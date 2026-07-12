@@ -1,0 +1,36 @@
+{
+  "entities": [
+    {
+      "url": "https://google.com",
+      "name": "Google",
+      "aliases": ["google", "search"],
+      "category": "search"
+    },
+    {
+      "url": "https://github.com",
+      "name": "GitHub",
+      "aliases": ["github", "git hub"],
+      "category": "development"
+    },
+    {
+      "url": "https://youtube.com",
+      "name": "YouTube",
+      "aliases": ["youtube"],
+      "category": "video"
+    },
+    {
+      "url": "https://mail.google.com",
+      "name": "Gmail",
+      "aliases": ["gmail", "email", "mail"],
+      "category": "email"
+    },
+    {
+      "url": "https://stackoverflow.com",
+      "name": "Stack Overflow",
+      "aliases": ["stack overflow", "stackoverflow"],
+      "category": "development"
+    }
+  ],
+  "version": 1,
+  "last_scan": "2026-07-07T00:00:00Z"
+}

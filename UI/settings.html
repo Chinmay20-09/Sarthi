@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Sarthi - Settings</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;family=JetBrains+Mono:wght@400;500&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed-dim": "#00d9ff",
+                        "surface-container-highest": "#353534",
+                        "primary": "#afecff",
+                        "on-surface-variant": "#bbc9ce",
+                        "on-tertiary-fixed-variant": "#6e3900",
+                        "on-background": "#e5e2e1",
+                        "secondary-fixed": "#e5e2e1",
+                        "outline-variant": "#3c494d",
+                        "on-secondary-fixed-variant": "#474746",
+                        "tertiary": "#ffddc4",
+                        "background": "#131313",
+                        "surface-container-lowest": "#0e0e0e",
+                        "outline": "#859398",
+                        "surface-container-low": "#1c1b1b",
+                        "on-primary": "#003641",
+                        "surface-dim": "#131313",
+                        "secondary-container": "#474746",
+                        "on-tertiary-fixed": "#2f1500",
+                        "error-container": "#93000a",
+                        "on-primary-fixed": "#001f26",
+                        "inverse-surface": "#e5e2e1",
+                        "inverse-on-surface": "#313030",
+                        "tertiary-container": "#ffb87f",
+                        "on-primary-container": "#005b6c",
+                        "on-error": "#690005",
+                        "inverse-primary": "#00687b",
+                        "primary-container": "#00d9ff",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "surface-variant": "#353534",
+                        "surface-tint": "#00d9ff",
+                        "on-error-container": "#ffdad6",
+                        "secondary-fixed-dim": "#c8c6c5",
+                        "surface": "#131313",
+                        "secondary": "#c8c6c5",
+                        "on-secondary-container": "#b7b5b4",
+                        "tertiary-fixed": "#ffdcc3",
+                        "on-primary-fixed-variant": "#004e5d",
+                        "surface-container-high": "#2a2a2a",
+                        "on-tertiary": "#4d2600",
+                        "on-secondary": "#313030",
+                        "primary-fixed": "#aeecff",
+                        "surface-bright": "#3a3939",
+                        "on-tertiary-container": "#7f4300",
+                        "on-surface": "#e5e2e1",
+                        "surface-container": "#201f1f",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed-dim": "#ffb77d"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "unit": "4px",
+                        "margin-mobile": "20px",
+                        "margin-desktop": "64px",
+                        "container-max-width": "1440px"
+                    },
+                    "fontFamily": {
+                        "label-caps": ["JetBrains Mono"],
+                        "headline-md-mobile": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "500" }],
+                        "headline-md-mobile": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "data-mono": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            background-color: #090909;
+            color: #e5e2e1;
+            overflow-x: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .nothing-toggle {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: #1c1b1b;
+            border-radius: 999px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nothing-toggle::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 16px;
+            height: 16px;
+            background: #bbc9ce;
+            border-radius: 50%;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nothing-toggle.active {
+            background: #00d9ff;
+        }
+
+        .nothing-toggle.active::after {
+            left: 23px;
+            background: #001f26;
+        }
+
+        .nothing-slider {
+            -webkitappearance: none;
+            width: 100%;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+        }
+
+        .nothing-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #00d9ff;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
+        }
+
+        .scanline {
+            width: 100%;
+            height: 2px;
+            background: #00d9ff;
+            opacity: 0.5;
+            position: absolute;
+            top: 0;
+            left: 0;
+            animation: scan 4s linear infinite;
+        }
+
+        @keyframes scan {
+            0% {
+                top: 0%;
+                opacity: 0;
+            }
+
+            5% {
+                opacity: 0.5;
+            }
+
+            95% {
+                opacity: 0.5;
+            }
+
+            100% {
+                top: 100%;
+                opacity: 0;
+            }
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body class="font-body-lg text-body-lg selection:bg-primary-container selection:text-on-primary-container">
+    <!-- Persistent SideNavBar -->
+    <aside
+        class="fixed left-0 top-0 h-full flex flex-col py-margin-desktop bg-surface/40 backdrop-blur-[40px] border-r border-white/10 h-screen w-64 z-50">
+        <div class="px-8 mb-12">
+            <h1
+                class="font-display-lg text-display-lg tracking-tighter text-primary-container drop-shadow-[0_0_8px_rgba(0,217,255,0.4)]">
+                Sarthi</h1>
+            <p class="font-label-caps text-label-caps text-on-surface-variant/60 mt-2">V1.0.4 Hyperion</p>
+        </div>
+        <nav class="flex-1 space-y-2">
+            <!-- Home -->
+            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="dashboard.html">
+                <span class="material-symbols-outlined mr-4">home</span>
+                <span class="font-body-lg text-body-lg">Home</span>
+            </a>
+            <!-- Skills -->
+            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="skills.html">
+                <span class="material-symbols-outlined mr-4">extension</span>
+                <span class="font-body-lg text-body-lg">Skills</span>
+            </a>
+            <!-- Memory -->
+            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="memory.html">
+                <span class="material-symbols-outlined mr-4">psychology</span>
+                <span class="font-body-lg text-body-lg">Memory</span>
+            </a>
+            <!-- Knowledge -->
+            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="knowledge.html">
+                <span class="material-symbols-outlined mr-4">database</span>
+                <span class="font-body-lg text-body-lg">Knowledge</span>
+            </a>
+            <!-- History -->
+            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="history.html">
+                <span class="material-symbols-outlined mr-4">history</span>
+                <span class="font-body-lg text-body-lg">History</span>
+            </a>
+        </nav>
+        <div class="px-8 mt-auto">
+            <a class="flex items-center py-4 transition-all duration-300 text-primary font-bold border-r-2 border-primary-container bg-primary/5 active:scale-95 duration-150"
+                href="settings.html">
+                <span class="material-symbols-outlined mr-4">settings</span>
+                <span class="font-body-lg text-body-lg">Settings</span>
+            </a>
+        </div>
+        <div class="px-8 mt-auto flex items-center gap-3 group cursor-pointer">
+            <div class="w-10 h-10 rounded-full border border-white/10 overflow-hidden">
+                <img class="w-full h-full object-cover"
+                    data-alt="A futuristic circular avatar of a highly sophisticated AI construct. The portrait uses deep blacks and brilliant cyan lines to define its features, resembling a circuit board mapped onto a human silhouette. The background is a soft, out-of-focus void of deep navy blue, highlighting the AI's presence with a professional, cinematic lens flare."
+                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuCciXZptKkEuDPe2ZiY0HfJXLEDbVLviacZGOJ2zDxXuyULWLUrqjLy-xP_Wky4AgyjN2gvO5KV8zgTBTz9ZzI8o4B5JIj7S4F9ai0jXPE-Ms8clIN93PoST5vY6HFYrBHuzuv0fXYeZm4V7GWQ0CguHdXeeDkrDXEoeR2G-NgHbnCfTBAn3NAh4mhkVaaMpa9fmJcVjbWi7EsSGp_jg0T32tfXdoSMocnKfrtkAegjOshfvyqiH_eunA" />
+            </div>
+            <div>
+                <p class="font-body-sm text-on-surface font-semibold">User_01</p>
+                <p class="font-label-caps text-[10px] text-primary">ADMIN ACCESS</p>
+            </div>
+        </div>
+    </aside>
+    <!-- Main Content Canvas -->
+    <main class="ml-64 min-h-screen pb-32">
+        <!-- TopAppBar -->
+        <header class="flex justify-between items-center w-full px-margin-desktop py-8 bg-transparent">
+            <h2 class="font-headline-md text-headline-md font-bold text-primary">System Settings</h2>
+            <div class="flex items-center gap-6">
+                <div class="relative">
+                    <input
+                        class="bg-surface-container-low border border-white/10 rounded-full px-6 py-2 w-64 focus:outline-none focus:border-primary-container transition-all font-body-sm"
+                        placeholder="Search parameters..." type="text" />
+                    <span class="material-symbols-outlined absolute right-4 top-2 text-on-surface-variant">search</span>
+                </div>
+                <div class="flex gap-4">
+                    <button
+                        class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">notifications</button>
+                    <button
+                        class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">account_circle</button>
+                </div>
+            </div>
+        </header>
+        <!-- Settings Grid Container -->
+        <div class="px-margin-desktop grid grid-cols-12 gap-gutter">
+            <!-- System Diagnostics (Bento Large) -->
+            <section class="col-span-12 glass-panel rounded-xl p-8 relative overflow-hidden group">
+                <div class="scanline"></div>
+                <div class="flex justify-between items-start mb-8 relative z-10">
+                    <div>
+                        <h3 class="font-label-caps text-label-caps text-primary mb-1">REAL-TIME DIAGNOSTICS</h3>
+                        <p class="font-headline-md text-headline-md font-bold">System Integrity</p>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="px-4 py-2 bg-white/5 rounded-lg border border-white/5 text-center">
+                            <p class="font-label-caps text-[10px] text-on-surface-variant">UPTIME</p>
+                            <p class="font-data-mono text-primary">142:24:08</p>
+                        </div>
+                        <div class="px-4 py-2 bg-white/5 rounded-lg border border-white/5 text-center">
+                            <p class="font-label-caps text-[10px] text-on-surface-variant">LATENCY</p>
+                            <p class="font-data-mono text-primary">12ms</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-4 gap-8 relative z-10">
+                    <!-- CPU -->
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-end">
+                            <span class="font-label-caps text-on-surface-variant">NEURAL CORE</span>
+                            <span class="font-data-mono text-primary">42%</span>
+                        </div>
+                        <div class="h-1 bg-white/5 rounded-full overflow-hidden">
+                            <div class="h-full bg-primary-container shadow-[0_0_8px_#00d9ff]" style="width: 42%"></div>
+                        </div>
+                        <div class="flex gap-1">
+                            <div class="h-4 w-1 bg-primary-container"></div>
+                            <div class="h-4 w-1 bg-primary-container"></div>
+                            <div class="h-4 w-1 bg-primary-container"></div>
+                            <div class="h-4 w-1 bg-white/10"></div>
+                            <div class="h-4 w-1 bg-white/10"></div>
+                            <div class="h-4 w-1 bg-white/10"></div>
+                        </div>
+                    </div>
+                    <!-- RAM -->
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-end">
+                            <span class="font-label-caps text-on-surface-variant">MEMORY BANK</span>
+                            <span class="font-data-mono text-primary">68%</span>
+                        </div>
+                        <div class="h-1 bg-white/5 rounded-full overflow-hidden">
+                            <div class="h-full bg-primary-container shadow-[0_0_8px_#00d9ff]" style="width: 68%"></div>
+                        </div>
+                        <div class="flex gap-1">
+                            <div class="h-4 w-1 bg-primary-container"></div>
+                            <div class="h-4 w-1 bg-primary-container"></div>
+                            <div class="h-4 w-1 bg-primary-container"></div>
+                            <div class="h-4 w-1 bg-primary-container"></div>
+                            <div class="h-4 w-1 bg-white/10"></div>
+                            <div class="h-4 w-1 bg-white/10"></div>
+                        </div>
+                    </div>
+                    <!-- STORAGE -->
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-end">
+                            <span class="font-label-caps text-on-surface-variant">SYNAPSE DISK</span>
+                            <span class="font-data-mono text-primary">21%</span>
+                        </div>
+                        <div class="h-1 bg-white/5 rounded-full overflow-hidden">
+                            <div class="h-full bg-primary-container shadow-[0_0_8px_#00d9ff]" style="width: 21%"></div>
+                        </div>
+                        <div class="flex gap-1">
+                            <div class="h-4 w-1 bg-primary-container"></div>
+                            <div class="h-4 w-1 bg-white/10"></div>
+                            <div class="h-4 w-1 bg-white/10"></div>
+                            <div class="h-4 w-1 bg-white/10"></div>
+                            <div class="h-4 w-1 bg-white/10"></div>
+                            <div class="h-4 w-1 bg-white/10"></div>
+                        </div>
+                    </div>
+                    <!-- NETWORK -->
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-end">
+                            <span class="font-label-caps text-on-surface-variant">BANDWIDTH</span>
+                            <span class="font-data-mono text-primary">890 MB/S</span>
+                        </div>
+                        <div class="h-1 bg-white/5 rounded-full overflow-hidden">
+                            <div class="h-full bg-primary-container shadow-[0_0_8px_#00d9ff]" style="width: 85%"></div>
+                        </div>
+                        <div class="flex gap-1 items-end h-4">
+                            <div class="w-1 h-1 bg-primary"></div>
+                            <div class="w-1 h-3 bg-primary"></div>
+                            <div class="w-1 h-2 bg-primary"></div>
+                            <div class="w-1 h-4 bg-primary"></div>
+                            <div class="w-1 h-3 bg-primary"></div>
+                            <div class="w-1 h-1 bg-primary"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- Voice & Personality -->
+            <section class="col-span-12 lg:col-span-6 glass-panel rounded-xl p-8 space-y-8">
+                <div>
+                    <h3 class="font-label-caps text-label-caps text-primary mb-2">VOICE &amp; PERSONALITY</h3>
+                    <p class="text-on-surface-variant font-body-sm">Configure how Sarthi sounds and interacts.</p>
+                </div>
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <div class="space-y-1">
+                            <p class="font-body-lg font-medium">Neural Voice Synthesis</p>
+                            <p class="text-xs text-on-surface-variant">Enable hyper-realistic speech generation</p>
+                        </div>
+                        <div class="nothing-toggle active" onclick="this.classList.toggle('active')"></div>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <p class="font-body-lg font-medium">Emotional Intelligence</p>
+                            <span class="font-data-mono text-primary text-xs">DYNAMIC</span>
+                        </div>
+                        <input class="nothing-slider" max="100" min="0" type="range" value="75" />
+                        <div class="flex justify-between text-[10px] font-label-caps text-on-surface-variant">
+                            <span>ANALYTICAL</span>
+                            <span>EMPATHETIC</span>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <p class="font-body-lg font-medium">Selected Avatar</p>
+                        <div class="flex gap-4">
+                            <div
+                                class="w-12 h-12 rounded-lg border-2 border-primary bg-primary/10 flex items-center justify-center cursor-pointer">
+                                <span class="material-symbols-outlined text-primary">graphic_eq</span>
+                            </div>
+                            <div
+                                class="w-12 h-12 rounded-lg border border-white/10 hover:border-primary/50 flex items-center justify-center cursor-pointer transition-colors">
+                                <span class="material-symbols-outlined text-on-surface-variant">waves</span>
+                            </div>
+                            <div
+                                class="w-12 h-12 rounded-lg border border-white/10 hover:border-primary/50 flex items-center justify-center cursor-pointer transition-colors">
+                                <span class="material-symbols-outlined text-on-surface-variant">grain</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- Privacy & Security -->
+            <section class="col-span-12 lg:col-span-6 glass-panel rounded-xl p-8 space-y-8">
+                <div>
+                    <h3 class="font-label-caps text-label-caps text-error mb-2">PRIVACY &amp; SECURITY</h3>
+                    <p class="text-on-surface-variant font-body-sm">Control your data and access protocols.</p>
+                </div>
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <div class="space-y-1">
+                            <p class="font-body-lg font-medium">Zero-Knowledge Encryption</p>
+                            <p class="text-xs text-on-surface-variant">Server-side data is never readable by Sarthi Labs
+                            </p>
+                        </div>
+                        <div class="nothing-toggle active" onclick="this.classList.toggle('active')"></div>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <div class="space-y-1">
+                            <p class="font-body-lg font-medium">Biometric Lockdown</p>
+                            <p class="text-xs text-on-surface-variant">Require scan for sensitive memory access</p>
+                        </div>
+                        <div class="nothing-toggle" onclick="this.classList.toggle('active')"></div>
+                    </div>
+                    <div class="pt-4 border-t border-white/5 space-y-4">
+                        <button
+                            class="w-full py-3 border border-white/10 hover:bg-white/5 transition-all rounded-lg flex items-center justify-center gap-2 font-body-sm">
+                            <span class="material-symbols-outlined text-sm">history</span>
+                            Clear Interaction Logs
+                        </button>
+                        <button
+                            class="w-full py-3 border border-error/20 text-error hover:bg-error/5 transition-all rounded-lg flex items-center justify-center gap-2 font-body-sm">
+                            <span class="material-symbols-outlined text-sm">delete_forever</span>
+                            Wipe Local Cache
+                        </button>
+                    </div>
+                </div>
+            </section>
+            <!-- UI Customization -->
+            <section class="col-span-12 lg:col-span-8 glass-panel rounded-xl p-8">
+                <div class="mb-8">
+                    <h3 class="font-label-caps text-label-caps text-primary mb-2">UI CUSTOMIZATION</h3>
+                    <p class="text-on-surface-variant font-body-sm">Tailor the visual experience of Sarthi.</p>
+                </div>
+                <div class="grid grid-cols-2 gap-12">
+                    <div class="space-y-6">
+                        <div class="space-y-4">
+                            <p class="font-body-lg font-medium">Primary Hue</p>
+                            <div class="flex gap-3">
+                                <div
+                                    class="w-8 h-8 rounded-full bg-[#00d9ff] ring-2 ring-offset-2 ring-offset-background ring-[#00d9ff] cursor-pointer">
+                                </div>
+                                <div
+                                    class="w-8 h-8 rounded-full bg-[#ffb87f] hover:scale-110 transition-transform cursor-pointer">
+                                </div>
+                                <div
+                                    class="w-8 h-8 rounded-full bg-[#ffb4ab] hover:scale-110 transition-transform cursor-pointer">
+                                </div>
+                                <div
+                                    class="w-8 h-8 rounded-full bg-[#aeecff] hover:scale-110 transition-transform cursor-pointer">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="flex justify-between">
+                                <p class="font-body-lg font-medium">Interface Blur</p>
+                                <span class="font-data-mono text-xs">40PX</span>
+                            </div>
+                            <input class="nothing-slider" max="100" min="0" type="range" value="40" />
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="space-y-4">
+                            <p class="font-body-lg font-medium">System Font</p>
+                            <div class="space-y-2">
+                                <div
+                                    class="p-3 bg-white/5 border border-primary/30 rounded-lg flex justify-between items-center">
+                                    <span class="font-body-sm">Inter (Default)</span>
+                                    <span class="material-symbols-outlined text-primary text-sm">check_circle</span>
+                                </div>
+                                <div
+                                    class="p-3 border border-white/10 rounded-lg flex justify-between items-center opacity-50">
+                                    <span class="font-data-mono text-sm">JetBrains Mono</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- System Integration -->
+            <section class="col-span-12 lg:col-span-4 glass-panel rounded-xl p-8 flex flex-col justify-between">
+                <div>
+                    <h3 class="font-label-caps text-label-caps text-primary mb-2">SYSTEM INTEGRATION</h3>
+                    <p class="text-on-surface-variant font-body-sm mb-6">Connected services and hardware.</p>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5">
+                            <div class="flex items-center gap-3">
+                                <span class="material-symbols-outlined text-primary">cloud</span>
+                                <span class="font-body-sm">Cloud Bridge</span>
+                            </div>
+                            <span class="font-label-caps text-[10px] text-primary">ACTIVE</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5">
+                            <div class="flex items-center gap-3">
+                                <span class="material-symbols-outlined text-on-surface-variant">home_iot_device</span>
+                                <span class="font-body-sm">IoT Control</span>
+                            </div>
+                            <span class="font-label-caps text-[10px] text-on-surface-variant">PENDING</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5">
+                            <div class="flex items-center gap-3">
+                                <span class="material-symbols-outlined text-on-surface-variant">mail</span>
+                                <span class="font-body-sm">Neural Mail</span>
+                            </div>
+                            <span class="font-label-caps text-[10px] text-on-surface-variant">DISABLED</span>
+                        </div>
+                    </div>
+                </div>
+                <button
+                    class="w-full mt-8 py-3 bg-primary-container text-on-primary-container font-bold rounded-lg hover:brightness-110 transition-all active:scale-[0.98]">
+                    Sync All Services
+                </button>
+            </section>
+        </div>
+    </main>
+    <!-- BottomNavBar (Dock) -->
+    <nav class="fixed bottom-0 left-0 w-full z-50 flex justify-center pb-6">
+        <div
+            class="flex items-center gap-2 rounded-full mb-8 mx-auto w-fit border border-white/10 bg-surface-container/60 backdrop-blur-[30px] shadow-[0_0_20px_rgba(0,217,255,0.1)] px-6 py-3">
+            <button
+                class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 px-4 py-2 rounded-full transition-all active:scale-90 duration-100 group">
+                <span class="material-symbols-outlined group-hover:text-primary">mic</span>
+                <span class="font-label-caps text-label-caps mt-1">Speak</span>
+            </button>
+            <button
+                class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 px-4 py-2 rounded-full transition-all active:scale-90 duration-100 group">
+                <span class="material-symbols-outlined group-hover:text-primary">keyboard</span>
+                <span class="font-label-caps text-label-caps mt-1">Type</span>
+            </button>
+            <button
+                class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 px-4 py-2 rounded-full transition-all active:scale-90 duration-100 group">
+                <span class="material-symbols-outlined group-hover:text-primary">refresh</span>
+                <span class="font-label-caps text-label-caps mt-1">Refresh</span>
+            </button>
+            <button
+                class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 px-4 py-2 rounded-full transition-all active:scale-90 duration-100 group">
+                <span class="material-symbols-outlined group-hover:text-primary">apps</span>
+                <span class="font-label-caps text-label-caps mt-1">Apps</span>
+            </button>
+            <a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 px-4 py-2 rounded-full transition-all active:scale-90 duration-100 group"
+                href="{{DATA:SCREEN:SCREEN_2}}">
+                <span class="material-symbols-outlined group-hover:text-primary">bolt</span>
+                <span class="font-label-caps text-label-caps mt-1">Skills</span>
+            </a>
+        </div>
+    </nav>
+    <!-- Interactive Layer for Sliders & Toggles -->
+    <script>
+        document.querySelectorAll('.nothing-slider').forEach(slider => {
+            slider.addEventListener('input', (e) => {
+                const valueDisplay = e.target.closest('.space-y-4')?.querySelector('.font-data-mono');
+                if (valueDisplay) {
+                    if (e.target.value > 80) valueDisplay.textContent = 'HIGH';
+                    else if (e.target.value < 20) valueDisplay.textContent = 'LOW';
+                    else valueDisplay.textContent = e.target.value + (e.target.max == 100 ? '%' : 'PX');
+                }
+            });
+        });
+
+        // Atmospheric mouse glow effect
+        document.addEventListener('mousemove', (e) => {
+            const panels = document.querySelectorAll('.glass-panel');
+            panels.forEach(panel => {
+                const rect = panel.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                if (x > 0 && x < rect.width && y > 0 && y < rect.height) {
+                    panel.style.boxShadow = `inset ${x / 10}px ${y / 10}px 30px rgba(0, 217, 255, 0.03)`;
+                } else {
+                    panel.style.boxShadow = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

@@ -1,4 +1,4 @@
-from speech.recorder import record_audiogit
+from speech.recorder import record_audio
 from speech.speech_to_text import transcribe
 
 from brain.entity_resolver import EntityResolver
@@ -26,11 +26,12 @@ def main():
 
         print("\n📝 Whisper :", raw_text)
 
-        normalized = resolver.resolve(raw_text)
+        intent = interpret(raw_text)
+        if intent.target:
+         intent.target = resolver.resolve(intent.target)
+        print("🧩 Resolved Target:", intent.target)
 
-        print("🧠 Resolver:", normalized)
-
-        intent = interpret(normalized)
+        print("\n🧠 Interpreter:", intent.model_dump())
 
         print("🎯 Intent  :", intent.model_dump())
 

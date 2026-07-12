@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Sarthi | History Log</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        body {
+            background-color: #090909;
+            color: #e5e2e1;
+            overflow-x: hidden;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(0, 217, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .timeline-line {
+            background: linear-gradient(180deg, rgba(0, 217, 255, 0) 0%, rgba(0, 217, 255, 0.2) 15%, rgba(0, 217, 255, 0.2) 85%, rgba(0, 217, 255, 0) 100%);
+        }
+
+        .glow-cyan {
+            box-shadow: 0 0 15px rgba(0, 217, 255, 0.1);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 217, 255, 0.3);
+        }
+    </style>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed-dim": "#00d9ff",
+                        "surface-container-highest": "#353534",
+                        "primary": "#afecff",
+                        "on-surface-variant": "#bbc9ce",
+                        "on-tertiary-fixed-variant": "#6e3900",
+                        "on-background": "#e5e2e1",
+                        "secondary-fixed": "#e5e2e1",
+                        "outline-variant": "#3c494d",
+                        "on-secondary-fixed-variant": "#474746",
+                        "tertiary": "#ffddc4",
+                        "background": "#131313",
+                        "surface-container-lowest": "#0e0e0e",
+                        "outline": "#859398",
+                        "surface-container-low": "#1c1b1b",
+                        "on-primary": "#003641",
+                        "surface-dim": "#131313",
+                        "secondary-container": "#474746",
+                        "on-tertiary-fixed": "#2f1500",
+                        "error-container": "#93000a",
+                        "on-primary-fixed": "#001f26",
+                        "inverse-surface": "#e5e2e1",
+                        "inverse-on-surface": "#313030",
+                        "tertiary-container": "#ffb87f",
+                        "on-primary-container": "#005b6c",
+                        "on-error": "#690005",
+                        "inverse-primary": "#00687b",
+                        "primary-container": "#00d9ff",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "surface-variant": "#353534",
+                        "surface-tint": "#00d9ff",
+                        "on-error-container": "#ffdad6",
+                        "secondary-fixed-dim": "#c8c6c5",
+                        "surface": "#131313",
+                        "secondary": "#c8c6c5",
+                        "on-secondary-container": "#b7b5b4",
+                        "tertiary-fixed": "#ffdcc3",
+                        "on-primary-fixed-variant": "#004e5d",
+                        "surface-container-high": "#2a2a2a",
+                        "on-tertiary": "#4d2600",
+                        "on-secondary": "#313030",
+                        "primary-fixed": "#aeecff",
+                        "surface-bright": "#3a3939",
+                        "on-tertiary-container": "#7f4300",
+                        "on-surface": "#e5e2e1",
+                        "surface-container": "#201f1f",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed-dim": "#ffb77d"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "unit": "4px",
+                        "margin-mobile": "20px",
+                        "margin-desktop": "64px",
+                        "container-max-width": "1440px"
+                    },
+                    "fontFamily": {
+                        "label-caps": ["JetBrains Mono"],
+                        "headline-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "500" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "data-mono": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="font-body-lg text-body-lg bg-background min-h-screen selection:bg-primary-container/30">
+    <!-- Persistent SideNav Shell -->
+    <aside
+        class="fixed left-0 top-0 h-full flex flex-col py-margin-desktop h-screen w-64 border-r border-white/10 bg-surface/40 backdrop-blur-[40px] z-40">
+        <div class="px-6 mb-12">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-primary-container flex items-center justify-center glow-cyan">
+                    <span class="material-symbols-outlined text-on-primary-container"
+                        style="font-variation-settings: 'FILL' 1;">bolt</span>
+                </div>
+                <div>
+                    <h1
+                        class="font-display-lg text-[20px] leading-tight tracking-tighter text-primary-container drop-shadow-[0_0_8px_rgba(0,217,255,0.4)]">
+                        Sarthi</h1>
+                    <p class="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-medium">V1.0.4
+                        Hyperion</p>
+                </div>
+            </div>
+        </div>
+        <nav class="flex-1 space-y-2">
+            <!-- Home -->
+            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="dashboard.html">
+                <span class="material-symbols-outlined mr-4">home</span>
+                <span class="font-body-lg text-body-lg">Home</span>
+            </a>
+            <!-- Skills -->
+            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="skills.html">
+                <span class="material-symbols-outlined mr-4">extension</span>
+                <span class="font-body-lg text-body-lg">Skills</span>
+            </a>
+            <!-- Memory -->
+            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="memory.html">
+                <span class="material-symbols-outlined mr-4">psychology</span>
+                <span class="font-body-lg text-body-lg">Memory</span>
+            </a>
+            <!-- Knowledge -->
+            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="knowledge.html">
+                <span class="material-symbols-outlined mr-4">database</span>
+                <span class="font-body-lg text-body-lg">Knowledge</span>
+            </a>
+            <!-- History (Active) -->
+            <a class="flex items-center px-8 py-4 transition-all duration-300 text-primary font-bold border-r-2 border-primary-container bg-primary/5 active:scale-95 duration-150"
+                href="history.html">
+                <span class="material-symbols-outlined mr-4">history</span>
+                <span class="font-body-lg text-body-lg">History</span>
+            </a>
+        </nav>
+        <div class="px-8 mt-auto">
+            <a class="flex items-center py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="settings.html">
+                <span class="material-symbols-outlined mr-4">settings</span>
+                <span class="font-body-lg text-body-lg">Settings</span>
+            </a>
+        </div>
+        <div class="mt-auto px-6">
+            <div class="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/5">
+                <img alt="A portrait of a futuristic AI interface representative avatar, ethereal and digital, with glowing blue neural pathways visible beneath semi-transparent skin, set against a dark infinite void background. The aesthetic is ultra-minimalist and sophisticated, reflecting a high-end aerospace OS identity."
+                    class="w-8 h-8 rounded-full border border-primary-container/30"
+                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuA9RzoAiGb4pD_WqSXebfJ4l31gPq8v39PGWU4pXiwIasvRIk6H_qJ2XiCz9tiIBtHQN2mCQbz2fnD6JX1OTExrLT_EZeCVJ1EEXzJzlj57G8UxSsomjHnRtEBi-IdqCi5AgdbRFv7B6N1rg-28E-2gWcAqeRESlfZwp58L_F9CB_2Lfj6Ghjp2eNv3Z3SGRbsOacVU6beD3H5Mmk6aT4Gg5A2n0FkTxzJ8ubWFnnZzVIl7k0APsVxMOA" />
+                <div class="overflow-hidden">
+                    <p class="text-sm font-bold truncate">Astra-9</p>
+                    <p class="text-[10px] text-primary-container/70">Connected</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+    <!-- Top AppBar Shell -->
+    <header
+        class="fixed top-0 left-64 right-0 z-30 flex justify-between items-center px-margin-desktop py-4 bg-transparent backdrop-blur-sm">
+        <div class="flex items-center gap-4">
+            <h2 class="font-headline-md text-headline-md font-bold text-primary">History Log</h2>
+            <div class="px-3 py-1 rounded-full border border-white/10 bg-white/5 flex items-center gap-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-primary-container animate-pulse"></span>
+                <span class="font-label-caps text-label-caps text-on-surface-variant">Syncing Stream</span>
+            </div>
+        </div>
+        <div class="flex items-center gap-6">
+            <!-- Search Bar -->
+            <div class="relative group">
+                <span
+                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors">search</span>
+                <input
+                    class="bg-surface-container-low border border-white/10 rounded-full pl-10 pr-4 py-2 w-64 text-sm focus:outline-none focus:ring-1 focus:ring-primary-container transition-all"
+                    placeholder="Search interactions..." type="text" />
+            </div>
+            <div class="flex items-center gap-3">
+                <button class="p-2 rounded-full hover:bg-white/5 text-on-surface-variant transition-colors">
+                    <span class="material-symbols-outlined">notifications</span>
+                </button>
+                <button class="p-2 rounded-full hover:bg-white/5 text-on-surface-variant transition-colors">
+                    <span class="material-symbols-outlined">account_circle</span>
+                </button>
+            </div>
+        </div>
+    </header>
+    <!-- Main Content Canvas -->
+    <main class="ml-64 pt-24 pb-32 px-margin-desktop min-h-screen relative">
+        <!-- Background Animation Overlay -->
+        <div class="fixed inset-0 pointer-events-none z-[-1] overflow-hidden">
+        </div>
+        <div class="max-w-4xl mx-auto relative">
+            <!-- Timeline Vertical Line -->
+            <div class="absolute left-6 top-8 bottom-0 w-[2px] timeline-line"></div>
+            <!-- Date Group: Today -->
+            <div class="mb-16 relative">
+                <div class="flex items-center gap-4 mb-8 sticky top-24 z-10 bg-background/50 backdrop-blur-md py-2">
+                    <div
+                        class="w-12 h-12 rounded-2xl bg-surface-container-high border border-white/10 flex items-center justify-center shadow-lg">
+                        <span class="font-label-caps text-primary text-lg">24</span>
+                    </div>
+                    <div>
+                        <h3 class="font-headline-md text-xl font-bold">Today</h3>
+                        <p class="font-label-caps text-[10px] text-on-surface-variant">October 2024</p>
+                    </div>
+                </div>
+                <div class="space-y-8 pl-14">
+                    <!-- Entry 1: Voice Command -->
+                    <div class="relative group">
+                        <div
+                            class="absolute -left-[45px] top-4 w-4 h-4 rounded-full bg-primary-container border-4 border-background z-10 shadow-[0_0_10px_rgba(0,217,255,0.5)]">
+                        </div>
+                        <div class="glass-card rounded-2xl p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="flex items-center gap-3">
+                                    <span class="material-symbols-outlined text-primary-container">mic</span>
+                                    <span class="font-label-caps text-xs text-primary-container">Voice Input</span>
+                                </div>
+                                <span class="font-data-mono text-[11px] text-on-surface-variant">14:32:04</span>
+                            </div>
+                            <h4 class="font-headline-md text-lg mb-2">"Analyze my quarterly spending habits and suggest
+                                a savings plan."</h4>
+                            <div class="mt-4 flex gap-4 overflow-hidden">
+                                <div class="flex-1 p-4 rounded-xl bg-white/5 border border-white/5">
+                                    <p class="text-sm text-on-surface-variant leading-relaxed">Processing query...
+                                        Accessed <span class="text-primary">Finance_Module.sql</span>. Found 1,248
+                                        transactions. Generated 3-tier strategy. Output sent to Memory.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Entry 2: Automated Task -->
+                    <div class="relative group">
+                        <div
+                            class="absolute -left-[45px] top-4 w-4 h-4 rounded-full bg-tertiary-container border-4 border-background z-10">
+                        </div>
+                        <div class="glass-card rounded-2xl p-6 border-l-4 border-l-tertiary-container">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="flex items-center gap-3 text-tertiary">
+                                    <span class="material-symbols-outlined"
+                                        style="font-variation-settings: 'FILL' 1;">bolt</span>
+                                    <span class="font-label-caps text-xs">Automated Task</span>
+                                </div>
+                                <span class="font-data-mono text-[11px] text-on-surface-variant">11:15:00</span>
+                            </div>
+                            <h4 class="font-headline-md text-lg mb-2">System Maintenance &amp; Knowledge Indexing</h4>
+                            <div class="space-y-3">
+                                <div class="w-full bg-white/5 h-1 rounded-full overflow-hidden">
+                                    <div class="bg-tertiary h-full w-[85%]"></div>
+                                </div>
+                                <p class="text-sm text-on-surface-variant">Optimization complete. Compressed 4.2GB of
+                                    logs. Updated vector database with 15 new research papers from indexed sources.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Entry 3: System Notification -->
+                    <div class="relative group">
+                        <div
+                            class="absolute -left-[45px] top-4 w-4 h-4 rounded-full bg-error border-4 border-background z-10">
+                        </div>
+                        <div class="glass-card rounded-2xl p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="flex items-center gap-3 text-error">
+                                    <span class="material-symbols-outlined">report</span>
+                                    <span class="font-label-caps text-xs">System Alert</span>
+                                </div>
+                                <span class="font-data-mono text-[11px] text-on-surface-variant">09:41:22</span>
+                            </div>
+                            <div class="flex gap-6">
+                                <div class="flex-1">
+                                    <h4 class="font-headline-md text-lg mb-1">External Connection Attempt</h4>
+                                    <p class="text-sm text-on-surface-variant">Blocked unauthorized handshake from IP:
+                                        192.168.1.144. Shield integrity maintained at 100%.</p>
+                                </div>
+                                <div
+                                    class="w-24 h-24 rounded-lg bg-surface-container overflow-hidden border border-white/5">
+                                    <img alt="A macro digital visualization of a firewall or cybersecurity grid being targeted by red digital pulses, representing a blocked connection attempt. Minimalist cyberpunk aesthetic, dark background with glowing lines, ultra-detailed."
+                                        class="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500"
+                                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuB312p24X3uJq50Jg5IvLMQArjxIkuXC0Y-0fvmOvtd0B3lIq_km5ZtzkAnA6gYE-m4gAOivp5iuqjgfbrBl9GJEUrAKstAC-Q9dy5xq5sFt6m_YCQmBDwn6pdOid0sRG681hRVM01csq_F5Uuyf8pFz1x9WNAtn6oB-eq788kqVJKMILp55VQVrSsnprZ_mi6JmdN4mjlhrTR2k-Ii498oYoT9IddEE78Ddcn5eXrYCzo-bU1Vg5hv3w" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Date Group: Yesterday -->
+            <div class="mb-16 relative">
+                <div class="flex items-center gap-4 mb-8 sticky top-24 z-10 bg-background/50 backdrop-blur-md py-2">
+                    <div
+                        class="w-12 h-12 rounded-2xl bg-surface-container-high border border-white/10 flex items-center justify-center">
+                        <span class="font-label-caps text-on-surface-variant text-lg">23</span>
+                    </div>
+                    <div>
+                        <h3 class="font-headline-md text-xl font-bold opacity-60">Yesterday</h3>
+                        <p class="font-label-caps text-[10px] text-on-surface-variant">October 2024</p>
+                    </div>
+                </div>
+                <div class="space-y-8 pl-14">
+                    <!-- Entry 4: Interaction -->
+                    <div class="relative group opacity-80 hover:opacity-100 transition-opacity">
+                        <div
+                            class="absolute -left-[45px] top-4 w-4 h-4 rounded-full bg-primary/20 border-4 border-background z-10">
+                        </div>
+                        <div class="glass-card rounded-2xl p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="flex items-center gap-3">
+                                    <span class="material-symbols-outlined text-on-surface-variant">keyboard</span>
+                                    <span class="font-label-caps text-xs text-on-surface-variant">Typed
+                                        Interaction</span>
+                                </div>
+                                <span class="font-data-mono text-[11px] text-on-surface-variant">21:05:45</span>
+                            </div>
+                            <h4 class="font-headline-md text-lg mb-2">"Generate a schematic for a modular workstation."
+                            </h4>
+                            <div class="mt-4 p-4 rounded-xl bg-primary/5 border border-primary/10">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-12 rounded bg-white/10 flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-primary">draw</span>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium">Rendered Schematic_V1.pdf</p>
+                                        <p class="text-[10px] text-on-surface-variant">High-fidelity 3D model prepared
+                                        </p>
+                                    </div>
+                                    <button
+                                        class="ml-auto p-2 rounded-full border border-white/10 hover:bg-white/10 transition-colors">
+                                        <span class="material-symbols-outlined text-sm">open_in_new</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Entry 5: Automated Task -->
+                    <div class="relative group opacity-80 hover:opacity-100 transition-opacity">
+                        <div
+                            class="absolute -left-[45px] top-4 w-4 h-4 rounded-full bg-tertiary-container/30 border-4 border-background z-10">
+                        </div>
+                        <div class="glass-card rounded-2xl p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="flex items-center gap-3 text-on-surface-variant">
+                                    <span class="material-symbols-outlined">refresh</span>
+                                    <span class="font-label-caps text-xs">Cloud Synchronization</span>
+                                </div>
+                                <span class="font-data-mono text-[11px] text-on-surface-variant">18:00:00</span>
+                            </div>
+                            <p class="text-sm text-on-surface-variant">Successfully synchronized local 'Skills' database
+                                with Sarthi Cloud Node 7. Delta: +4 modules, -1 legacy dependency.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <!-- Bottom Navigation Shell (Dock) -->
+    <div class="fixed bottom-0 left-0 w-full z-50 flex justify-center pb-6">
+        <nav
+            class="rounded-full mb-8 mx-auto w-fit border border-white/10 bg-surface-container/60 backdrop-blur-[30px] shadow-[0_0_20px_rgba(0,217,255,0.1)] px-8 py-3 flex items-center gap-10">
+            <button
+                class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 rounded-full px-4 py-1 transition-all active:scale-90 duration-100 group">
+                <span class="material-symbols-outlined mb-1 group-hover:text-primary">mic</span>
+                <span class="font-label-caps text-[10px]">Speak</span>
+            </button>
+            <button
+                class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 rounded-full px-4 py-1 transition-all active:scale-90 duration-100 group">
+                <span class="material-symbols-outlined mb-1 group-hover:text-primary">keyboard</span>
+                <span class="font-label-caps text-[10px]">Type</span>
+            </button>
+            <button
+                class="flex flex-col items-center justify-center text-primary drop-shadow-[0_0_4px_rgba(0,217,255,0.8)] px-4 py-1 group">
+                <span class="material-symbols-outlined mb-1">refresh</span>
+                <span class="font-label-caps text-[10px]">Refresh</span>
+            </button>
+            <button
+                class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 rounded-full px-4 py-1 transition-all active:scale-90 duration-100 group">
+                <span class="material-symbols-outlined mb-1 group-hover:text-primary">apps</span>
+                <span class="font-label-caps text-[10px]">Apps</span>
+            </button>
+            <a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 rounded-full px-4 py-1 transition-all active:scale-90 duration-100 group"
+                href="{{DATA:SCREEN:SCREEN_2}}">
+                <span class="material-symbols-outlined mb-1 group-hover:text-primary">bolt</span>
+                <span class="font-label-caps text-[10px]">Skills</span>
+            </a>
+        </nav>
+    </div>
+    <!-- Floating Action Element -->
+    <div class="fixed right-8 bottom-8 z-50">
+        <button
+            class="w-16 h-16 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center shadow-[0_0_30px_rgba(0,217,255,0.4)] hover:scale-110 active:scale-95 transition-all duration-300">
+            <span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">add</span>
+        </button>
+    </div>
+    <script>
+        // Micro-interactions for the timeline
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.glass-card');
+
+            const observerOptions = {
+                threshold: 0.1
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('opacity-100');
+                        entry.target.classList.remove('translate-y-4');
+                    }
+                });
+            }, observerOptions);
+
+            cards.forEach(card => {
+                card.classList.add('opacity-0', 'translate-y-4', 'transition-all', 'duration-700');
+                observer.observe(card);
+            });
+        });
+
+        // Simple time update for HUD
+        function updateTime() {
+            const now = new Date();
+            // Could add a live clock element if needed
+        }
+        setInterval(updateTime, 1000);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Sarthi | Skills Repository</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <style>
+        :root {
+            --cyan-glow: rgba(0, 217, 255, 0.4);
+            --cyan-border: rgba(0, 217, 255, 0.2);
+        }
+
+        body {
+            background-color: #090909;
+            color: #e5e2e1;
+            overflow-x: hidden;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--cyan-border);
+            box-shadow: 0 0 20px rgba(0, 217, 255, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .cyan-glow-text {
+            text-shadow: 0 0 8px var(--cyan-glow);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .skill-icon-container {
+            position: relative;
+        }
+
+        .skill-icon-container::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            background: radial-gradient(circle, var(--cyan-glow) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .glass-card:hover .skill-icon-container::after {
+            opacity: 1;
+        }
+
+        @keyframes scan {
+            0% {
+                transform: translateY(-100%);
+            }
+
+            100% {
+                transform: translateY(400%);
+            }
+        }
+
+        .scanning-line {
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00d9ff, transparent);
+            animation: scan 4s linear infinite;
+        }
+    </style>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed-dim": "#00d9ff",
+                        "surface-container-highest": "#353534",
+                        "primary": "#afecff",
+                        "on-surface-variant": "#bbc9ce",
+                        "on-tertiary-fixed-variant": "#6e3900",
+                        "on-background": "#e5e2e1",
+                        "secondary-fixed": "#e5e2e1",
+                        "outline-variant": "#3c494d",
+                        "on-secondary-fixed-variant": "#474746",
+                        "tertiary": "#ffddc4",
+                        "background": "#131313",
+                        "surface-container-lowest": "#0e0e0e",
+                        "outline": "#859398",
+                        "surface-container-low": "#1c1b1b",
+                        "on-primary": "#003641",
+                        "surface-dim": "#131313",
+                        "secondary-container": "#474746",
+                        "on-tertiary-fixed": "#2f1500",
+                        "error-container": "#93000a",
+                        "on-primary-fixed": "#001f26",
+                        "inverse-surface": "#e5e2e1",
+                        "inverse-on-surface": "#313030",
+                        "tertiary-container": "#ffb87f",
+                        "on-primary-container": "#005b6c",
+                        "on-error": "#690005",
+                        "inverse-primary": "#00687b",
+                        "primary-container": "#00d9ff",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "surface-variant": "#353534",
+                        "surface-tint": "#00d9ff",
+                        "on-error-container": "#ffdad6",
+                        "secondary-fixed-dim": "#c8c6c5",
+                        "surface": "#131313",
+                        "secondary": "#c8c6c5",
+                        "on-secondary-container": "#b7b5b4",
+                        "tertiary-fixed": "#ffdcc3",
+                        "on-primary-fixed-variant": "#004e5d",
+                        "surface-container-high": "#2a2a2a",
+                        "on-tertiary": "#4d2600",
+                        "on-secondary": "#313030",
+                        "primary-fixed": "#aeecff",
+                        "surface-bright": "#3a3939",
+                        "on-tertiary-container": "#7f4300",
+                        "on-surface": "#e5e2e1",
+                        "surface-container": "#201f1f",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed-dim": "#ffb77d"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "unit": "4px",
+                        "margin-mobile": "20px",
+                        "margin-desktop": "64px",
+                        "container-max-width": "1440px"
+                    },
+                    "fontFamily": {
+                        "label-caps": ["JetBrains Mono"],
+                        "headline-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "500" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "data-mono": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+
+<body class="font-body-lg text-body-lg bg-background selection:bg-primary-container/30">
+    <!-- Background Shader Canvas -->
+    <div class="fixed inset-0 -z-10 pointer-events-none opacity-40">
+    </div>
+    <!-- Persistent SideNavBar -->
+    <aside
+        class="fixed left-0 top-0 h-full w-64 border-r border-white/10 bg-surface/40 backdrop-blur-3xl flex flex-col py-margin-desktop z-40 hidden md:flex">
+        <div class="px-8 mb-12">
+            <h1
+                class="font-display-lg text-display-lg tracking-tighter text-primary-container drop-shadow-[0_0_8px_rgba(0,217,255,0.4)]">
+                Sarthi</h1>
+            <p class="font-label-caps text-label-caps text-on-surface-variant mt-1">V1.0.4 Hyperion</p>
+        </div>
+        <nav class="flex-1 px-4 space-y-2">
+            <a class="flex items-center gap-4 px-4 py-3 rounded-xl text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary transition-all duration-300 group"
+                href="{{DATA:SCREEN:SCREEN_6}}">
+                <span class="material-symbols-outlined transition-transform group-active:scale-95">home</span>
+                <span>Home</span>
+            </a>
+            <a class="flex items-center gap-4 px-4 py-3 rounded-xl text-primary font-bold border-r-2 border-primary-container bg-primary/5 transition-all duration-300 group"
+                href="{{DATA:SCREEN:SCREEN_2}}">
+                <span class="material-symbols-outlined transition-transform group-active:scale-95">extension</span>
+                <span>Skills</span>
+            </a>
+            <a class="flex items-center gap-4 px-4 py-3 rounded-xl text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary transition-all duration-300 group"
+                href="{{DATA:SCREEN:SCREEN_5}}">
+                <span class="material-symbols-outlined transition-transform group-active:scale-95">psychology</span>
+                <span>Memory</span>
+            </a>
+            <a class="flex items-center gap-4 px-4 py-3 rounded-xl text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary transition-all duration-300 group"
+                href="{{DATA:SCREEN:SCREEN_8}}">
+                <span class="material-symbols-outlined transition-transform group-active:scale-95">database</span>
+                <span>Knowledge</span>
+            </a>
+            <a class="flex items-center gap-4 px-4 py-3 rounded-xl text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary transition-all duration-300 group"
+                href="{{DATA:SCREEN:SCREEN_4}}">
+                <span class="material-symbols-outlined transition-transform group-active:scale-95">history</span>
+                <span>History</span>
+            </a>
+            <a class="flex items-center gap-4 px-4 py-3 rounded-xl text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary transition-all duration-300 group"
+                href="{{DATA:SCREEN:SCREEN_7}}">
+                <span class="material-symbols-outlined transition-transform group-active:scale-95">settings</span>
+                <span>Settings</span>
+            </a>
+        </nav>
+        <div class="px-6 py-6 border-t border-white/5">
+            <div class="flex items-center gap-3 glass-card p-3 rounded-2xl">
+                <div class="w-10 h-10 rounded-full overflow-hidden border border-primary-container/30">
+                    <img class="w-full h-full object-cover"
+                        data-alt="A professional, hyper-realistic close-up portrait of a sleek, minimalist AI avatar with glowing white circuitry lines subtly visible beneath iridescent glass-like skin. The background is a deep, void-like black with soft cyan highlights. The expression is serene and intelligent, capturing a futuristic humanist aesthetic."
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuAMrsMZ3d-B72xU-1pf9E9_tG3Siye5fGvzz86eKGfrdHpArEMu3GOqRFGZfYZA5LF1GVG5pLQl0g34XrsTkELq6PTUJhp2ajA5OLx06Xl4v7Q7MExOF5cl8vZM9HI81abPimHq33H-95QwdHN3IjDLoWUsLSlr7cdJzFTpaY4NJ9pbRQL_dBk8CYmXeBHAaieztzOmkBplhKzVEPD_A4jCt4bP6-YOdDfUcR166M8WiTdWBiYYOYpB7Q" />
+                </div>
+                <div>
+                    <p class="text-sm font-bold text-primary">Sarthi AI</p>
+                    <p class="text-xs text-on-surface-variant">System Ready</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+    <!-- Top Navigation Bar -->
+    <header
+        class="fixed top-0 right-0 left-0 md:left-64 h-20 px-8 flex justify-between items-center z-30 bg-transparent">
+        <div class="flex items-center gap-6">
+            <div class="relative group">
+                <span
+                    class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary-container transition-colors">search</span>
+                <input
+                    class="bg-surface-container-lowest/80 border border-white/10 rounded-full py-2.5 pl-12 pr-6 w-80 font-body-sm text-body-sm focus:outline-none focus:border-primary-container/50 focus:ring-1 focus:ring-primary-container/50 transition-all backdrop-blur-xl"
+                    placeholder="Search capabilities..." type="text" />
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+                <span class="material-symbols-outlined">notifications</span>
+            </button>
+            <button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+                <span class="material-symbols-outlined">account_circle</span>
+            </button>
+        </div>
+    </header>
+    <!-- Main Content Canvas -->
+    <main class="ml-0 md:ml-64 pt-24 pb-32 px-8 min-h-screen">
+        <!-- Header Section -->
+        <section class="mb-12 max-w-6xl mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-end gap-6 mb-8">
+                <div>
+                    <h2 class="font-display-lg text-display-lg tracking-tight mb-2">Skill Repository</h2>
+                    <p class="text-on-surface-variant max-w-2xl">Deploy and manage modular cognitive functions to expand
+                        Sarthi's core reasoning capabilities.</p>
+                </div>
+                <button
+                    class="flex items-center gap-2 px-6 py-3 bg-primary-container text-on-primary-container font-bold rounded-xl hover:scale-105 active:scale-95 transition-all shadow-[0_0_15px_rgba(0,217,255,0.4)]">
+                    <span class="material-symbols-outlined">add_circle</span>
+                    <span>Get More Skills</span>
+                </button>
+            </div>
+            <!-- Categories Tabs -->
+            <div class="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
+                <button
+                    class="px-6 py-2 rounded-full glass-card border-primary-container/50 text-primary-container text-sm font-bold whitespace-nowrap">All
+                    Modules</button>
+                <button
+                    class="px-6 py-2 rounded-full glass-card text-on-surface-variant text-sm font-medium hover:text-primary transition-colors whitespace-nowrap">Logic
+                    &amp; Reasoning</button>
+                <button
+                    class="px-6 py-2 rounded-full glass-card text-on-surface-variant text-sm font-medium hover:text-primary transition-colors whitespace-nowrap">Media
+                    Processing</button>
+                <button
+                    class="px-6 py-2 rounded-full glass-card text-on-surface-variant text-sm font-medium hover:text-primary transition-colors whitespace-nowrap">System
+                    Interface</button>
+                <button
+                    class="px-6 py-2 rounded-full glass-card text-on-surface-variant text-sm font-medium hover:text-primary transition-colors whitespace-nowrap">Web
+                    Synthesis</button>
+            </div>
+        </section>
+        <!-- Bento Grid Skills Section -->
+        <section class="max-w-6xl mx-auto mb-20">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Skill Card 1: Web Browsing -->
+                <div class="glass-card rounded-3xl p-6 relative overflow-hidden group">
+                    <div class="scanning-line absolute inset-x-0 opacity-0 group-hover:opacity-20"></div>
+                    <div class="flex justify-between items-start mb-6">
+                        <div class="p-3 bg-primary/10 rounded-2xl skill-icon-container">
+                            <span class="material-symbols-outlined text-primary-container text-3xl">public</span>
+                        </div>
+                        <span
+                            class="font-label-caps text-[10px] text-primary-container border border-primary-container/30 px-2 py-0.5 rounded">Active</span>
+                    </div>
+                    <h3 class="font-headline-md text-headline-md mb-2">Web Browsing</h3>
+                    <p class="text-on-surface-variant text-sm mb-6 leading-relaxed">Real-time internet access for data
+                        retrieval, source verification, and live information updates.</p>
+                    <div class="flex items-center gap-4 text-xs font-label-caps text-on-surface-variant">
+                        <span class="flex items-center gap-1"><span
+                                class="material-symbols-outlined text-xs">speed</span> 42ms Latency</span>
+                        <span class="flex items-center gap-1"><span
+                                class="material-symbols-outlined text-xs">bolt</span> V2.4.1</span>
+                    </div>
+                </div>
+                <!-- Skill Card 2: System Control -->
+                <div class="glass-card rounded-3xl p-6 relative overflow-hidden group">
+                    <div class="flex justify-between items-start mb-6">
+                        <div class="p-3 bg-primary/10 rounded-2xl">
+                            <span class="material-symbols-outlined text-primary-container text-3xl">terminal</span>
+                        </div>
+                        <span
+                            class="font-label-caps text-[10px] text-primary-container border border-primary-container/30 px-2 py-0.5 rounded">Active</span>
+                    </div>
+                    <h3 class="font-headline-md text-headline-md mb-2">System Control</h3>
+                    <p class="text-on-surface-variant text-sm mb-6 leading-relaxed">Execute native OS commands, manage
+                        file structures, and automate local desktop workflows.</p>
+                    <div class="flex items-center gap-4 text-xs font-label-caps text-on-surface-variant">
+                        <span class="flex items-center gap-1"><span
+                                class="material-symbols-outlined text-xs">lock</span> Sandbox: On</span>
+                        <span class="flex items-center gap-1"><span
+                                class="material-symbols-outlined text-xs">bolt</span> V1.0.8</span>
+                    </div>
+                </div>
+                <!-- Skill Card 3: Code Synthesis -->
+                <div class="glass-card rounded-3xl p-6 relative overflow-hidden group">
+                    <div class="flex justify-between items-start mb-6">
+                        <div class="p-3 bg-primary/10 rounded-2xl">
+                            <span class="material-symbols-outlined text-primary-container text-3xl">code_blocks</span>
+                        </div>
+                        <span
+                            class="font-label-caps text-[10px] text-primary-container border border-primary-container/30 px-2 py-0.5 rounded">Active</span>
+                    </div>
+                    <h3 class="font-headline-md text-headline-md mb-2">Code Synthesis</h3>
+                    <p class="text-on-surface-variant text-sm mb-6 leading-relaxed">Generate, debug, and refactor
+                        complex multi-language codebases using advanced neural patterns.</p>
+                    <div class="flex items-center gap-4 text-xs font-label-caps text-on-surface-variant">
+                        <span class="flex items-center gap-1"><span
+                                class="material-symbols-outlined text-xs">memory</span> 12B Params</span>
+                        <span class="flex items-center gap-1"><span
+                                class="material-symbols-outlined text-xs">bolt</span> V3.1.0</span>
+                    </div>
+                </div>
+                <!-- Skill Card 4: Media Management -->
+                <div class="glass-card rounded-3xl p-6 relative overflow-hidden group">
+                    <div class="flex justify-between items-start mb-6">
+                        <div class="p-3 bg-primary/10 rounded-2xl">
+                            <span class="material-symbols-outlined text-primary-container text-3xl">perm_media</span>
+                        </div>
+                        <span
+                            class="font-label-caps text-[10px] text-primary-container border border-primary-container/30 px-2 py-0.5 rounded">Active</span>
+                    </div>
+                    <h3 class="font-headline-md text-headline-md mb-2">Media Management</h3>
+                    <p class="text-on-surface-variant text-sm mb-6 leading-relaxed">Organize, transcode, and creatively
+                        manipulate visual and auditory assets across libraries.</p>
+                    <div class="flex items-center gap-4 text-xs font-label-caps text-on-surface-variant">
+                        <span class="flex items-center gap-1"><span
+                                class="material-symbols-outlined text-xs">visibility</span> Vision En.</span>
+                        <span class="flex items-center gap-1"><span
+                                class="material-symbols-outlined text-xs">bolt</span> V1.2.2</span>
+                    </div>
+                </div>
+                <!-- Skill Card 5: Semantic Search -->
+                <div class="glass-card rounded-3xl p-6 relative overflow-hidden group">
+                    <div class="flex justify-between items-start mb-6">
+                        <div class="p-3 bg-primary/10 rounded-2xl">
+                            <span class="material-symbols-outlined text-primary-container text-3xl">grain</span>
+                        </div>
+                        <span
+                            class="font-label-caps text-[10px] text-on-surface-variant border border-white/10 px-2 py-0.5 rounded">Idle</span>
+                    </div>
+                    <h3 class="font-headline-md text-headline-md mb-2">Semantic Search</h3>
+                    <p class="text-on-surface-variant text-sm mb-6 leading-relaxed">Understand the conceptual intent
+                        behind queries rather than just keyword matching.</p>
+                    <div class="flex items-center gap-4 text-xs font-label-caps text-on-surface-variant">
+                        <span class="flex items-center gap-1"><span
+                                class="material-symbols-outlined text-xs">database</span> RAG Ready</span>
+                        <span class="flex items-center gap-1"><span
+                                class="material-symbols-outlined text-xs">bolt</span> V2.0.0</span>
+                    </div>
+                </div>
+                <!-- Skill Card 6: Add Placeholder -->
+                <div
+                    class="border-2 border-dashed border-white/10 rounded-3xl p-6 flex flex-col items-center justify-center text-center group cursor-pointer hover:border-primary-container/50 hover:bg-white/5 transition-all">
+                    <div
+                        class="w-16 h-16 rounded-full flex items-center justify-center bg-white/5 mb-4 group-hover:scale-110 transition-transform">
+                        <span
+                            class="material-symbols-outlined text-3xl text-on-surface-variant group-hover:text-primary-container">add</span>
+                    </div>
+                    <p class="font-bold text-on-surface-variant group-hover:text-primary">Install New Logic</p>
+                    <p class="text-xs text-on-surface-variant/60 mt-1">Visit the Capability Store</p>
+                </div>
+            </div>
+        </section>
+        <!-- Store Discover Section -->
+        <section class="max-w-6xl mx-auto">
+            <div class="flex items-center justify-between mb-8">
+                <h3 class="font-headline-md text-headline-md">Featured in Store</h3>
+                <a class="text-primary text-sm font-medium hover:underline" href="#">View All Store Items</a>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Featured Store Item 1 -->
+                <div class="glass-card rounded-3xl overflow-hidden flex h-48 group">
+                    <div class="w-1/3 relative h-full">
+                        <img class="w-full h-full object-cover"
+                            data-alt="A cinematic, abstract digital artwork representing 'Neural Audio Processing'. It features glowing, pulsating sound waves forming a futuristic brain silhouette in vibrant cyan and electric blue on a deep obsidian background. Low-angle lighting creates dramatic shadows and a sense of immense computational depth."
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsLqI9B4Q7fAqkIbYYyn8R0pWXyGVo-e9kK8jj-VgTag-QakyGBuiEdZ8AOUtPahdq7y3xz-UZJNJx_nFsccE0HZeUKnaYV-qMebaRDErdnW6juy0yHdT6zs5-93UmV5T_d-G_AiLQW_cHgKyN3bb0p2RjOSXJGt9dT81C3SpqsESWgreZ71iKlwT9HaUGptWTCw4SG9CAEs4N6qlquujsOcqfvLNHU7aJMpZ2wiKzpvmamcS3bK9f3Q" />
+                        <div class="absolute inset-0 bg-gradient-to-r from-transparent to-surface-container/60"></div>
+                    </div>
+                    <div class="w-2/3 p-6 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="material-symbols-outlined text-sm text-tertiary-container">stars</span>
+                                <span class="font-label-caps text-[10px] text-tertiary-container">Trending</span>
+                            </div>
+                            <h4 class="font-bold text-lg">Neural Audio Synthesis</h4>
+                            <p class="text-xs text-on-surface-variant line-clamp-2">Generate studio-quality narration
+                                and music from text descriptions.</p>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-mono text-primary-container">FREE</span>
+                            <button
+                                class="px-4 py-1.5 bg-white/10 rounded-lg text-xs font-bold hover:bg-white/20 transition-colors">Preview</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Featured Store Item 2 -->
+                <div class="glass-card rounded-3xl overflow-hidden flex h-48 group">
+                    <div class="w-1/3 relative h-full">
+                        <img class="w-full h-full object-cover"
+                            data-alt="A futuristic, hyper-detailed visual of a 3D glass data cube with glowing, interconnected holographic nodes inside. The lighting is sophisticated and moody, using deep violet and neon cyan hues. The aesthetic is ultra-modern, echoing high-end industrial design for a data-centric AI operating system."
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAnuGsz3AFWznKF_XmHc8FiXo93qiG8WV0X0AkNNS1OMw0_2Tf-baMFoLu0EaJZmfKmL3A66NxmI9Unx-g7btVhUc_BBr_jfH0Clb8OlMx0N0qsPDRqrN3S18kZKL4QaU6RnMbzcxND8RP4NrcRZNRuOedHlag6gmiALieQReF5r2EFbX2leGbAdLEhKaaUbODj2zJRfYNn7dWHszBlcDwBE6WBriCuw38UjyrwhWQp2DS6lJ0VjMD7wA" />
+                        <div class="absolute inset-0 bg-gradient-to-r from-transparent to-surface-container/60"></div>
+                    </div>
+                    <div class="w-2/3 p-6 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="material-symbols-outlined text-sm text-primary-container">shield</span>
+                                <span class="font-label-caps text-[10px] text-primary-container">Enterprise</span>
+                            </div>
+                            <h4 class="font-bold text-lg">Vector Database Sync</h4>
+                            <p class="text-xs text-on-surface-variant line-clamp-2">Securely sync your OS long-term
+                                memory with decentralized vector clouds.</p>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-mono text-primary-container">2.5 SAR</span>
+                            <button
+                                class="px-4 py-1.5 bg-white/10 rounded-lg text-xs font-bold hover:bg-white/20 transition-colors">Acquire</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    <!-- Persistent BottomNavBar (Dock) -->
+    <nav class="flex-1 space-y-2">
+        <!-- Home  -->
+        <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+            href="dashboard.html">
+            <span class="material-symbols-outlined mr-4">home</span>
+            <span class="font-body-lg text-body-lg">Home</span>
+        </a>
+        <!-- Skills (Active)-->
+        <a class="flex items-center px-8 py-4 transition-all duration-300 text-primary font-bold border-r-2 border-primary-container bg-primary/5 active:scale-95 duration-150"
+            href="skills.html">
+            <span class="material-symbols-outlined mr-4">extension</span>
+            <span class="font-body-lg text-body-lg">Skills</span>
+        </a>
+        <!-- Memory -->
+        <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+            href="memory.html">
+            <span class="material-symbols-outlined mr-4">psychology</span>
+            <span class="font-body-lg text-body-lg">Memory</span>
+        </a>
+        <!-- Knowledge -->
+        <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+            href="knowledge.html">
+            <span class="material-symbols-outlined mr-4">database</span>
+            <span class="font-body-lg text-body-lg">Knowledge</span>
+        </a>
+        <!-- History -->
+        <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+            href="history.html">
+            <span class="material-symbols-outlined mr-4">history</span>
+            <span class="font-body-lg text-body-lg">History</span>
+        </a>
+    </nav>
+    <div class="px-8 mt-auto">
+        <a class="flex items-center py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+            href="settings.html">
+            <span class="material-symbols-outlined mr-4">settings</span>
+            <span class="font-body-lg text-body-lg">Settings</span>
+        </a>
+    </div>
+    <script>
+        // Micro-interactions for skill cards
+        document.querySelectorAll('.glass-card').forEach(card => {
+            card.addEventListener('mousedown', () => {
+                card.style.transform = 'scale(0.98)';
+            });
+            card.addEventListener('mouseup', () => {
+                card.style.transform = 'scale(1.01)';
+                setTimeout(() => {
+                    card.style.transform = 'translateY(-2px)';
+                }, 100);
+            });
+        });
+
+        // Search bar hover glow
+        const searchInput = document.querySelector('input[type="text"]');
+        searchInput.addEventListener('focus', () => {
+            searchInput.parentElement.style.boxShadow = '0 0 15px rgba(0, 217, 255, 0.15)';
+        });
+        searchInput.addEventListener('blur', () => {
+            searchInput.parentElement.style.boxShadow = 'none';
+        });
+    </script>
+</body>
+
+</html>

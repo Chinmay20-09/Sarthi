@@ -1,27 +1,62 @@
+from email.mime import text
+
 from models.intent import Intent
+ACTION_WORDS = {
+    "open": "open",
+    "launch": "open",
+    "start": "open",
+    "run": "open",
+
+    "search": "search",
+    "find": "search",
+
+    "play": "play",
+
+    "close": "close",
+}
+
+FILLER_WORDS = {
+    "please",
+    "could",
+    "would",
+    "can",
+    "you",
+    "me",
+    "the",
+    "a",
+    "an",
+    "my",
+    "for",
+    "to",
+    "on",
+    "of",
+}
 
 
 def interpret(text: str) -> Intent:
+    action = "unknown"
+    target_words = []
 
-    text = text.lower()
+    words = text.lower().split()
 
-    words = text.split()
+    for word in words:
 
-    if not words:
-        return Intent(
-            action="unknown",
-            confidence=0.0
-        )
+    # Detect action
+     if word in ACTION_WORDS:
+        action = ACTION_WORDS[word]
+        continue
 
-    action = words[0]
+    # Ignore filler words
+     if word in FILLER_WORDS:
+        continue
 
-    target = ""
+    # Everything else belongs to the target
+     target_words.append(word)
 
-    if len(words) > 1:
-        target = " ".join(words[1:])
+    target = " ".join(target_words)
 
     return Intent(
-        action=action,
-        target=target,
-        confidence=1.0
-    )
+    action=action,
+    target=target,
+    confidence=1.0 if action != "unknown" else 0.0
+)

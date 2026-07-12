@@ -1,0 +1,533 @@
+<html class="dark" lang="en">
+
+<head></head>
+
+<body class="font-body-lg">```html
+
+
+
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Sarthi - Hyperion HUD</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary": "#4d2600",
+                        "on-error": "#690005",
+                        "surface-tint": "#00d9ff",
+                        "tertiary": "#ffddc4",
+                        "tertiary-fixed": "#ffdcc3",
+                        "inverse-surface": "#e5e2e1",
+                        "outline-variant": "#3c494d",
+                        "surface-container-lowest": "#0e0e0e",
+                        "on-tertiary-fixed-variant": "#6e3900",
+                        "secondary-container": "#474746",
+                        "on-tertiary-fixed": "#2f1500",
+                        "secondary-fixed-dim": "#c8c6c5",
+                        "on-secondary-container": "#b7b5b4",
+                        "surface-container-low": "#1c1b1b",
+                        "on-secondary-fixed-variant": "#474746",
+                        "surface": "#131313",
+                        "outline": "#859398",
+                        "tertiary-container": "#ffb87f",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed-dim": "#ffb77d",
+                        "secondary-fixed": "#e5e2e1",
+                        "on-surface-variant": "#bbc9ce",
+                        "on-primary": "#003641",
+                        "inverse-on-surface": "#313030",
+                        "primary-fixed-dim": "#00d9ff",
+                        "surface-dim": "#131313",
+                        "on-primary-fixed": "#001f26",
+                        "surface-bright": "#3a3939",
+                        "inverse-primary": "#00687b",
+                        "on-background": "#e5e2e1",
+                        "on-surface": "#e5e2e1",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-high": "#2a2a2a",
+                        "on-tertiary-container": "#7f4300",
+                        "surface-variant": "#353534",
+                        "secondary": "#c8c6c5",
+                        "on-primary-container": "#005b6c",
+                        "on-primary-fixed-variant": "#004e5d",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "surface-container": "#201f1f",
+                        "error-container": "#93000a",
+                        "primary-fixed": "#aeecff",
+                        "background": "#131313",
+                        "on-secondary": "#313030",
+                        "primary-container": "#00d9ff",
+                        "surface-container-highest": "#353534",
+                        "primary": "#afecff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-max-width": "1440px",
+                        "unit": "4px",
+                        "margin-mobile": "20px",
+                        "margin-desktop": "64px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "label-caps": ["JetBrains Mono"],
+                        "body-sm": ["Inter"],
+                        "headline-md-mobile": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "display-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "500" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-md-mobile": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "data-mono": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            background-color: #090909;
+            color: #e5e2e1;
+            overflow: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(19, 19, 19, 0.4);
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .orb-glow {
+            animation: orb-pulse 4s ease-in-out infinite;
+            box-shadow: 0 0 40px rgba(0, 217, 255, 0.2), inset 0 0 20px rgba(0, 217, 255, 0.4);
+        }
+
+        @keyframes orb-pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 0.8;
+                box-shadow: 0 0 50px rgba(0, 217, 255, 0.3);
+            }
+
+            50% {
+                transform: scale(1.05);
+                opacity: 1;
+                box-shadow: 0 0 100px rgba(0, 217, 255, 0.6);
+            }
+        }
+
+        .scanning-line {
+            height: 2px;
+            background: #00d9ff;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            animation: scanning 3s linear infinite;
+            box-shadow: 0 0 10px #00d9ff;
+            opacity: 0.3;
+        }
+
+        @keyframes scanning {
+            0% {
+                top: 0;
+            }
+
+            100% {
+                top: 100%;
+            }
+        }
+
+        .ring-chart {
+            transform: rotate(-90deg);
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .active-glow {
+            text-shadow: 0 0 8px rgba(0, 217, 255, 0.8);
+        }
+    </style>
+    <!-- Background Shader -->
+
+    <!-- SideNavBar (Shared Component 1) -->
+    <aside
+        class="fixed left-0 top-0 h-full flex flex-col py-margin-desktop h-screen w-64 border-r border-white/10 bg-surface/40 backdrop-blur-[40px] z-50">
+        <div class="px-8 mb-12 flex flex-col items-center">
+            <img alt="Sarthi Logo"
+                class="w-16 h-16 object-contain mb-4 filter drop-shadow-[0_0_12px_rgba(0,217,255,0.6)]"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsKS1C0ncF1QaIs4yZ-Ktfsj0KXYNm2KxZrhGvcsdGKkyViETMsXLB-v4ASdiK0_ajiDBsH2gFwRbNWnIyxXdOCKqFiCNGFPRMDqkuRvBoiIy1b_jJj1oOvNVB6uRNDKeEBjd4aaBI8jUOKo0S7g0Z3awce17Ut2_zlbexWiQG2JDI1ARm_FlshNI1_Hu0BfX24_H6uy86gnR20SGn_k9s4DwJZ8CZavzvDufXwz1WNRLERyqvwvoJiA" />
+            <div class="text-center">
+                <h1
+                    class="font-display-lg text-display-lg tracking-tighter text-primary-container drop-shadow-[0_0_8px_rgba(0,217,255,0.4)] leading-tight">
+                    Sarthi</h1>
+                <p class="font-label-caps text-label-caps text-on-surface-variant opacity-60">V1.0.4 Hyperion</p>
+            </div>
+        </div>
+        <nav class="flex-1 space-y-2">
+            <!-- Home (Active) -->
+            <a class="flex items-center px-8 py-4 transition-all duration-300 text-primary font-bold border-r-2 border-primary-container bg-primary/5 active:scale-95 duration-150"
+                href="dashboard.html">
+                <span class="material-symbols-outlined mr-4">home</span>
+                <span class="font-body-lg text-body-lg">Home</span>
+            </a>
+            <!-- Skills -->
+            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="skills.html">
+                <span class="material-symbols-outlined mr-4">extension</span>
+                <span class="font-body-lg text-body-lg">Skills</span>
+            </a>
+            <!-- Memory -->
+            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="memory.html">
+                <span class="material-symbols-outlined mr-4">psychology</span>
+                <span class="font-body-lg text-body-lg">Memory</span>
+            </a>
+            <!-- Knowledge -->
+            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="knowledge.html">
+                <span class="material-symbols-outlined mr-4">database</span>
+                <span class="font-body-lg text-body-lg">Knowledge</span>
+            </a>
+            <!-- History -->
+            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="history.html">
+                <span class="material-symbols-outlined mr-4">history</span>
+                <span class="font-body-lg text-body-lg">History</span>
+            </a>
+        </nav>
+        <div class="px-8 mt-auto">
+            <a class="flex items-center py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="settings.html">
+                <span class="material-symbols-outlined mr-4">settings</span>
+                <span class="font-body-lg text-body-lg">Settings</span>
+            </a>
+        </div>
+    </aside>
+    <!-- Main Content Grid -->
+    <main class="ml-64 mr-80 min-h-screen flex flex-col items-center justify-center relative z-10 px-gutter pb-40">
+        <!-- Voice Orb Visualization -->
+        <div class="relative flex flex-col items-center group">
+            <div
+                class="w-64 h-64 rounded-full bg-gradient-to-tr from-[#00d9ff]/20 to-[#00d9ff]/5 orb-glow flex items-center justify-center border border-[#00d9ff]/30 relative">
+                <!-- Inner Core -->
+                <div
+                    class="w-40 h-40 rounded-full bg-surface-container-lowest/80 backdrop-blur-md flex items-center justify-center border border-primary-fixed-dim/20">
+                    <span class="material-symbols-outlined text-6xl text-primary-fixed-dim animate-pulse"
+                        style="font-variation-settings: 'FILL' 1;">mic</span>
+                </div>
+                <!-- Orbiting Rings -->
+                <div
+                    class="absolute inset-0 border-2 border-dashed border-primary/10 rounded-full animate-[spin_20s_linear_infinite]">
+                </div>
+            </div>
+            <div class="mt-12 text-center">
+                <h2 id="status" class="font-headline-md text-headline-md text-primary tracking-widest uppercase active-glow">
+                
+                    Ready
+                
+                </h2>
+                <div class="mt-2 flex gap-1 justify-center">
+                    <div class="w-1 h-4 bg-primary rounded-full animate-bounce" style="animation-delay: 0s"></div>
+                    <div class="w-1 h-8 bg-primary rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                    <div class="w-1 h-6 bg-primary rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                    <div class="w-1 h-4 bg-primary rounded-full animate-bounce" style="animation-delay: 0.3s"></div>
+                </div>
+            </div>
+        </div>
+        <!-- Command Timeline -->
+        <div class="mt-24 w-full max-w-2xl space-y-4">
+            <h3 class="font-label-caps text-label-caps text-on-surface-variant opacity-60 mb-4 px-2">COMMAND TIMELINE
+            </h3>
+            <div
+                class="glass-panel p-6 rounded-xl flex items-center justify-between group hover:border-primary/40 transition-all duration-500 overflow-hidden relative">
+                <div class="scanning-line"></div>
+                <div class="flex items-center gap-4">
+                    <div
+                        class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                        <span class="material-symbols-outlined">mic</span>
+                    </div>
+                    <div>
+                        <p class="font-body-lg text-body-lg font-semibold text-on-surface">Open Chrome</p>
+                        <p class="font-body-sm text-body-sm text-on-surface-variant">Last activity: 2 mins ago</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 text-primary-container">
+                    <span class="material-symbols-outlined text-sm">check_circle</span>
+                    <span class="font-label-caps text-label-caps font-bold">EXECUTED</span>
+                </div>
+            </div>
+            <div
+                class="glass-panel p-6 rounded-xl flex items-center justify-between group hover:border-primary/40 transition-all duration-500">
+                <div class="flex items-center gap-4">
+                    <div
+                        class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                        <span class="material-symbols-outlined">mic</span>
+                    </div>
+                    <div>
+                        <p class="font-body-lg text-body-lg font-semibold text-on-surface">Search Python decorators</p>
+                        <p class="font-body-sm text-body-sm text-on-surface-variant">Active processing</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 text-tertiary-container">
+                    <span class="material-symbols-outlined text-sm animate-spin">refresh</span>
+                    <span class="font-label-caps text-label-caps font-bold uppercase">Opened Browser</span>
+                </div>
+            </div>
+        </div>
+    </main>
+    <!-- Right Panel (Today's Overview) -->
+    <aside
+        class="fixed right-0 top-0 h-full w-80 p-8 border-l border-white/10 bg-surface/20 backdrop-blur-2xl z-20 flex flex-col gap-8 overflow-y-auto">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="font-headline-md text-headline-md">Overview</h2>
+            <span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+        </div>
+        <!-- System Usage -->
+        <section class="space-y-4">
+            <h3 class="font-label-caps text-label-caps text-on-surface-variant opacity-60">SYSTEM UTILIZATION</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="glass-panel p-4 rounded-xl flex flex-col items-center">
+                    <svg class="w-16 h-16 ring-chart" viewbox="0 0 36 36">
+                        <path class="text-white/5"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            fill="none" stroke="currentColor" stroke-width="2.5"></path>
+                        <path class="text-primary"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            fill="none" stroke="currentColor" stroke-dasharray="24, 100" stroke-linecap="round"
+                            stroke-width="2.5"></path>
+                    </svg>
+                    <div class="text-center mt-2">
+                        <p class="font-data-mono text-data-mono font-bold text-primary">24%</p>
+                        <p class="font-label-caps text-[10px] opacity-60">CPU</p>
+                    </div>
+                </div>
+                <div class="glass-panel p-4 rounded-xl flex flex-col items-center">
+                    <svg class="w-16 h-16 ring-chart" viewbox="0 0 36 36">
+                        <path class="text-white/5"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            fill="none" stroke="currentColor" stroke-width="2.5"></path>
+                        <path class="text-primary-fixed"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                            fill="none" stroke="currentColor" stroke-dasharray="42, 100" stroke-linecap="round"
+                            stroke-width="2.5"></path>
+                    </svg>
+                    <div class="text-center mt-2">
+                        <p class="font-data-mono text-data-mono font-bold text-primary-fixed">42%</p>
+                        <p class="font-label-caps text-[10px] opacity-60">RAM</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Knowledge Statistics -->
+        <section class="space-y-4">
+            <h3 class="font-label-caps text-label-caps text-on-surface-variant opacity-60">KNOWLEDGE STATS</h3>
+            <div class="space-y-3">
+                <div class="flex items-center justify-between p-3 border-b border-white/5">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-primary text-sm">apps</span>
+                        <span class="font-body-sm text-body-sm">Apps Connected</span>
+                    </div>
+                    <span class="font-data-mono text-primary-container font-bold" id="counter-apps">128</span>
+                </div>
+                <div class="flex items-center justify-between p-3 border-b border-white/5">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-primary text-sm">videogame_asset</span>
+                        <span class="font-body-sm text-body-sm">Active Agents</span>
+                    </div>
+                    <span class="font-data-mono text-primary-container font-bold" id="counter-agents">42</span>
+                </div>
+                <div class="flex items-center justify-between p-3 border-b border-white/5">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-primary text-sm">devices</span>
+                        <span class="font-body-sm text-body-sm">Node Devices</span>
+                    </div>
+                    <span class="font-data-mono text-primary-container font-bold" id="counter-nodes">09</span>
+                </div>
+            </div>
+        </section>
+        <!-- Calendar Widget -->
+        <section class="glass-panel p-5 rounded-xl space-y-4">
+            <div class="flex justify-between items-center border-b border-white/10 pb-3">
+                <span class="font-label-caps text-label-caps text-primary">MONDAY, 12 OCT</span>
+                <span class="material-symbols-outlined text-on-surface-variant text-sm">event</span>
+            </div>
+            <div class="space-y-3">
+                <div class="border-l-2 border-primary-container pl-3 py-1">
+                    <p class="font-body-sm text-body-sm font-semibold">AI Strategy Meeting</p>
+                    <p class="font-label-caps text-[10px] text-on-surface-variant">10:30 AM</p>
+                </div>
+                <div class="border-l-2 border-white/20 pl-3 py-1 opacity-50">
+                    <p class="font-body-sm text-body-sm font-semibold">Deep Learning Sync</p>
+                    <p class="font-label-caps text-[10px] text-on-surface-variant">02:00 PM</p>
+                </div>
+            </div>
+        </section>
+    </aside>
+    <!-- BottomNavBar (Shared Component 3) -->
+    <footer class="fixed bottom-0 left-0 w-full z-50 flex justify-center pb-6">
+        <div
+            class="rounded-full mb-8 mx-auto w-fit border border-white/10 bg-surface-container/60 backdrop-blur-[30px] shadow-[0_0_20px_rgba(0,217,255,0.1)] flex items-center px-4 py-2 gap-4">
+            <!-- Speak (Active) -->
+        <button id="speakButton"
+            class="flex flex-col items-center justify-center text-primary drop-shadow-[0_0_4px_rgba(0,217,255,0.8)] px-6 py-2 rounded-full hover:bg-white/5 transition-all duration-200 active:scale-90">
+        
+            <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1;">
+                mic
+            </span>
+        
+            <span class="font-label-caps text-[10px] uppercase mt-1">
+                Speak
+            </span>
+        
+        </button>
+            <!-- Type -->
+            <button
+                class="flex flex-col items-center justify-center text-on-surface-variant px-6 py-2 rounded-full hover:bg-white/5 transition-all duration-200 active:scale-90">
+                <span class="material-symbols-outlined">keyboard</span>
+                <span class="font-label-caps text-[10px] uppercase mt-1">Type</span>
+            </button>
+            <!-- Refresh -->
+            <button
+                class="flex flex-col items-center justify-center text-on-surface-variant px-6 py-2 rounded-full hover:bg-white/5 transition-all duration-200 active:scale-90">
+                <span class="material-symbols-outlined">refresh</span>
+                <span class="font-label-caps text-[10px] uppercase mt-1">Refresh</span>
+            </button>
+            <!-- Apps -->
+            <button
+                class="flex flex-col items-center justify-center text-on-surface-variant px-6 py-2 rounded-full hover:bg-white/5 transition-all duration-200 active:scale-90">
+                <span class="material-symbols-outlined">apps</span>
+                <span class="font-label-caps text-[10px] uppercase mt-1">Apps</span>
+            </button>
+            <!-- Skills -->
+            <a class="flex flex-col items-center justify-center text-on-surface-variant px-6 py-2 rounded-full hover:bg-white/5 transition-all duration-200 active:scale-90"
+                href="{{DATA:SCREEN:SCREEN_2}}">
+                <span class="material-symbols-outlined">bolt</span>
+                <span class="font-label-caps text-[10px] uppercase mt-1">Skills</span>
+            </a>
+        </div>
+    </footer>
+    <script>
+        // Simple counter animation for the knowledge section
+        function animateCounter(id, start, end, duration) {
+            let current = start;
+            const range = end - start;
+            const increment = end > start ? 1 : -1;
+            const stepTime = Math.abs(Math.floor(duration / range));
+            const obj = document.getElementById(id);
+
+            const timer = setInterval(() => {
+                current += increment;
+                obj.innerText = current.toString().padStart(2, '0');
+                if (current == end) {
+                    clearInterval(timer);
+                }
+            }, stepTime);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            animateCounter('counter-apps', 100, 128, 2000);
+            animateCounter('counter-agents', 10, 42, 2000);
+            animateCounter('counter-nodes', 0, 9, 1500);
+        });
+
+        // Hover effect for side nav
+        const navItems = document.querySelectorAll('aside nav a');
+        navItems.forEach(item => {
+            item.addEventListener('mouseenter', () => {
+                if (!item.classList.contains('text-primary')) {
+                    item.style.paddingLeft = '36px';
+                }
+            });
+            item.addEventListener('mouseleave', () => {
+                if (!item.classList.contains('text-primary')) {
+                    item.style.paddingLeft = '32px';
+                }
+            });
+        });
+    </script>
+    <script>
+
+        const API = "http://127.0.0.1:8000";
+
+        const speakButton = document.getElementById("speakButton");
+        const status = document.getElementById("status");
+
+        speakButton.addEventListener("click", async () => {
+
+            const command = prompt("Enter command");
+
+            if (!command)
+                return;
+
+            status.innerText = "Thinking...";
+
+            try {
+
+                const response = await fetch(API + "/command", {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        text: command
+                    })
+
+                });
+
+                const result = await response.json();
+
+                status.innerText =
+                    "Executed : " + result.action + " " + result.target;
+
+                console.log(result);
+
+            }
+
+            catch (err) {
+
+                console.error(err);
+
+                status.innerText = "Connection Failed";
+
+            }
+
+        });
+
+    </script>
+    ```
+</body>
+
+</html>
