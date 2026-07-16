@@ -1,0 +1,13 @@
+{
+    "id": "voice",
+    "name": "Voice",
+    "description": "Records audio using the microphone and converts it into commands.",
+    "version": "1.0.0",
+    "enabled": true,
+    "icon": "mic",
+    "commands": [
+        "Open Chrome",
+        "Search Python",
+        "Play Spotify"
+    ]
+}

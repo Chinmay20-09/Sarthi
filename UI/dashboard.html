@@ -411,7 +411,7 @@
         
         </button>
             <!-- Type -->
-            <button
+            <button id="typebutton"
                 class="flex flex-col items-center justify-center text-on-surface-variant px-6 py-2 rounded-full hover:bg-white/5 transition-all duration-200 active:scale-90">
                 <span class="material-symbols-outlined">keyboard</span>
                 <span class="font-label-caps text-[10px] uppercase mt-1">Type</span>
@@ -430,7 +430,7 @@
             </button>
             <!-- Skills -->
             <a class="flex flex-col items-center justify-center text-on-surface-variant px-6 py-2 rounded-full hover:bg-white/5 transition-all duration-200 active:scale-90"
-                href="{{DATA:SCREEN:SCREEN_2}}">
+                href="skills.html">
                 <span class="material-symbols-outlined">bolt</span>
                 <span class="font-label-caps text-[10px] uppercase mt-1">Skills</span>
             </a>
@@ -479,10 +479,11 @@
 
         const API = "http://127.0.0.1:8000";
 
+        const typeButton = document.getElementById("typebutton");
         const speakButton = document.getElementById("speakButton");
         const status = document.getElementById("status");
 
-        speakButton.addEventListener("click", async () => {
+        typeButton.addEventListener("click", async () => {
 
             const command = prompt("Enter command");
 
@@ -504,6 +505,36 @@
                     body: JSON.stringify({
                         text: command
                     })
+
+                });
+
+                const result = await response.json();
+
+                status.innerText =
+                    "Executed : " + result.action + " " + result.target;
+
+                console.log(result);
+
+            }
+
+            catch (err) {
+
+                console.error(err);
+
+                status.innerText = "Connection Failed";
+
+            }
+
+        });
+    speakButton.addEventListener("click", async () => {
+
+            status.innerText = "Listening...";
+
+            try {
+
+                const response = await fetch(API + "/listen", {
+
+                    method: "POST"
 
                 });
 

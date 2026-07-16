@@ -1,6 +1,6 @@
 from rapidfuzz import process, fuzz
 
-from brain.vocabulary import VOCABULARY
+from brain.interpreter import ACTION_WORDS
 
 SIMILARITY_THRESHOLD = 75
 
@@ -9,7 +9,7 @@ def fuzzy_match(word: str):
 
     match = process.extractOne(
         word,
-        VOCABULARY,
+        ACTION_WORDS,
         scorer=fuzz.ratio,
     )
 

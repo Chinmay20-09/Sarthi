@@ -194,38 +194,45 @@
                 Sarthi</h1>
             <p class="font-label-caps text-label-caps text-on-surface-variant mt-1">V1.0.4 Hyperion</p>
         </div>
-        <nav class="flex-1 px-4 space-y-2">
-            <a class="flex items-center gap-4 px-4 py-3 rounded-xl text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary transition-all duration-300 group"
-                href="{{DATA:SCREEN:SCREEN_6}}">
-                <span class="material-symbols-outlined transition-transform group-active:scale-95">home</span>
-                <span>Home</span>
+        <nav class="flex-1 space-y-2">
+            <!-- Home (Active) -->
+            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="dashboard.html">
+                <span class="material-symbols-outlined mr-4">home</span>
+                <span class="font-body-lg text-body-lg">Home</span>
             </a>
-            <a class="flex items-center gap-4 px-4 py-3 rounded-xl text-primary font-bold border-r-2 border-primary-container bg-primary/5 transition-all duration-300 group"
-                href="{{DATA:SCREEN:SCREEN_2}}">
-                <span class="material-symbols-outlined transition-transform group-active:scale-95">extension</span>
-                <span>Skills</span>
+            <!-- Skills -->
+            <a class="flex items-center px-8 py-4 transition-all duration-300 text-primary font-bold border-r-2 border-primary-container bg-primary/5 active:scale-95 duration-150"
+                href="skills.html">
+                <span class="material-symbols-outlined mr-4">extension</span>
+                <span class="font-body-lg text-body-lg">Skills</span>
             </a>
-            <a class="flex items-center gap-4 px-4 py-3 rounded-xl text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary transition-all duration-300 group"
-                href="{{DATA:SCREEN:SCREEN_5}}">
-                <span class="material-symbols-outlined transition-transform group-active:scale-95">psychology</span>
-                <span>Memory</span>
+            <!-- Memory -->
+            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="memory.html">
+                <span class="material-symbols-outlined mr-4">psychology</span>
+                <span class="font-body-lg text-body-lg">Memory</span>
             </a>
-            <a class="flex items-center gap-4 px-4 py-3 rounded-xl text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary transition-all duration-300 group"
-                href="{{DATA:SCREEN:SCREEN_8}}">
-                <span class="material-symbols-outlined transition-transform group-active:scale-95">database</span>
-                <span>Knowledge</span>
+            <!-- Knowledge -->
+            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="knowledge.html">
+                <span class="material-symbols-outlined mr-4">database</span>
+                <span class="font-body-lg text-body-lg">Knowledge</span>
             </a>
-            <a class="flex items-center gap-4 px-4 py-3 rounded-xl text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary transition-all duration-300 group"
-                href="{{DATA:SCREEN:SCREEN_4}}">
-                <span class="material-symbols-outlined transition-transform group-active:scale-95">history</span>
-                <span>History</span>
-            </a>
-            <a class="flex items-center gap-4 px-4 py-3 rounded-xl text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary transition-all duration-300 group"
-                href="{{DATA:SCREEN:SCREEN_7}}">
-                <span class="material-symbols-outlined transition-transform group-active:scale-95">settings</span>
-                <span>Settings</span>
+            <!-- History -->
+            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="history.html">
+                <span class="material-symbols-outlined mr-4">history</span>
+                <span class="font-body-lg text-body-lg">History</span>
             </a>
         </nav>
+        <div class="px-8 mt-auto">
+            <a class="flex items-center py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="settings.html">
+                <span class="material-symbols-outlined mr-4">settings</span>
+                <span class="font-body-lg text-body-lg">Settings</span>
+            </a>
+        </div>
         <div class="px-6 py-6 border-t border-white/5">
             <div class="flex items-center gap-3 glass-card p-3 rounded-2xl">
                 <div class="w-10 h-10 rounded-full overflow-hidden border border-primary-container/30">
@@ -281,131 +288,14 @@
             <div class="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
                 <button
                     class="px-6 py-2 rounded-full glass-card border-primary-container/50 text-primary-container text-sm font-bold whitespace-nowrap">All
-                    Modules</button>
-                <button
-                    class="px-6 py-2 rounded-full glass-card text-on-surface-variant text-sm font-medium hover:text-primary transition-colors whitespace-nowrap">Logic
-                    &amp; Reasoning</button>
-                <button
-                    class="px-6 py-2 rounded-full glass-card text-on-surface-variant text-sm font-medium hover:text-primary transition-colors whitespace-nowrap">Media
-                    Processing</button>
-                <button
-                    class="px-6 py-2 rounded-full glass-card text-on-surface-variant text-sm font-medium hover:text-primary transition-colors whitespace-nowrap">System
-                    Interface</button>
-                <button
-                    class="px-6 py-2 rounded-full glass-card text-on-surface-variant text-sm font-medium hover:text-primary transition-colors whitespace-nowrap">Web
-                    Synthesis</button>
+                    Modules
+                </button>
+                
             </div>
         </section>
         <!-- Bento Grid Skills Section -->
         <section class="max-w-6xl mx-auto mb-20">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Skill Card 1: Web Browsing -->
-                <div class="glass-card rounded-3xl p-6 relative overflow-hidden group">
-                    <div class="scanning-line absolute inset-x-0 opacity-0 group-hover:opacity-20"></div>
-                    <div class="flex justify-between items-start mb-6">
-                        <div class="p-3 bg-primary/10 rounded-2xl skill-icon-container">
-                            <span class="material-symbols-outlined text-primary-container text-3xl">public</span>
-                        </div>
-                        <span
-                            class="font-label-caps text-[10px] text-primary-container border border-primary-container/30 px-2 py-0.5 rounded">Active</span>
-                    </div>
-                    <h3 class="font-headline-md text-headline-md mb-2">Web Browsing</h3>
-                    <p class="text-on-surface-variant text-sm mb-6 leading-relaxed">Real-time internet access for data
-                        retrieval, source verification, and live information updates.</p>
-                    <div class="flex items-center gap-4 text-xs font-label-caps text-on-surface-variant">
-                        <span class="flex items-center gap-1"><span
-                                class="material-symbols-outlined text-xs">speed</span> 42ms Latency</span>
-                        <span class="flex items-center gap-1"><span
-                                class="material-symbols-outlined text-xs">bolt</span> V2.4.1</span>
-                    </div>
-                </div>
-                <!-- Skill Card 2: System Control -->
-                <div class="glass-card rounded-3xl p-6 relative overflow-hidden group">
-                    <div class="flex justify-between items-start mb-6">
-                        <div class="p-3 bg-primary/10 rounded-2xl">
-                            <span class="material-symbols-outlined text-primary-container text-3xl">terminal</span>
-                        </div>
-                        <span
-                            class="font-label-caps text-[10px] text-primary-container border border-primary-container/30 px-2 py-0.5 rounded">Active</span>
-                    </div>
-                    <h3 class="font-headline-md text-headline-md mb-2">System Control</h3>
-                    <p class="text-on-surface-variant text-sm mb-6 leading-relaxed">Execute native OS commands, manage
-                        file structures, and automate local desktop workflows.</p>
-                    <div class="flex items-center gap-4 text-xs font-label-caps text-on-surface-variant">
-                        <span class="flex items-center gap-1"><span
-                                class="material-symbols-outlined text-xs">lock</span> Sandbox: On</span>
-                        <span class="flex items-center gap-1"><span
-                                class="material-symbols-outlined text-xs">bolt</span> V1.0.8</span>
-                    </div>
-                </div>
-                <!-- Skill Card 3: Code Synthesis -->
-                <div class="glass-card rounded-3xl p-6 relative overflow-hidden group">
-                    <div class="flex justify-between items-start mb-6">
-                        <div class="p-3 bg-primary/10 rounded-2xl">
-                            <span class="material-symbols-outlined text-primary-container text-3xl">code_blocks</span>
-                        </div>
-                        <span
-                            class="font-label-caps text-[10px] text-primary-container border border-primary-container/30 px-2 py-0.5 rounded">Active</span>
-                    </div>
-                    <h3 class="font-headline-md text-headline-md mb-2">Code Synthesis</h3>
-                    <p class="text-on-surface-variant text-sm mb-6 leading-relaxed">Generate, debug, and refactor
-                        complex multi-language codebases using advanced neural patterns.</p>
-                    <div class="flex items-center gap-4 text-xs font-label-caps text-on-surface-variant">
-                        <span class="flex items-center gap-1"><span
-                                class="material-symbols-outlined text-xs">memory</span> 12B Params</span>
-                        <span class="flex items-center gap-1"><span
-                                class="material-symbols-outlined text-xs">bolt</span> V3.1.0</span>
-                    </div>
-                </div>
-                <!-- Skill Card 4: Media Management -->
-                <div class="glass-card rounded-3xl p-6 relative overflow-hidden group">
-                    <div class="flex justify-between items-start mb-6">
-                        <div class="p-3 bg-primary/10 rounded-2xl">
-                            <span class="material-symbols-outlined text-primary-container text-3xl">perm_media</span>
-                        </div>
-                        <span
-                            class="font-label-caps text-[10px] text-primary-container border border-primary-container/30 px-2 py-0.5 rounded">Active</span>
-                    </div>
-                    <h3 class="font-headline-md text-headline-md mb-2">Media Management</h3>
-                    <p class="text-on-surface-variant text-sm mb-6 leading-relaxed">Organize, transcode, and creatively
-                        manipulate visual and auditory assets across libraries.</p>
-                    <div class="flex items-center gap-4 text-xs font-label-caps text-on-surface-variant">
-                        <span class="flex items-center gap-1"><span
-                                class="material-symbols-outlined text-xs">visibility</span> Vision En.</span>
-                        <span class="flex items-center gap-1"><span
-                                class="material-symbols-outlined text-xs">bolt</span> V1.2.2</span>
-                    </div>
-                </div>
-                <!-- Skill Card 5: Semantic Search -->
-                <div class="glass-card rounded-3xl p-6 relative overflow-hidden group">
-                    <div class="flex justify-between items-start mb-6">
-                        <div class="p-3 bg-primary/10 rounded-2xl">
-                            <span class="material-symbols-outlined text-primary-container text-3xl">grain</span>
-                        </div>
-                        <span
-                            class="font-label-caps text-[10px] text-on-surface-variant border border-white/10 px-2 py-0.5 rounded">Idle</span>
-                    </div>
-                    <h3 class="font-headline-md text-headline-md mb-2">Semantic Search</h3>
-                    <p class="text-on-surface-variant text-sm mb-6 leading-relaxed">Understand the conceptual intent
-                        behind queries rather than just keyword matching.</p>
-                    <div class="flex items-center gap-4 text-xs font-label-caps text-on-surface-variant">
-                        <span class="flex items-center gap-1"><span
-                                class="material-symbols-outlined text-xs">database</span> RAG Ready</span>
-                        <span class="flex items-center gap-1"><span
-                                class="material-symbols-outlined text-xs">bolt</span> V2.0.0</span>
-                    </div>
-                </div>
-                <!-- Skill Card 6: Add Placeholder -->
-                <div
-                    class="border-2 border-dashed border-white/10 rounded-3xl p-6 flex flex-col items-center justify-center text-center group cursor-pointer hover:border-primary-container/50 hover:bg-white/5 transition-all">
-                    <div
-                        class="w-16 h-16 rounded-full flex items-center justify-center bg-white/5 mb-4 group-hover:scale-110 transition-transform">
-                        <span
-                            class="material-symbols-outlined text-3xl text-on-surface-variant group-hover:text-primary-container">add</span>
-                    </div>
-                    <p class="font-bold text-on-surface-variant group-hover:text-primary">Install New Logic</p>
-                    <p class="text-xs text-on-surface-variant/60 mt-1">Visit the Capability Store</p>
-                </div>
+            <div id="skills-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             </div>
         </section>
         <!-- Store Discover Section -->
@@ -521,6 +411,89 @@
                 }, 100);
             });
         });
+        async function loadSkills() {
+
+                const response = await fetch("http://127.0.0.1:8000/skills");
+
+                const skills = await response.json();
+
+                const grid = document.getElementById("skills-grid");
+
+                grid.innerHTML = "";
+
+                skills.forEach(skill => {
+                    const commands = (skill.commands || [])
+                        .map(cmd => `
+        <span class="px-2 py-1 rounded-lg bg-primary/10 text-primary text-xs">
+            ${cmd}
+        </span>
+    `)
+                        .join("");
+
+                    grid.innerHTML += `
+            <div class="glass-card rounded-3xl p-6">
+
+                <div class="flex justify-between items-start mb-6">
+
+                    <div class="p-3 bg-primary/10 rounded-2xl">
+
+                        <span class="material-symbols-outlined text-primary-container text-3xl">
+                            ${skill.icon || "extension"}
+                        </span>
+
+                    </div>
+
+                    <span class="font-label-caps text-[10px] px-2 py-1 rounded
+                        ${skill.enabled
+                            ? "text-primary-container border border-primary-container/30"
+                            : "text-on-surface-variant border border-white/10"}">
+
+                        ${skill.enabled ? "Active" : "Disabled"}
+
+                    </span>
+
+                </div>
+
+                <h3 class="font-headline-md text-headline-md mb-2">
+
+                    ${skill.name}
+
+                </h3>
+
+                <p class="text-on-surface-variant text-sm mb-6">
+
+                    ${skill.description}
+
+                </p>
+
+                <div class="mt-5">
+
+    <p class="text-xs text-on-surface-variant mb-2">
+        Commands
+    </p>
+
+    <div class="flex flex-wrap gap-2">
+
+        ${commands}
+
+    </div>
+
+</div>
+
+<div class="mt-5 text-xs text-on-surface-variant">
+
+    Version ${skill.version}
+
+</div>
+
+            </div>
+        `;
+
+                });
+
+            }
+
+            loadSkills();
 
         // Search bar hover glow
         const searchInput = document.querySelector('input[type="text"]');

@@ -1,0 +1,13 @@
+{
+    "id": "project_tracker",
+    "name": "Project Tracker",
+    "description": "Tracks GitHub and Notion projects.",
+    "version": "1.0.0",
+    "enabled": true,
+    "icon": "folder",
+    "commands": [
+        "How are my projects?",
+        "Show pending issues",
+        "Open Sarthi"
+    ]
+}

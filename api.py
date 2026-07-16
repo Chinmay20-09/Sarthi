@@ -2,11 +2,12 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from knowledge.manager import get_manager
+from skills.speech_recognization.listener import listen
 
 from brain.interpreter import interpret
 from brain.entity_resolver import EntityResolver
 from actions.executor import execute
-
+from skills.manager import load_skills
 app = FastAPI(title="Sarthi API")
 app.add_middleware(
     CORSMiddleware,
@@ -74,3 +75,30 @@ def applications():
         }
         for app in apps
     ]
+@app.get("/skills")
+def get_skills():
+
+    return load_skills()
+@app.post("/listen")
+def listen_command():
+
+    text = listen()
+
+    print(f"🎤 Whisper : {text}")
+
+    intent = interpret(text)
+
+    if intent.target:
+        intent.target = resolver.resolve(intent.target)
+
+    print(f"🧠 Intent : {intent.model_dump()}")
+
+    execute(intent)
+
+    return {
+        "text": text,
+        "action": intent.action,
+        "target": intent.target,
+        "confidence": intent.confidence,
+        "status": "executed"
+    }
