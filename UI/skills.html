@@ -185,68 +185,8 @@
     <!-- Background Shader Canvas -->
     <div class="fixed inset-0 -z-10 pointer-events-none opacity-40">
     </div>
-    <!-- Persistent SideNavBar -->
-    <aside
-        class="fixed left-0 top-0 h-full w-64 border-r border-white/10 bg-surface/40 backdrop-blur-3xl flex flex-col py-margin-desktop z-40 hidden md:flex">
-        <div class="px-8 mb-12">
-            <h1
-                class="font-display-lg text-display-lg tracking-tighter text-primary-container drop-shadow-[0_0_8px_rgba(0,217,255,0.4)]">
-                Sarthi</h1>
-            <p class="font-label-caps text-label-caps text-on-surface-variant mt-1">V1.0.4 Hyperion</p>
-        </div>
-        <nav class="flex-1 space-y-2">
-            <!-- Home (Active) -->
-            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-                href="dashboard.html">
-                <span class="material-symbols-outlined mr-4">home</span>
-                <span class="font-body-lg text-body-lg">Home</span>
-            </a>
-            <!-- Skills -->
-            <a class="flex items-center px-8 py-4 transition-all duration-300 text-primary font-bold border-r-2 border-primary-container bg-primary/5 active:scale-95 duration-150"
-                href="skills.html">
-                <span class="material-symbols-outlined mr-4">extension</span>
-                <span class="font-body-lg text-body-lg">Skills</span>
-            </a>
-            <!-- Memory -->
-            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-                href="memory.html">
-                <span class="material-symbols-outlined mr-4">psychology</span>
-                <span class="font-body-lg text-body-lg">Memory</span>
-            </a>
-            <!-- Knowledge -->
-            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-                href="knowledge.html">
-                <span class="material-symbols-outlined mr-4">database</span>
-                <span class="font-body-lg text-body-lg">Knowledge</span>
-            </a>
-            <!-- History -->
-            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-                href="history.html">
-                <span class="material-symbols-outlined mr-4">history</span>
-                <span class="font-body-lg text-body-lg">History</span>
-            </a>
-        </nav>
-        <div class="px-8 mt-auto">
-            <a class="flex items-center py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-                href="settings.html">
-                <span class="material-symbols-outlined mr-4">settings</span>
-                <span class="font-body-lg text-body-lg">Settings</span>
-            </a>
-        </div>
-        <div class="px-6 py-6 border-t border-white/5">
-            <div class="flex items-center gap-3 glass-card p-3 rounded-2xl">
-                <div class="w-10 h-10 rounded-full overflow-hidden border border-primary-container/30">
-                    <img class="w-full h-full object-cover"
-                        data-alt="A professional, hyper-realistic close-up portrait of a sleek, minimalist AI avatar with glowing white circuitry lines subtly visible beneath iridescent glass-like skin. The background is a deep, void-like black with soft cyan highlights. The expression is serene and intelligent, capturing a futuristic humanist aesthetic."
-                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuAMrsMZ3d-B72xU-1pf9E9_tG3Siye5fGvzz86eKGfrdHpArEMu3GOqRFGZfYZA5LF1GVG5pLQl0g34XrsTkELq6PTUJhp2ajA5OLx06Xl4v7Q7MExOF5cl8vZM9HI81abPimHq33H-95QwdHN3IjDLoWUsLSlr7cdJzFTpaY4NJ9pbRQL_dBk8CYmXeBHAaieztzOmkBplhKzVEPD_A4jCt4bP6-YOdDfUcR166M8WiTdWBiYYOYpB7Q" />
-                </div>
-                <div>
-                    <p class="text-sm font-bold text-primary">Sarthi AI</p>
-                    <p class="text-xs text-on-surface-variant">System Ready</p>
-                </div>
-            </div>
-        </div>
-    </aside>
+    <!-- Sidebar (loaded from shared component) -->
+    <div id="sidebar"></div>
     <!-- Top Navigation Bar -->
     <header
         class="fixed top-0 right-0 left-0 md:left-64 h-20 px-8 flex justify-between items-center z-30 bg-transparent">
@@ -290,7 +230,7 @@
                     class="px-6 py-2 rounded-full glass-card border-primary-container/50 text-primary-container text-sm font-bold whitespace-nowrap">All
                     Modules
                 </button>
-                
+
             </div>
         </section>
         <!-- Bento Grid Skills Section -->
@@ -358,151 +298,71 @@
             </div>
         </section>
     </main>
-    <!-- Persistent BottomNavBar (Dock) -->
-    <nav class="flex-1 space-y-2">
-        <!-- Home  -->
-        <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-            href="dashboard.html">
-            <span class="material-symbols-outlined mr-4">home</span>
-            <span class="font-body-lg text-body-lg">Home</span>
-        </a>
-        <!-- Skills (Active)-->
-        <a class="flex items-center px-8 py-4 transition-all duration-300 text-primary font-bold border-r-2 border-primary-container bg-primary/5 active:scale-95 duration-150"
-            href="skills.html">
-            <span class="material-symbols-outlined mr-4">extension</span>
-            <span class="font-body-lg text-body-lg">Skills</span>
-        </a>
-        <!-- Memory -->
-        <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-            href="memory.html">
-            <span class="material-symbols-outlined mr-4">psychology</span>
-            <span class="font-body-lg text-body-lg">Memory</span>
-        </a>
-        <!-- Knowledge -->
-        <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-            href="knowledge.html">
-            <span class="material-symbols-outlined mr-4">database</span>
-            <span class="font-body-lg text-body-lg">Knowledge</span>
-        </a>
-        <!-- History -->
-        <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-            href="history.html">
-            <span class="material-symbols-outlined mr-4">history</span>
-            <span class="font-body-lg text-body-lg">History</span>
-        </a>
-    </nav>
-    <div class="px-8 mt-auto">
-        <a class="flex items-center py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-            href="settings.html">
-            <span class="material-symbols-outlined mr-4">settings</span>
-            <span class="font-body-lg text-body-lg">Settings</span>
-        </a>
-    </div>
+    <!-- Footer (loaded from shared component) -->
+    <div id="footer"></div>
+    <script src="components.js"></script>
     <script>
-        // Micro-interactions for skill cards
-        document.querySelectorAll('.glass-card').forEach(card => {
-            card.addEventListener('mousedown', () => {
-                card.style.transform = 'scale(0.98)';
-            });
-            card.addEventListener('mouseup', () => {
-                card.style.transform = 'scale(1.01)';
-                setTimeout(() => {
-                    card.style.transform = 'translateY(-2px)';
-                }, 100);
-            });
-        });
-        async function loadSkills() {
-
-                const response = await fetch("http://127.0.0.1:8000/skills");
-
-                const skills = await response.json();
-
-                const grid = document.getElementById("skills-grid");
-
-                grid.innerHTML = "";
-
-                skills.forEach(skill => {
-                    const commands = (skill.commands || [])
-                        .map(cmd => `
-        <span class="px-2 py-1 rounded-lg bg-primary/10 text-primary text-xs">
-            ${cmd}
-        </span>
-    `)
-                        .join("");
-
-                    grid.innerHTML += `
-            <div class="glass-card rounded-3xl p-6">
-
-                <div class="flex justify-between items-start mb-6">
-
-                    <div class="p-3 bg-primary/10 rounded-2xl">
-
-                        <span class="material-symbols-outlined text-primary-container text-3xl">
-                            ${skill.icon || "extension"}
-                        </span>
-
-                    </div>
-
-                    <span class="font-label-caps text-[10px] px-2 py-1 rounded
-                        ${skill.enabled
-                            ? "text-primary-container border border-primary-container/30"
-                            : "text-on-surface-variant border border-white/10"}">
-
-                        ${skill.enabled ? "Active" : "Disabled"}
-
-                    </span>
-
-                </div>
-
-                <h3 class="font-headline-md text-headline-md mb-2">
-
-                    ${skill.name}
-
-                </h3>
-
-                <p class="text-on-surface-variant text-sm mb-6">
-
-                    ${skill.description}
-
-                </p>
-
-                <div class="mt-5">
-
-    <p class="text-xs text-on-surface-variant mb-2">
-        Commands
-    </p>
-
-    <div class="flex flex-wrap gap-2">
-
-        ${commands}
-
-    </div>
-
-</div>
-
-<div class="mt-5 text-xs text-on-surface-variant">
-
-    Version ${skill.version}
-
-</div>
-
-            </div>
-        `;
-
+        function initializePage() {
+            // Micro-interactions for skill cards
+            document.querySelectorAll('.glass-card').forEach(card => {
+                card.addEventListener('mousedown', () => {
+                    card.style.transform = 'scale(0.98)';
                 });
+                card.addEventListener('mouseup', () => {
+                    card.style.transform = 'scale(1.01)';
+                    setTimeout(() => {
+                        card.style.transform = 'translateY(-2px)';
+                    }, 100);
+                });
+            });
 
-            }
-
+            // Load skills from API
             loadSkills();
 
-        // Search bar hover glow
-        const searchInput = document.querySelector('input[type="text"]');
-        searchInput.addEventListener('focus', () => {
-            searchInput.parentElement.style.boxShadow = '0 0 15px rgba(0, 217, 255, 0.15)';
-        });
-        searchInput.addEventListener('blur', () => {
-            searchInput.parentElement.style.boxShadow = 'none';
-        });
+            // Search bar hover glow
+            const searchInput = document.querySelector('input[type="text"]');
+            if (searchInput) {
+                searchInput.addEventListener('focus', () => {
+                    searchInput.parentElement.style.boxShadow = '0 0 15px rgba(0, 217, 255, 0.15)';
+                });
+                searchInput.addEventListener('blur', () => {
+                    searchInput.parentElement.style.boxShadow = 'none';
+                });
+            }
+        }
+
+        async function loadSkills() {
+            try {
+                const response = await fetch("http://127.0.0.1:8000/skills");
+                const skills = await response.json();
+                const grid = document.getElementById("skills-grid");
+                if (!grid) return;
+                grid.innerHTML = "";
+                skills.forEach(skill => {
+                    const commands = (skill.commands || [])
+                        .map(cmd => `<span class="px-2 py-1 rounded-lg bg-primary/10 text-primary text-xs">${cmd}</span>`)
+                        .join("");
+                    grid.innerHTML += `
+            <div class="glass-card rounded-3xl p-6">
+                <div class="flex justify-between items-start mb-6">
+                    <div class="p-3 bg-primary/10 rounded-2xl">
+                        <span class="material-symbols-outlined text-primary-container text-3xl">${skill.icon || "extension"}</span>
+                    </div>
+                    <span class="font-label-caps text-[10px] px-2 py-1 rounded ${skill.enabled ? "text-primary-container border border-primary-container/30" : "text-on-surface-variant border border-white/10"}">${skill.enabled ? "Active" : "Disabled"}</span>
+                </div>
+                <h3 class="font-headline-md text-headline-md mb-2">${skill.name}</h3>
+                <p class="text-on-surface-variant text-sm mb-6">${skill.description}</p>
+                <div class="mt-5">
+                    <p class="text-xs text-on-surface-variant mb-2">Commands</p>
+                    <div class="flex flex-wrap gap-2">${commands}</div>
+                </div>
+                <div class="mt-5 text-xs text-on-surface-variant">Version ${skill.version}</div>
+            </div>`;
+                });
+            } catch (err) {
+                console.warn("Failed to load skills", err);
+            }
+        }
     </script>
 </body>
 

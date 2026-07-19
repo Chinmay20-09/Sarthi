@@ -1,92 +1,70 @@
-import sqlite3
-from pathlib import Path
+"""
+GitHub Project Tracker — Database layer.
 
+Uses the centralized DatabaseManager instead of creating
+its own SQLite connection. Table schemas are defined in
+database/models.py.
 
-DATABASE_PATH = Path("database") / "sarthi.db"
+This ensures no duplicate database connections or scattered
+database files across skills.
+"""
+
+import logging
+from typing import Any
+
+from database.manager import DatabaseManager, get_database
+from database.models import CREATE_GITHUB_PROJECTS, CREATE_GITHUB_SUMMARY
+
+logger = logging.getLogger(__name__)
 
 
 class GitHubDatabase:
-    def __init__(self):
-        DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    """
+    Database access for the GitHub Project Tracker skill.
 
-        self.connection = sqlite3.connect(DATABASE_PATH)
-        self.connection.row_factory = sqlite3.Row
+    Uses DatabaseManager for all queries.
+    Tables are defined in database/models.py.
+    """
 
-        self.create_tables()
+    def __init__(self, db: DatabaseManager | None = None):
+        """
+        Initialize the database.
 
-    def create_tables(self):
-        cursor = self.connection.cursor()
+        Args:
+            db: DatabaseManager instance. If None, uses the global singleton.
+        """
+        self.db = db or get_database()
+        self._initialize_schema()
 
-        cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS github_projects (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                github_id INTEGER UNIQUE,
-                name TEXT UNIQUE,
-                full_name TEXT,
-                description TEXT,
-                private INTEGER,
-                html_url TEXT,
-                default_branch TEXT,
-                language TEXT,
-                created_at TEXT,
-                updated_at TEXT
-            )
-            """
-        )
+    # ------------------------------------------------------------------
+    # Schema
+    # ------------------------------------------------------------------
 
-        cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS github_summary (
-                repository TEXT PRIMARY KEY,
-                stars INTEGER,
-                forks INTEGER,
-                watchers INTEGER,
-                language TEXT,
-                open_issues INTEGER,
-                open_pull_requests INTEGER,
-                last_updated TEXT,
-                latest_commit_sha TEXT,
-                latest_commit_message TEXT,
-                latest_commit_author TEXT,
-                latest_commit_date TEXT,
-                latest_commit_url TEXT
-            )
-            """
-        )
+    def _initialize_schema(self) -> None:
+        """Ensure required tables exist."""
+        self.db.create_table(CREATE_GITHUB_PROJECTS)
+        self.db.create_table(CREATE_GITHUB_SUMMARY)
+        logger.debug("GitHub database schema initialized")
 
-        self.connection.commit()
+    # ------------------------------------------------------------------
+    # Repository CRUD
+    # ------------------------------------------------------------------
 
     def repository_exists(self, repository_name: str) -> bool:
-        cursor = self.connection.cursor()
-
-        cursor.execute(
-            """
-            SELECT 1
-            FROM github_projects
-            WHERE name = ?
-            """,
+        """Check if a repository is already tracked."""
+        result = self.db.fetch_one(
+            "SELECT 1 FROM github_projects WHERE name = ?",
             (repository_name,),
         )
+        return result is not None
 
-        return cursor.fetchone() is not None
-
-    def add_repository(self, repository: dict):
-        cursor = self.connection.cursor()
-
-        cursor.execute(
+    def add_repository(self, repository: dict) -> None:
+        """Add a repository to the tracking database."""
+        self.db.execute(
             """
             INSERT OR IGNORE INTO github_projects (
-                github_id,
-                name,
-                full_name,
-                description,
-                private,
-                html_url,
-                default_branch,
-                language,
-                created_at,
-                updated_at
+                github_id, name, full_name, description, private,
+                html_url, default_branch, language, created_at, updated_at
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
@@ -104,58 +82,37 @@ class GitHubDatabase:
             ),
         )
 
-        self.connection.commit()
+    def get_all_repositories(self) -> list[dict[str, Any]]:
+        """Get all tracked repositories."""
+        return self.db.fetch_all("SELECT * FROM github_projects ORDER BY name")
 
-    def get_all_repositories(self):
-        cursor = self.connection.cursor()
-
-        cursor.execute(
-            """
-            SELECT *
-            FROM github_projects
-            ORDER BY name
-            """
-        )
-
-        return [dict(row) for row in cursor.fetchall()]
-
-    def get_repository(self, repository_name: str):
-        cursor = self.connection.cursor()
-
-        cursor.execute(
-            """
-            SELECT *
-            FROM github_projects
-            WHERE name = ?
-            """,
+    def get_repository(self, repository_name: str) -> dict[str, Any] | None:
+        """Get a single repository by name."""
+        return self.db.fetch_one(
+            "SELECT * FROM github_projects WHERE name = ?",
             (repository_name,),
         )
 
-        row = cursor.fetchone()
+    def delete_repository(self, repository_name: str) -> None:
+        """Delete a repository and its summary."""
+        self.db.execute("DELETE FROM github_projects WHERE name = ?", (repository_name,))
+        self.db.execute("DELETE FROM github_summary WHERE repository = ?", (repository_name,))
 
-        return dict(row) if row else None
+    # ------------------------------------------------------------------
+    # Summary CRUD
+    # ------------------------------------------------------------------
 
-    def update_summary(self, repository_name: str, summary: dict):
+    def update_summary(self, repository_name: str, summary: dict) -> None:
+        """Update or insert a repository summary."""
         commit = summary.get("latest_commit") or {}
 
-        cursor = self.connection.cursor()
-
-        cursor.execute(
+        self.db.execute(
             """
             INSERT OR REPLACE INTO github_summary (
-                repository,
-                stars,
-                forks,
-                watchers,
-                language,
-                open_issues,
-                open_pull_requests,
-                last_updated,
-                latest_commit_sha,
-                latest_commit_message,
-                latest_commit_author,
-                latest_commit_date,
-                latest_commit_url
+                repository, stars, forks, watchers, language,
+                open_issues, open_pull_requests, last_updated,
+                latest_commit_sha, latest_commit_message,
+                latest_commit_author, latest_commit_date, latest_commit_url
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
@@ -176,44 +133,23 @@ class GitHubDatabase:
             ),
         )
 
-        self.connection.commit()
-
-    def get_summary(self, repository_name: str):
-        cursor = self.connection.cursor()
-
-        cursor.execute(
-            """
-            SELECT *
-            FROM github_summary
-            WHERE repository = ?
-            """,
+    def get_summary(self, repository_name: str) -> dict[str, Any] | None:
+        """Get the summary for a repository."""
+        return self.db.fetch_one(
+            "SELECT * FROM github_summary WHERE repository = ?",
             (repository_name,),
         )
 
-        row = cursor.fetchone()
+    # ------------------------------------------------------------------
+    # Legacy
+    # ------------------------------------------------------------------
 
-        return dict(row) if row else None
+    def close(self) -> None:
+        """
+        Close the database connection.
 
-    def delete_repository(self, repository_name: str):
-        cursor = self.connection.cursor()
-
-        cursor.execute(
-            """
-            DELETE FROM github_projects
-            WHERE name = ?
-            """,
-            (repository_name,),
-        )
-
-        cursor.execute(
-            """
-            DELETE FROM github_summary
-            WHERE repository = ?
-            """,
-            (repository_name,),
-        )
-
-        self.connection.commit()
-
-    def close(self):
-        self.connection.close()
+        Note: With DatabaseManager, this is optional.
+        The manager's connection is shared and closed on exit.
+        Kept for backward compatibility.
+        """
+        pass

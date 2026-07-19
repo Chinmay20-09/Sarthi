@@ -1,26 +1,37 @@
 """
 Application Scanner for Sarthi.
 
-Discovers installed applications from standard Windows locations and generates
-a knowledge base of applications with automatic alias generation.
+Discovers installed applications and games from standard Windows locations
+and generates a knowledge base with automatic alias generation.
 
-Supports .exe and .lnk file discovery with smart deduplication.
+Supports:
+- .exe executables from Program Files, Start Menu, PATH
+- .lnk shortcuts via VBScript resolution
+- Game directories (Steam, Epic Games, GOG)
+- Smart deduplication with priority-based merging
+- Automatic alias generation from metadata and display names
+
+ARCHITECTURE:
+    This is the SINGLE scanner for all application discovery.
+    KnowledgeManager calls scan_all() and handles persistence.
+    No other module should scan applications directly.
 """
 
-import json
 import logging
 import os
 import subprocess
 import tempfile
-from datetime import datetime
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Set
-from dataclasses import dataclass, field, asdict
 
 logger = logging.getLogger(__name__)
 
 
-# Application metadata for improving alias generation
+# =============================================================================
+# Configuration
+# =============================================================================
+
+# Well-known application metadata for improved alias generation
 APP_METADATA = {
     "code": {
         "display_name": "Visual Studio Code",
@@ -87,6 +98,7 @@ IGNORED_EXECUTABLES = {
     "helper.exe",
     "service.exe",
 }
+
 IGNORED_FOLDERS = {
     ".venv",
     "venv",
@@ -101,16 +113,30 @@ IGNORED_FOLDERS = {
     "microsoft sdks",
 }
 
+# Game directories to scan
+GAME_DIRECTORIES = [
+    Path("C:\\Program Files (x86)\\Steam\\steamapps\\common"),
+    Path("C:\\Program Files\\Epic Games"),
+    Path("C:\\GOG Games"),
+    Path.home() / "Games",
+]
+
+
+# =============================================================================
+# Data Model
+# =============================================================================
+
 
 @dataclass
 class Application:
-    """Represents a discovered application."""
+    """Represents a discovered application or game."""
 
     name: str
     path: Path
-    aliases: List[str] = field(default_factory=list)
+    aliases: list[str] = field(default_factory=list)
+    category: str = "application"  # "application" or "game"
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
         return {
             "name": self.name,
@@ -119,7 +145,7 @@ class Application:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict) -> "Application":
+    def from_dict(cls, data: dict) -> "Application":
         """Create from dictionary."""
         return cls(
             name=data["name"],
@@ -128,42 +154,33 @@ class Application:
         )
 
 
-def should_ignore(path: Path) -> bool:
-    """
-    Return True if this executable should not be indexed.
-    """
+# =============================================================================
+# Helpers
+# =============================================================================
 
-    # Ignore folders
+
+def should_ignore(path: Path) -> bool:
+    """Return True if this executable should not be indexed."""
     for part in path.parts:
         if part.lower() in IGNORED_FOLDERS:
             return True
 
     filename = path.name.lower()
-
     if filename in IGNORED_EXECUTABLES:
         return True
 
     if any(
         word in filename
-        for word in (
-            "setup",
-            "installer",
-            "update",
-            "uninstall",
-            "helper",
-            "crashpad",
-            "converter",
-        )
+        for word in ("setup", "installer", "update", "uninstall", "helper", "crashpad", "converter")
     ):
         return True
 
     return False
 
 
-def resolve_shortcut(lnk_path: Path) -> Optional[Path]:
-    """Resolve a .lnk shortcut to its target executable."""
+def resolve_shortcut(lnk_path: Path) -> Path | None:
+    """Resolve a .lnk shortcut to its target executable using VBScript."""
     try:
-        # Use Windows Script Host to resolve shortcut
         script = f"""
         Dim shell
         Set shell = CreateObject("WScript.Shell")
@@ -197,10 +214,9 @@ def resolve_shortcut(lnk_path: Path) -> Optional[Path]:
     return None
 
 
-def get_display_name_from_exe(exe_path: Path) -> Optional[str]:
+def get_display_name_from_exe(exe_path: Path) -> str | None:
     """Extract display name from executable file properties (Windows)."""
     try:
-        # Try to get file description from Windows properties
         from win32api import GetFileVersionInfo
 
         try:
@@ -209,7 +225,6 @@ def get_display_name_from_exe(exe_path: Path) -> Optional[str]:
                 return info["FileDescription"]
         except Exception:
             pass
-
     except ImportError:
         logger.debug("pywin32 not available for extracting display names")
     except Exception as e:
@@ -218,62 +233,57 @@ def get_display_name_from_exe(exe_path: Path) -> Optional[str]:
     return None
 
 
-def generate_aliases(exe_name: str, display_name: Optional[str] = None) -> List[str]:
-    """Generate aliases for an application."""
-    aliases: Set[str] = set()
-
-    # Check if we have metadata for this executable
+def generate_aliases(exe_name: str, display_name: str | None = None) -> list[str]:
+    """Generate intelligent aliases for an application."""
+    aliases: set[str] = set()
     exe_base = exe_name.lower().replace(".exe", "")
 
+    # Check metadata for well-known apps
     if exe_base in APP_METADATA:
         metadata = APP_METADATA[exe_base]
         if display_name is None:
             display_name = metadata.get("display_name")
         aliases.update(metadata.get("aliases", []))
 
-    # Add the base executable name
+    # Add base executable name
     if exe_name.lower() != "explorer.exe":
         aliases.add(exe_base)
 
-    # Try to generate from display name
+    # Generate from display name
     if display_name:
         display_lower = display_name.lower()
         aliases.add(display_lower)
 
-        # Generate variations from display name
         parts = display_lower.split()
-
         if len(parts) > 1:
-            # Add full phrase
             aliases.add(display_lower)
-
-            # Add first word
             aliases.add(parts[0])
 
-            # Add common abbreviations
-            if "visual studio" in display_lower:
-                if "code" in display_lower:
-                    aliases.add("vscode")
-                    aliases.add("vs code")
+            if "visual studio" in display_lower and "code" in display_lower:
+                aliases.add("vscode")
+                aliases.add("vs code")
 
-        # Handle special cases
         if "chrome" in display_lower:
             aliases.add("chrome")
         if "firefox" in display_lower:
             aliases.add("firefox")
-        if "notepad++" in display_lower or "notepad ++" in display_lower:
+        if "notepad++" in display_lower or "notepad +" in display_lower:
             aliases.add("notepad++")
             aliases.add("notepad plus plus")
 
     return sorted(list(aliases))
 
 
+# =============================================================================
+# Scanners
+# =============================================================================
+
+
 def scan_directory(
     directory: Path, max_depth: int = 1, current_depth: int = 0
-) -> List[Application]:
+) -> list[Application]:
     """Scan a directory for executables (limited depth)."""
-    applications: List[Application] = []
-    
+    applications: list[Application] = []
 
     if not directory.exists() or not directory.is_dir():
         return applications
@@ -281,7 +291,6 @@ def scan_directory(
     try:
         for item in directory.iterdir():
             try:
-                # Stop at max depth
                 if current_depth >= max_depth:
                     continue
 
@@ -290,11 +299,13 @@ def scan_directory(
                         if should_ignore(item):
                             continue
 
+                        # Skip system executables
+                        if "windows\\system32" in str(item).lower():
+                            continue
+
                         exe_name = item.stem
                         display_name = get_display_name_from_exe(item)
                         aliases = generate_aliases(item.name, display_name)
-                        if "windows\\system32" in str(item).lower():
-                         continue
 
                         app = Application(
                             name=display_name or exe_name,
@@ -321,10 +332,7 @@ def scan_directory(
                             applications.append(app)
 
                 elif item.is_dir():
-                    # Recursively scan subdirectories
-                    applications.extend(
-                        scan_directory(item, max_depth, current_depth + 1)
-                    )
+                    applications.extend(scan_directory(item, max_depth, current_depth + 1))
 
             except (PermissionError, OSError) as e:
                 logger.debug(f"Skipped {item}: {e}")
@@ -335,23 +343,81 @@ def scan_directory(
     return applications
 
 
-def scan_program_files() -> List[Application]:
+def scan_game_directories() -> list[Application]:
+    """Scan configured game directories for installed games."""
+    games = []
+    existing_paths: set[str] = set()
+
+    for root in GAME_DIRECTORIES:
+        if not root.exists():
+            continue
+
+        logger.debug(f"Scanning games in: {root}")
+
+        for game_folder in root.iterdir():
+            if not game_folder.is_dir():
+                continue
+
+            exe_path = None
+            for exe in game_folder.rglob("*.exe"):
+                name = exe.stem.lower()
+                if any(
+                    word in name
+                    for word in (
+                        "setup",
+                        "uninstall",
+                        "updater",
+                        "update",
+                        "helper",
+                        "crashpad",
+                        "service",
+                        "launcherhelper",
+                        "redist",
+                        "vc_redist",
+                        "dxsetup",
+                    )
+                ):
+                    continue
+                exe_path = exe.resolve()
+                break
+
+            if exe_path is None:
+                continue
+
+            target_path = str(exe_path).lower()
+            if target_path in existing_paths:
+                continue
+
+            existing_paths.add(target_path)
+
+            games.append(
+                Application(
+                    name=game_folder.name,
+                    path=exe_path,
+                    category="game",
+                )
+            )
+
+    logger.info(f"Found {len(games)} games in game directories")
+    return games
+
+
+def scan_program_files() -> list[Application]:
     """Scan C:\\Program Files."""
     logger.info("Scanning C:\\Program Files...")
     return scan_directory(Path("C:\\Program Files"), max_depth=2)
 
 
-def scan_program_files_x86() -> List[Application]:
+def scan_program_files_x86() -> list[Application]:
     """Scan C:\\Program Files (x86)."""
     logger.info("Scanning C:\\Program Files (x86)...")
     return scan_directory(Path("C:\\Program Files (x86)"), max_depth=2)
 
 
-def scan_local_programs() -> List[Application]:
+def scan_local_programs() -> list[Application]:
     """Scan %LOCALAPPDATA%\\Programs."""
     logger.info("Scanning %LOCALAPPDATA%\\Programs...")
     local_appdata = Path(os.getenv("LOCALAPPDATA", ""))
-
     if not local_appdata.exists():
         return []
 
@@ -362,10 +428,10 @@ def scan_local_programs() -> List[Application]:
     return scan_directory(programs_dir, max_depth=2)
 
 
-def scan_start_menu() -> List[Application]:
+def scan_start_menu() -> list[Application]:
     """Scan Start Menu shortcuts."""
     logger.info("Scanning Start Menu...")
-    applications: List[Application] = []
+    applications: list[Application] = []
 
     # Current user Start Menu
     appdata = Path(os.getenv("APPDATA", ""))
@@ -384,10 +450,10 @@ def scan_start_menu() -> List[Application]:
     return applications
 
 
-def scan_path() -> List[Application]:
+def scan_path() -> list[Application]:
     """Scan executables in PATH environment variable."""
     logger.info("Scanning PATH...")
-    applications: List[Application] = []
+    applications: list[Application] = []
     path_env = os.getenv("PATH", "")
 
     for path_str in path_env.split(os.pathsep):
@@ -417,9 +483,29 @@ def scan_path() -> List[Application]:
     return applications
 
 
+# =============================================================================
+# Merging
+# =============================================================================
+
+
+def _get_priority(path_str: str) -> int:
+    """Determine merge priority based on path (lower = higher priority)."""
+    upper = path_str.upper()
+    if "PROGRAM FILES (X86)" in upper:
+        return 1
+    elif "PROGRAM FILES" in upper:
+        return 0
+    elif "LOCALAPPDATA" in upper:
+        return 2
+    elif "START MENU" in upper:
+        return 3
+    else:
+        return 4
+
+
 def merge_results(
-    all_applications: List[List[Application]],
-) -> Dict[str, Application]:
+    all_applications: list[list[Application]],
+) -> dict[str, Application]:
     """
     Merge results from different scan locations.
 
@@ -430,120 +516,69 @@ def merge_results(
     4. Start Menu
     5. PATH
     """
-    registry: Dict[str, Application] = {}
+    registry: dict[str, Application] = {}
 
     for app_list in all_applications:
         for app in app_list:
             app_key = app.name.lower()
+            priority = _get_priority(str(app.path))
 
-            # Determine priority based on path
-            priority = 999
-            path_str = str(app.path).upper()
-
-            if "PROGRAM FILES (X86)" in path_str:
-                priority = 1
-            elif "PROGRAM FILES" in path_str:
-                priority = 0
-            elif "LOCALAPPDATA" in path_str:
-                priority = 2
-            elif "START MENU" in path_str:
-                priority = 3
-            else:
-                priority = 4
-
-            # Keep if not seen before or if this version has higher priority
-            if app_key not in registry:
+            if app_key not in registry or priority < _get_priority(str(registry[app_key].path)):
                 registry[app_key] = app
-            else:
-                existing = registry[app_key]
-                existing_priority = 999
-                existing_path = str(existing.path).upper()
-
-                if "PROGRAM FILES (X86)" in existing_path:
-                    existing_priority = 1
-                elif "PROGRAM FILES" in existing_path:
-                    existing_priority = 0
-                elif "LOCALAPPDATA" in existing_path:
-                    existing_priority = 2
-                elif "START MENU" in existing_path:
-                    existing_priority = 3
-                else:
-                    existing_priority = 4
-
-                if priority < existing_priority:
-                    registry[app_key] = app
 
     return registry
 
 
-def save_registry(
-    registry: Dict[str, Application], output_path: Path
-) -> None:
-    """Save registry to JSON file."""
-    data = {
-        "version": 1,
-        "last_scan": datetime.now().isoformat(),
-        "applications": sorted(
-            [app.to_dict() for app in registry.values()],
-            key=lambda x: x["name"].lower(),
-        ),
-    }
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-
-    logger.info(f"Saved {len(registry)} applications to {output_path}")
+# =============================================================================
+# Public API
+# =============================================================================
 
 
-def scan_all() -> List[Dict]:
+def scan_all() -> list[dict]:
     """
-    Execute full application discovery pipeline.
+    Execute full application and game discovery pipeline.
+
+    Discovers:
+    - Applications from Start Menu
+    - Applications from LocalAppData Programs
+    - Applications from Program Files
+    - Applications from Program Files (x86)
+    - Games from recognized game directories
 
     Returns:
         List of application dictionaries (not saved to file).
-        KnowledgeManager decides how to save.
+        KnowledgeManager decides how to persist.
 
     Note:
-        This function NO LONGER writes JSON.
-        It only discovers and returns results.
+        Does NOT write JSON. Returns data for KnowledgeManager to handle.
     """
     logger.info("Starting application scan...")
 
-    # Scan all locations
     results = [
-        
-     scan_start_menu(),
-     scan_local_programs(),
-     scan_program_files(),
-     scan_program_files_x86(),
-
+        scan_start_menu(),
+        scan_local_programs(),
+        scan_program_files(),
+        scan_program_files_x86(),
+        scan_game_directories(),
     ]
 
-    # Merge results
     registry = merge_results(results)
 
-    logger.info(f"Discovered {len(registry)} unique applications")
+    logger.info(f"Discovered {len(registry)} unique applications and games")
 
-    # Convert to list of dicts for manager
-    applications = [app.to_dict() for app in registry.values()]
-
-    return applications
+    return [app.to_dict() for app in registry.values()]
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    )
+    from utils.logger import setup_logging
+
+    setup_logging(level="INFO")
 
     from knowledge.manager import get_manager
 
     manager = get_manager()
 
-    # Scan and save through manager
     if manager.refresh_applications():
-        print(f"\nRefreshed applications successfully")
+        print("\nRefreshed applications successfully")
     else:
-        print(f"\nFailed to refresh applications")
+        print("\nFailed to refresh applications")

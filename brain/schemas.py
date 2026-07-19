@@ -1,13 +1,14 @@
-from dataclasses import dataclass, field
+"""
+Legacy data models for Sarthi's Brain.
 
+Backward-compatibility re-export:
+    Intent — Imported from brain/intent.py (the canonical location)
 
-@dataclass
-class Command:
+NEW CODE SHOULD IMPORT FROM:
+    from brain.intent import Intent
+"""
 
-    action: str
+from brain.intent import Intent as _Intent
 
-    target: str
-
-    parameters: dict = field(default_factory=dict)
-
-    confidence: float = 1.0
+# Re-export Intent from its canonical location
+Intent = _Intent

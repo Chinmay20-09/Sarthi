@@ -2,7 +2,6 @@
 
 from skills.project_tracker.main import GitHubProjectSkill
 
-
 USERNAME = "Chinmay20-09"
 
 # Leave as None for public repositories.

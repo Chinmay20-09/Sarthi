@@ -1,13 +1,29 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
-from fastapi.middleware.cors import CORSMiddleware
-from knowledge.manager import get_manager
-from skills.speech_recognization.listener import listen
+"""
+Sarthi API — FastAPI server.
 
-from brain.interpreter import interpret
-from brain.entity_resolver import EntityResolver
-from actions.executor import execute
+Endpoints:
+    GET  /             — Health check
+    POST /command      — Process a text command
+    POST /listen       — Process a voice command
+    GET  /knowledge    — Knowledge base statistics
+    GET  /applications — List all applications
+    GET  /skills       — List all installed skills
+"""
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+from brain.engine import BrainEngine
+from knowledge.manager import get_manager
 from skills.manager import load_skills
+from skills.speech_recognition.listener import listen
+from utils.logger import get_logger, setup_logging
+
+setup_logging()
+
+logger = get_logger(__name__)
+
 app = FastAPI(title="Sarthi API")
 app.add_middleware(
     CORSMiddleware,
@@ -17,88 +33,74 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-resolver = EntityResolver()
+engine = BrainEngine()
 knowledge = get_manager()
 
 
 class CommandRequest(BaseModel):
+    """Request model for POST /command."""
+
     text: str
 
 
 @app.get("/")
 def home():
-    return {
-        "assistant": "Sarthi",
-        "status": "Running"
-    }
+    """Health check endpoint."""
+    return {"assistant": "Sarthi", "status": "Running"}
 
 
 @app.post("/command")
 def command(request: CommandRequest):
+    """Process a text command through the brain pipeline."""
+    response = engine.process(request.text)
+    result = response.to_api_dict()
+    result["text"] = request.text
+    return result
 
-    intent = interpret(request.text)
 
-    if intent.target:
-        intent.target = resolver.resolve(intent.target)
-
-    execute(intent)
-
-    return {
-        "action": intent.action,
-        "target": intent.target,
-        "confidence": intent.confidence,
-        "status": "executed"
-    }
 @app.get("/knowledge")
 def knowledge_stats():
+    """Get knowledge base statistics."""
+    applications = knowledge.load_applications()
 
-    applications = knowledge.load_applications() 
-
-    games = [
-    e for e in applications
-    if e["category"] == "game"
-    ]
-
-    apps = [
-    e for e in applications
-    if e["category"] == "application"
-    ]
-@app.get("/applications")
-def applications():
-
-    apps = knowledge.load_applications()
-
-    return [
-        {
-            "name": app["name"],
-            "category": app["category"]
-        }
-        for app in apps
-    ]
-@app.get("/skills")
-def get_skills():
-
-    return load_skills()
-@app.post("/listen")
-def listen_command():
-
-    text = listen()
-
-    print(f"🎤 Whisper : {text}")
-
-    intent = interpret(text)
-
-    if intent.target:
-        intent.target = resolver.resolve(intent.target)
-
-    print(f"🧠 Intent : {intent.model_dump()}")
-
-    execute(intent)
+    games = [app for app in applications if app.get("category") == "game"]
+    apps = [app for app in applications if app.get("category") != "game"]
 
     return {
-        "text": text,
-        "action": intent.action,
-        "target": intent.target,
-        "confidence": intent.confidence,
-        "status": "executed"
+        "total": len(applications),
+        "applications": len(apps),
+        "games": len(games),
+        "last_scan": None,
     }
+
+
+@app.get("/applications")
+def applications():
+    apps = knowledge.load_applications()
+
+    return [{"name": app["name"], "category": app["category"]} for app in apps]
+
+
+@app.get("/skills")
+def get_skills():
+    """List all installed skills."""
+    return load_skills()
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("api:app", host="127.0.0.1", port=8000, reload=True)
+
+
+@app.post("/listen")
+def listen_command():
+    """Record audio, transcribe, and process through the brain pipeline."""
+    text = listen()
+    logger.info(f"🎤 Whisper : {text}")
+
+    response = engine.process(text)
+
+    result = response.to_api_dict()
+    result["text"] = text
+    return result

@@ -1,9 +1,8 @@
-from actions.browser import open_site
 from actions.apps import open_app
+from actions.browser import open_site
 
 
 def execute(intent):
-
     if intent.action != "open":
         print("Unknown action")
         return

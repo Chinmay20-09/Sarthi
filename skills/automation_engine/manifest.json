@@ -1,0 +1,13 @@
+{
+    "id": "automation_engine",
+    "name": "Automation Engine",
+    "description": "Generates assistant configurations from skill manifests. Automates code generation and project analysis.",
+    "version": "1.0.0",
+    "enabled": true,
+    "icon": "automation",
+    "commands": [
+        "Generate assistant for project_tracker",
+        "Analyze skill capabilities",
+        "Build assistant.json from manifest"
+    ]
+}

@@ -8,7 +8,6 @@ model = WhisperModel(
 
 
 def transcribe(audio_path):
-
     segments, info = model.transcribe(
         audio_path,
         language="en",

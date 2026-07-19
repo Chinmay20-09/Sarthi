@@ -216,55 +216,8 @@
 </head>
 
 <body class="font-body-lg text-body-lg selection:bg-primary-container selection:text-on-primary-container">
-    <!-- Persistent SideNavBar -->
-    <aside
-        class="fixed left-0 top-0 h-full flex flex-col py-margin-desktop bg-surface/40 backdrop-blur-[40px] border-r border-white/10 h-screen w-64 z-50">
-        <div class="px-8 mb-12">
-            <h1
-                class="font-display-lg text-display-lg tracking-tighter text-primary-container drop-shadow-[0_0_8px_rgba(0,217,255,0.4)]">
-                Sarthi</h1>
-            <p class="font-label-caps text-label-caps text-on-surface-variant/60 mt-2">V1.0.4 Hyperion</p>
-        </div>
-        <nav class="flex-1 space-y-2">
-            <!-- Home -->
-            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-                href="dashboard.html">
-                <span class="material-symbols-outlined mr-4">home</span>
-                <span class="font-body-lg text-body-lg">Home</span>
-            </a>
-            <!-- Skills -->
-            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-                href="skills.html">
-                <span class="material-symbols-outlined mr-4">extension</span>
-                <span class="font-body-lg text-body-lg">Skills</span>
-            </a>
-            <!-- Memory -->
-            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-                href="memory.html">
-                <span class="material-symbols-outlined mr-4">psychology</span>
-                <span class="font-body-lg text-body-lg">Memory</span>
-            </a>
-            <!-- Knowledge -->
-            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-                href="knowledge.html">
-                <span class="material-symbols-outlined mr-4">database</span>
-                <span class="font-body-lg text-body-lg">Knowledge</span>
-            </a>
-            <!-- History -->
-            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-                href="history.html">
-                <span class="material-symbols-outlined mr-4">history</span>
-                <span class="font-body-lg text-body-lg">History</span>
-            </a>
-        </nav>
-        <div class="px-8 mt-auto">
-            <a class="flex items-center py-4 transition-all duration-300 text-primary font-bold border-r-2 border-primary-container bg-primary/5 active:scale-95 duration-150"
-                href="settings.html">
-                <span class="material-symbols-outlined mr-4">settings</span>
-                <span class="font-body-lg text-body-lg">Settings</span>
-            </a>
-        </div>
-    </aside>
+    <!-- Sidebar (loaded from shared component) -->
+    <div id="sidebar"></div>
     <!-- Main Content Canvas -->
     <main class="ml-64 min-h-screen pb-32">
         <!-- TopAppBar -->
@@ -548,65 +501,40 @@
             </section>
         </div>
     </main>
-    <!-- BottomNavBar (Dock) -->
-    <nav class="fixed bottom-0 left-0 w-full z-50 flex justify-center pb-6">
-        <div
-            class="flex items-center gap-2 rounded-full mb-8 mx-auto w-fit border border-white/10 bg-surface-container/60 backdrop-blur-[30px] shadow-[0_0_20px_rgba(0,217,255,0.1)] px-6 py-3">
-            <button
-                class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 px-4 py-2 rounded-full transition-all active:scale-90 duration-100 group">
-                <span class="material-symbols-outlined group-hover:text-primary">mic</span>
-                <span class="font-label-caps text-label-caps mt-1">Speak</span>
-            </button>
-            <button
-                class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 px-4 py-2 rounded-full transition-all active:scale-90 duration-100 group">
-                <span class="material-symbols-outlined group-hover:text-primary">keyboard</span>
-                <span class="font-label-caps text-label-caps mt-1">Type</span>
-            </button>
-            <button
-                class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 px-4 py-2 rounded-full transition-all active:scale-90 duration-100 group">
-                <span class="material-symbols-outlined group-hover:text-primary">refresh</span>
-                <span class="font-label-caps text-label-caps mt-1">Refresh</span>
-            </button>
-            <button
-                class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 px-4 py-2 rounded-full transition-all active:scale-90 duration-100 group">
-                <span class="material-symbols-outlined group-hover:text-primary">apps</span>
-                <span class="font-label-caps text-label-caps mt-1">Apps</span>
-            </button>
-            <a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 px-4 py-2 rounded-full transition-all active:scale-90 duration-100 group"
-                href="{{DATA:SCREEN:SCREEN_2}}">
-                <span class="material-symbols-outlined group-hover:text-primary">bolt</span>
-                <span class="font-label-caps text-label-caps mt-1">Skills</span>
-            </a>
-        </div>
-    </nav>
-    <!-- Interactive Layer for Sliders & Toggles -->
+    <!-- Footer (loaded from shared component) -->
+    <div id="footer"></div>
+    <script src="components.js"></script>
     <script>
-        document.querySelectorAll('.nothing-slider').forEach(slider => {
-            slider.addEventListener('input', (e) => {
-                const valueDisplay = e.target.closest('.space-y-4')?.querySelector('.font-data-mono');
-                if (valueDisplay) {
-                    if (e.target.value > 80) valueDisplay.textContent = 'HIGH';
-                    else if (e.target.value < 20) valueDisplay.textContent = 'LOW';
-                    else valueDisplay.textContent = e.target.value + (e.target.max == 100 ? '%' : 'PX');
-                }
+        function initializePage() {
+            // Sliders
+            document.querySelectorAll('.nothing-slider').forEach(slider => {
+                slider.addEventListener('input', (e) => {
+                    const container = e.target.closest('.space-y-4');
+                    if (!container) return;
+                    const valueDisplay = container.querySelector('.font-data-mono');
+                    if (valueDisplay) {
+                        if (e.target.value > 80) valueDisplay.textContent = 'HIGH';
+                        else if (e.target.value < 20) valueDisplay.textContent = 'LOW';
+                        else valueDisplay.textContent = e.target.value + (e.target.max == 100 ? '%' : 'PX');
+                    }
+                });
             });
-        });
 
-        // Atmospheric mouse glow effect
-        document.addEventListener('mousemove', (e) => {
-            const panels = document.querySelectorAll('.glass-panel');
-            panels.forEach(panel => {
-                const rect = panel.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-
-                if (x > 0 && x < rect.width && y > 0 && y < rect.height) {
-                    panel.style.boxShadow = `inset ${x / 10}px ${y / 10}px 30px rgba(0, 217, 255, 0.03)`;
-                } else {
-                    panel.style.boxShadow = 'none';
-                }
+            // Mouse glow effect
+            document.addEventListener('mousemove', (e) => {
+                const panels = document.querySelectorAll('.glass-panel');
+                panels.forEach(panel => {
+                    const rect = panel.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    if (x > 0 && x < rect.width && y > 0 && y < rect.height) {
+                        panel.style.boxShadow = `inset ${x / 10}px ${y / 10}px 30px rgba(0, 217, 255, 0.03)`;
+                    } else {
+                        panel.style.boxShadow = 'none';
+                    }
+                });
             });
-        });
+        }
     </script>
 </body>
 

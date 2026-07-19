@@ -186,56 +186,8 @@
             font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
         }
     </style>
-    <!-- Sidebar Navigation -->
-    <aside
-        class="fixed left-0 top-0 h-full flex flex-col py-margin-desktop bg-surface/40 backdrop-blur-3xl h-screen w-64 border-r border-white/10 z-50">
-        <div class="px-6 mb-12">
-            <h1
-                class="font-display-lg text-display-lg tracking-tighter text-primary-container drop-shadow-[0_0_8px_rgba(0,217,255,0.4)] mb-1">
-                Sarthi</h1>
-            <p class="font-data-mono text-data-mono text-on-surface-variant/60 uppercase tracking-widest">V1.0.4
-                Hyperion</p>
-        </div>
-        <nav class="flex-1 space-y-2">
-            <!-- Home -->
-            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-                href="dashboard.html">
-                <span class="material-symbols-outlined mr-4">home</span>
-                <span class="font-body-lg text-body-lg">Home</span>
-            </a>
-            <!-- Skills -->
-            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-                href="skills.html">
-                <span class="material-symbols-outlined mr-4">extension</span>
-                <span class="font-body-lg text-body-lg">Skills</span>
-            </a>
-            <!-- Memory -->
-            <a class="flex items-center px-8 py-4 transition-all duration-300 text-primary font-bold border-r-2 border-primary-container bg-primary/5 active:scale-95 duration-150"
-                href="memory.html">
-                <span class="material-symbols-outlined mr-4">psychology</span>
-                <span class="font-body-lg text-body-lg">Memory</span>
-            </a>
-            <!-- Knowledge (Active)-->
-            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-                href="knowledge.html">
-                <span class="material-symbols-outlined mr-4">database</span>
-                <span class="font-body-lg text-body-lg">Knowledge</span>
-            </a>
-            <!-- History -->
-            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-                href="history.html">
-                <span class="material-symbols-outlined mr-4">history</span>
-                <span class="font-body-lg text-body-lg">History</span>
-            </a>
-        </nav>
-        <div class="px-8 mt-auto">
-            <a class="flex items-center py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-                href="settings.html">
-                <span class="material-symbols-outlined mr-4">settings</span>
-                <span class="font-body-lg text-body-lg">Settings</span>
-            </a>
-        </div>
-    </aside>
+    <!-- Sidebar (loaded from shared component) -->
+    <div id="sidebar"></div>
     <!-- Main Content Canvas -->
     <main class="ml-64 min-h-screen relative overflow-hidden">
         <!-- Top App Bar -->
@@ -433,56 +385,20 @@
             </div>
         </section>
     </main>
-    <!-- Bottom Navigation Dock -->
-    <footer class="fixed bottom-0 left-0 w-full z-50 flex justify-center pb-6">
-        <div
-            class="bg-surface-container/60 backdrop-blur-2xl rounded-full mb-8 mx-auto w-fit border border-white/10 shadow-[0_0_20px_rgba(0,217,255,0.1)] px-8 py-3 flex items-center gap-10">
-            <button
-                class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 rounded-full transition-all group px-4 py-1">
-                <span class="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">mic</span>
-                <span class="font-label-caps text-[10px] mt-1">Speak</span>
-            </button>
-            <button
-                class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 rounded-full transition-all group px-4 py-1">
-                <span
-                    class="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">keyboard</span>
-                <span class="font-label-caps text-[10px] mt-1">Type</span>
-            </button>
-            <button
-                class="flex flex-col items-center justify-center text-primary drop-shadow-[0_0_4px_rgba(0,217,255,0.8)] px-4 py-1 scale-110">
-                <span class="material-symbols-outlined text-2xl"
-                    style="font-variation-settings: 'FILL' 1;">refresh</span>
-                <span class="font-label-caps text-[10px] mt-1">Refresh</span>
-            </button>
-            <button
-                class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 rounded-full transition-all group px-4 py-1">
-                <span class="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">apps</span>
-                <span class="font-label-caps text-[10px] mt-1">Apps</span>
-            </button>
-            <a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 rounded-full transition-all group px-4 py-1"
-                href="{{DATA:SCREEN:SCREEN_2}}">
-                <span class="material-symbols-outlined text-2xl group-hover:text-primary transition-colors">bolt</span>
-                <span class="font-label-caps text-[10px] mt-1">Skills</span>
-            </a>
-        </div>
-    </footer>
+    <!-- Footer (loaded from shared component) -->
+    <div id="footer"></div>
+    <script src="components.js"></script>
     <script>
-        // Micro-interactions for nodes
-        document.querySelectorAll('.group').forEach(node => {
-            node.addEventListener('mouseenter', () => {
-                // Subtle haptic or audio feedback would go here in a real OS
-                console.log('Hovering synaptic node...');
+        function initializePage() {
+            // Initialize scanning line animation cycle
+            const cards = document.querySelectorAll('.glass-card');
+            cards.forEach((card, index) => {
+                const scan = card.querySelector('.scan-line');
+                if (scan) {
+                    scan.style.animationDelay = `${index * 1.5}s`;
+                }
             });
-        });
-
-        // Initialize scanning line animation cycle
-        const cards = document.querySelectorAll('.glass-card');
-        cards.forEach((card, index) => {
-            const scan = card.querySelector('.scan-line');
-            if (scan) {
-                scan.style.animationDelay = `${index * 1.5}s`;
-            }
-        });
+        }
     </script>
     ```
 </body>

@@ -9,7 +9,6 @@ Does NOT know about JSON files or scanner directly.
 
 import logging
 import subprocess
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 

@@ -21,7 +21,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class KnowledgeLoader:
         """
         self.file_path = Path(file_path)
 
-    def load(self) -> Optional[Dict[str, Any]]:
+    def load(self) -> dict[str, Any] | None:
         """
         Load and parse JSON file.
 
@@ -50,7 +50,7 @@ class KnowledgeLoader:
             return None
 
         try:
-            with open(self.file_path, "r", encoding="utf-8") as f:
+            with open(self.file_path, encoding="utf-8") as f:
                 data = json.load(f)
             return data
 
@@ -58,7 +58,7 @@ class KnowledgeLoader:
             logger.error(f"Failed to load knowledge file {self.file_path}: {e}")
             return None
 
-    def save(self, data: Dict[str, Any]) -> bool:
+    def save(self, data: dict[str, Any]) -> bool:
         """
         Save data to JSON file.
 
@@ -117,7 +117,7 @@ class KnowledgeLoader:
 
 
 # Module-level convenience functions
-def load_json(file_path: Path) -> Optional[Dict[str, Any]]:
+def load_json(file_path: Path) -> dict[str, Any] | None:
     """
     Load JSON from file.
 
@@ -131,7 +131,7 @@ def load_json(file_path: Path) -> Optional[Dict[str, Any]]:
     return loader.load()
 
 
-def save_json(file_path: Path, data: Dict[str, Any]) -> bool:
+def save_json(file_path: Path, data: dict[str, Any]) -> bool:
     """
     Save JSON to file.
 

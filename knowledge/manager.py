@@ -12,7 +12,7 @@ Manages:
 
 This is the ONLY place that should be imported by:
 - EntityResolver
-- AppExecutor  
+- AppExecutor
 - BrowserSkill
 - Any skill that needs entity data
 
@@ -21,7 +21,6 @@ Nobody should import knowledge.loader directly.
 
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Any
 
 from knowledge.loader import KnowledgeLoader
 
@@ -49,10 +48,10 @@ class KnowledgeManager:
 
     def __init__(
         self,
-        applications_path: Optional[Path] = None,
-        websites_path: Optional[Path] = None,
-        devices_path: Optional[Path] = None,
-        contacts_path: Optional[Path] = None,
+        applications_path: Path | None = None,
+        websites_path: Path | None = None,
+        devices_path: Path | None = None,
+        contacts_path: Path | None = None,
     ):
         """
         Initialize Knowledge Manager.
@@ -78,12 +77,12 @@ class KnowledgeManager:
         self._contact_loader = KnowledgeLoader(self.contacts_path)
 
         # Cache
-        self._applications_cache: Optional[List[Dict]] = None
-        self._websites_cache: Optional[List[Dict]] = None
-        self._devices_cache: Optional[List[Dict]] = None
-        self._contacts_cache: Optional[List[Dict]] = None
+        self._applications_cache: list[dict] | None = None
+        self._websites_cache: list[dict] | None = None
+        self._devices_cache: list[dict] | None = None
+        self._contacts_cache: list[dict] | None = None
 
-    def _load_knowledge_base(self, loader: KnowledgeLoader) -> List[Dict]:
+    def _load_knowledge_base(self, loader: KnowledgeLoader) -> list[dict]:
         """
         Load entities from a knowledge base file.
 
@@ -98,10 +97,10 @@ class KnowledgeManager:
             return []
 
         if "entities" in data:
-         return data["entities"]
+            return data["entities"]
 
         entities = []
- 
+
         entities.extend(data.get("applications", []))
         entities.extend(data.get("games", []))
         entities.extend(data.get("websites", []))
@@ -110,7 +109,7 @@ class KnowledgeManager:
 
         return entities
 
-    def load_applications(self) -> List[Dict]:
+    def load_applications(self) -> list[dict]:
         """
         Load all discovered applications.
 
@@ -124,7 +123,7 @@ class KnowledgeManager:
         logger.info(f"Loaded {len(self._applications_cache)} applications")
         return self._applications_cache
 
-    def load_websites(self) -> List[Dict]:
+    def load_websites(self) -> list[dict]:
         """Load all websites."""
         if self._websites_cache is not None:
             return self._websites_cache
@@ -133,7 +132,7 @@ class KnowledgeManager:
         logger.info(f"Loaded {len(self._websites_cache)} websites")
         return self._websites_cache
 
-    def load_devices(self) -> List[Dict]:
+    def load_devices(self) -> list[dict]:
         """Load all devices."""
         if self._devices_cache is not None:
             return self._devices_cache
@@ -142,7 +141,7 @@ class KnowledgeManager:
         logger.info(f"Loaded {len(self._devices_cache)} devices")
         return self._devices_cache
 
-    def load_contacts(self) -> List[Dict]:
+    def load_contacts(self) -> list[dict]:
         """Load all contacts."""
         if self._contacts_cache is not None:
             return self._contacts_cache
@@ -151,7 +150,7 @@ class KnowledgeManager:
         logger.info(f"Loaded {len(self._contacts_cache)} contacts")
         return self._contacts_cache
 
-    def get_all_entities(self) -> List[Dict]:
+    def get_all_entities(self) -> list[dict]:
         """
         Get all entities across all types.
 
@@ -204,7 +203,7 @@ class KnowledgeManager:
 
         return entities
 
-    def find_entity(self, query: str, category: Optional[str] = None) -> Optional[Dict]:
+    def find_entity(self, query: str, category: str | None = None) -> dict | None:
         """
         Find entity by exact name match.
 
@@ -243,7 +242,7 @@ class KnowledgeManager:
 
         return None
 
-    def find_by_alias(self, alias: str, category: Optional[str] = None) -> Optional[Dict]:
+    def find_by_alias(self, alias: str, category: str | None = None) -> dict | None:
         """
         Find entity by alias.
 
@@ -286,7 +285,7 @@ class KnowledgeManager:
 
         return None
 
-    def find_application(self, name: str) -> Optional[Dict]:
+    def find_application(self, name: str) -> dict | None:
         """
         Find application by name or alias.
 
@@ -306,7 +305,7 @@ class KnowledgeManager:
         # Try alias
         return self.find_by_alias(name, category="applications")
 
-    def find_website(self, name: str) -> Optional[Dict]:
+    def find_website(self, name: str) -> dict | None:
         """
         Find website by name or alias.
 
@@ -326,7 +325,7 @@ class KnowledgeManager:
         # Try alias
         return self.find_by_alias(name, category="websites")
 
-    def save_applications(self, applications: List[Dict]) -> bool:
+    def save_applications(self, applications: list[dict]) -> bool:
         """
         Save applications to knowledge base.
 
@@ -355,7 +354,7 @@ class KnowledgeManager:
 
         return success
 
-    def save_websites(self, websites: List[Dict]) -> bool:
+    def save_websites(self, websites: list[dict]) -> bool:
         """Save websites to knowledge base."""
         from datetime import datetime
 
@@ -381,7 +380,7 @@ class KnowledgeManager:
             True if successful
         """
         try:
-            from scanner.app_scanner import scan_all
+            from knowledge.scanners.application_scanner import scan_all
 
             logger.info("Refreshing applications...")
             applications = scan_all()
@@ -403,7 +402,7 @@ class KnowledgeManager:
 
 
 # Global singleton instance
-_manager: Optional[KnowledgeManager] = None
+_manager: KnowledgeManager | None = None
 
 
 def get_manager() -> KnowledgeManager:

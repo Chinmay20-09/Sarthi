@@ -11,7 +11,6 @@ tests = [
 ]
 
 for t in tests:
-
     print()
 
     print("Input :", t)

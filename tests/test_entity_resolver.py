@@ -8,5 +8,5 @@ print(f"Applications: {len([e for e in resolver.entities if e.get('category') ==
 
 print("\nSample applications from knowledge base:")
 for entity in resolver.entities[:5]:
-    if entity.get('category') == 'applications':
+    if entity.get("category") == "applications":
         print(f"  {entity['name']} - {entity.get('aliases', [])[:2]}")
