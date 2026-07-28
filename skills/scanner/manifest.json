@@ -1,0 +1,13 @@
+{
+    "id": "scanner",
+    "name": "Application Scanner",
+    "description": "Discovers installed applications, games, and websites from the system.",
+    "version": "1.0.0",
+    "enabled": true,
+    "icon": "scan",
+    "commands": [
+        "Scan for new applications",
+        "Refresh application database",
+        "Discover installed games"
+    ]
+}

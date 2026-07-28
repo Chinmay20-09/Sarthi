@@ -6,8 +6,8 @@ Supports skill-based dispatch where each capability is a separate skill.
 
 The Executor maintains a registry of handlers:
     - Built-in handlers (e.g., open_app, open_site from actions/)
-    - Skill handlers (loaded from skills/ directory)
-    - Fallback handler for unknown actions
+    - Skill handlers (loaded from skills/ directory and registered by action)
+    - Fallback: tries all registered skills when no direct handler matches
 """
 
 import logging
@@ -16,6 +16,7 @@ from typing import Any
 
 from brain.context import BrainContext
 from brain.intent import Intent
+from skills.base import BaseSkill
 
 logger = logging.getLogger(__name__)
 
@@ -31,13 +32,15 @@ class BrainExecutor:
     Maintains a handler registry. Built-in handlers for common actions
     (open apps, open websites) are registered by default.
 
-    Skills can register their own handlers via register_handler().
+    Skills can register themselves via register_skill(), which adds
+    their execute() method as a fallback handler for unrecognized actions.
     """
 
     def __init__(self):
         """Initialize executor with default handlers."""
         self._handlers: dict[str, IntentHandler] = {}
         self._default_handler: IntentHandler | None = None
+        self._skills: list[BaseSkill] = []
         self._register_builtin_handlers()
 
     # ------------------------------------------------------------------
@@ -49,7 +52,7 @@ class BrainExecutor:
         Register a handler for a specific action.
 
         Args:
-            action: The action string (e.g., "open", "search", "play")
+            action: The action string (e.g., "open", "search", "check")
             handler: Function that takes an Intent and returns result dict
         """
         self._handlers[action] = handler
@@ -60,6 +63,20 @@ class BrainExecutor:
         self._default_handler = handler
         logger.debug("Registered default handler")
 
+    def register_skill(self, skill: BaseSkill) -> None:
+        """
+        Register a skill for intent dispatch.
+
+        This adds the skill to the fallback pool. When no direct action
+        handler matches, each registered skill's execute() method is
+        tried in order.
+
+        Args:
+            skill: An instantiated BaseSkill subclass
+        """
+        self._skills.append(skill)
+        logger.debug(f"Registered skill: {skill.name} ({skill.__class__.__name__})")
+
     # ------------------------------------------------------------------
     # Execution
     # ------------------------------------------------------------------
@@ -67,6 +84,12 @@ class BrainExecutor:
     def execute(self, intent: Intent, context: BrainContext | None = None) -> dict[str, Any]:
         """
         Execute an intent by dispatching to the appropriate handler.
+
+        Dispatch order:
+            1. Direct action handler (e.g., "open" → open handler)
+            2. Default fallback handler
+            3. Registered skills (tried in order — first match wins)
+            4. No handler found error
 
         Args:
             intent: The resolved Intent to execute
@@ -82,9 +105,8 @@ class BrainExecutor:
         action = intent.action
         logger.debug(f"Executing intent: {action} {intent.target}")
 
-        # Find handler for this action
+        # Step 1: Try direct action handler
         handler = self._handlers.get(action)
-
         if handler:
             try:
                 result = handler(intent)
@@ -103,7 +125,7 @@ class BrainExecutor:
                     "error": str(e),
                 }
 
-        # Try default handler if no specific handler found
+        # Step 2: Try default handler
         if self._default_handler:
             try:
                 result = self._default_handler(intent)
@@ -121,6 +143,22 @@ class BrainExecutor:
                     "result": None,
                     "error": str(e),
                 }
+
+        # Step 3: Try registered skills as fallback
+        for skill in self._skills:
+            try:
+                result = skill.execute(intent)
+                if isinstance(result, dict) and result.get("success"):
+                    logger.debug(f"Skill '{skill.name}' handled intent: {action} {intent.target}")
+                    return {
+                        "success": True,
+                        "status": result.get("status", "executed"),
+                        "result": result.get("result", result),
+                        "error": None,
+                    }
+            except Exception as e:
+                logger.debug(f"Skill '{skill.name}' could not handle intent: {e}")
+                continue
 
         # No handler found
         logger.warning(f"No handler for action '{action}'")

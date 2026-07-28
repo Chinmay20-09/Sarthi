@@ -376,11 +376,14 @@ class KnowledgeManager:
         """
         Refresh applications by rescanning system.
 
+        Delegates to the ScannerSkill for scanning.
+        Knowledge does NOT orchestrate — it saves the results.
+
         Returns:
             True if successful
         """
         try:
-            from knowledge.scanners.application_scanner import scan_all
+            from skills.scanner.application_scanner import scan_all
 
             logger.info("Refreshing applications...")
             applications = scan_all()

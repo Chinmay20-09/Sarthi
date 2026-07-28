@@ -35,6 +35,7 @@ async function loadLayout() {
 
     highlightCurrentPage();
     attachNavAnimations();
+    setupCommandHandlers();
 
     if (typeof initializePage === "function") {
         initializePage();
@@ -76,13 +77,17 @@ function attachNavAnimations() {
 function setupCommandHandlers() {
     const typeButton = document.getElementById("typebutton");
     const speakButton = document.getElementById("speakButton");
-    const status = document.getElementById("status");
-    if (!typeButton || !speakButton || !status) return;
+    if (!typeButton || !speakButton) return;
+
+    function updateStatus(text) {
+        const el = document.getElementById("status");
+        if (el) el.innerText = text;
+    }
 
     typeButton.addEventListener("click", async () => {
         const command = prompt("Enter command");
         if (!command) return;
-        status.innerText = "Thinking...";
+        updateStatus("Thinking...");
         try {
             const response = await fetch(API + "/command", {
                 method: "POST",
@@ -90,22 +95,22 @@ function setupCommandHandlers() {
                 body: JSON.stringify({ text: command }),
             });
             const result = await response.json();
-            status.innerText = "Executed : " + result.action + " " + result.target;
+            updateStatus("Executed : " + result.action + " " + result.target);
         } catch (err) {
             console.error(err);
-            status.innerText = "Connection Failed";
+            updateStatus("Connection Failed");
         }
     });
 
     speakButton.addEventListener("click", async () => {
-        status.innerText = "Listening...";
+        updateStatus("Listening...");
         try {
             const response = await fetch(API + "/listen", { method: "POST" });
             const result = await response.json();
-            status.innerText = "Executed : " + result.action + " " + result.target;
+            updateStatus("Executed : " + result.action + " " + result.target);
         } catch (err) {
             console.error(err);
-            status.innerText = "Connection Failed";
+            updateStatus("Connection Failed");
         }
     });
 }

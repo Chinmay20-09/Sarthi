@@ -7,6 +7,8 @@ The BrainEngine wires together the full pipeline:
 It is the SINGLE public entry point for the brain package.
 All command processing goes through BrainEngine.process().
 
+Skills are auto-loaded on startup and registered with the executor.
+
 Usage:
     from brain.engine import BrainEngine
 
@@ -38,7 +40,9 @@ class BrainEngine:
         - Interpreter (parses text → Intent)
         - Planner (decomposes compound commands → List[Intent])
         - Resolver (resolves entity names via fuzzy matching)
-        - Executor (dispatches to handlers)
+        - Executor (dispatches to handlers, including skills)
+
+    Automatically loads and registers all installed skills on startup.
 
     Accepts entities via dependency injection. If none provided,
     lazily loads from KnowledgeManager.
@@ -81,6 +85,26 @@ class BrainEngine:
             except Exception as e:
                 logger.warning(f"Could not load entities: {e}")
                 self.resolver = EntityResolver()
+
+        # Auto-load and register skills via SkillRegistry
+        self._load_skills()
+
+    # ------------------------------------------------------------------
+    # Skill loading via Registry
+    # ------------------------------------------------------------------
+
+    def _load_skills(self) -> None:
+        """Discover, instantiate, and register all installed skills via SkillRegistry."""
+        try:
+            from skills.registry import get_registry
+
+            registry = get_registry()
+            skills = registry.get_all_instances()
+            for skill in skills:
+                self.executor.register_skill(skill)
+                logger.info(f"Registered skill: {skill.name} v{skill.version}")
+        except Exception as e:
+            logger.warning(f"Could not load skills: {e}")
 
     # ------------------------------------------------------------------
     # Public API

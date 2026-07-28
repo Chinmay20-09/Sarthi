@@ -7,6 +7,14 @@ the Brain's executor dispatch system.
 The Brain only knows about skill.execute(intent).
 It never accesses internal skill implementation.
 
+ARCHITECTURE:
+    Skills receive dependencies via constructor injection:
+        - knowledge_manager (KnowledgeManager): Access to the Knowledge Layer
+        - event_bus (EventBus): Access to the event system
+
+    Skills NEVER import database modules directly.
+    Skills communicate ONLY through the Knowledge Layer.
+
 Usage:
     class MySkill(BaseSkill):
         name = "my_skill"
@@ -38,6 +46,7 @@ class BaseSkill(ABC):
         name: Human-readable skill name (displayed in UI, logs)
         description: Brief description of the skill's purpose
         version: Semantic version string
+        knowledge_manager: Injected KnowledgeManager instance (optional)
 
     Subclasses must implement:
         execute(self, intent: Intent) -> Dict[str, Any]
@@ -56,6 +65,53 @@ class BaseSkill(ABC):
     name: str = "unnamed_skill"
     description: str = ""
     version: str = "0.1.0"
+
+    def __init__(self, knowledge_manager=None, event_bus=None):
+        """
+        Initialize a skill with dependency injection.
+
+        Args:
+            knowledge_manager: Optional KnowledgeManager instance.
+                              If None, lazily loaded from get_manager() on first use.
+            event_bus: Optional EventBus instance.
+                      If None, lazily loaded from get_bus() on first use.
+        """
+        self._knowledge_manager = knowledge_manager
+        self._event_bus = event_bus
+
+    # ------------------------------------------------------------------
+    # Dependency Injection Properties
+    # ------------------------------------------------------------------
+
+    @property
+    def knowledge(self):
+        """
+        Get the KnowledgeManager (lazy-loaded with DI support).
+
+        Skills should use this property instead of importing get_manager() directly.
+        """
+        if self._knowledge_manager is None:
+            from knowledge.manager import get_manager
+
+            self._knowledge_manager = get_manager()
+        return self._knowledge_manager
+
+    @property
+    def events(self):
+        """
+        Get the EventBus (lazy-loaded with DI support).
+
+        Skills should use this property instead of importing get_bus() directly.
+        """
+        if self._event_bus is None:
+            from events import get_bus
+
+            self._event_bus = get_bus()
+        return self._event_bus
+
+    # ------------------------------------------------------------------
+    # Abstract Interface
+    # ------------------------------------------------------------------
 
     @abstractmethod
     def execute(self, intent: Intent) -> dict[str, Any]:

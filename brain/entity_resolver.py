@@ -2,45 +2,22 @@
 Entity Resolver — BACKWARD COMPATIBILITY WRAPPER.
 
 This module is preserved for existing code that imports from
-brain.entity_resolver. New code should import from brain.resolver instead.
+brain.entity_resolver. The EntityResolver has moved to the
+Knowledge Layer where it belongs (knowledge/entity_resolver.py).
 
-DEPRECATED: Import from brain.resolver.EntityResolver for new code.
+ARCHITECTURE:
+    Entity resolution is searching stored knowledge, NOT reasoning.
+    It belongs in the Knowledge Layer.
+
+NEW CODE SHOULD IMPORT FROM:
+    from knowledge.entity_resolver import EntityResolver
 """
 
 import logging
 
-from brain.resolver import EntityResolver as _EntityResolver
-
 logger = logging.getLogger(__name__)
 
+# Re-export from canonical Knowledge Layer location
+from knowledge.entity_resolver import EntityResolver  # noqa: F401
 
-class EntityResolver(_EntityResolver):
-    """
-    Backward-compatible EntityResolver.
-
-    Wraps the new brain.resolver.EntityResolver with the legacy behavior
-    of auto-loading entities from KnowledgeManager when entities=None.
-
-    DEPRECATED: Use brain.resolver.EntityResolver with explicit DI instead.
-    """
-
-    def __init__(self, entities: list[dict] | None = None, use_knowledge_base: bool = True):
-        """
-        Initialize with optional fallback to KnowledgeManager.
-
-        Args:
-            entities: List of entity dicts. If None, loads from KnowledgeManager.
-            use_knowledge_base: If True (and entities is None), auto-load entities.
-        """
-        if entities is None and use_knowledge_base:
-            try:
-                from knowledge.manager import get_manager
-
-                manager = get_manager()
-                entities = manager.get_all_entities()
-                logger.info(f"Loaded {len(entities)} entities from KnowledgeManager")
-            except Exception as e:
-                logger.warning(f"Could not load entities: {e}")
-                entities = []
-
-        super().__init__(entities=entities or [])
+logger.debug("brain.entity_resolver is a backward-compat shim. Use knowledge.entity_resolver.")

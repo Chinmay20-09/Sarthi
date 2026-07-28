@@ -1,6 +1,21 @@
 <aside id="sarthi-sidebar"
     class="fixed left-0 top-0 h-full flex flex-col py-16 h-screen w-64 border-r border-white/10 bg-surface/40 backdrop-blur-[40px] z-50 transition-all duration-300">
-    <div class="px-8 mb-12 flex flex-col items-center">
+    <style>
+        #sarthi-nav::-webkit-scrollbar {
+            width: 3px;
+        }
+        #sarthi-nav::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        #sarthi-nav::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+        }
+        #sarthi-nav::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 217, 255, 0.3);
+        }
+    </style>
+    <div class="px-8 mb-12 flex flex-col items-center flex-shrink-0">
         <img alt="Sarthi Logo"
             class="w-16 h-16 object-contain mb-4 filter drop-shadow-[0_0_12px_rgba(0,217,255,0.6)]"
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsKS1C0ncF1QaIs4yZ-Ktfsj0KXYNm2KxZrhGvcsdGKkyViETMsXLB-v4ASdiK0_ajiDBsH2gFwRbNWnIyxXdOCKqFiCNGFPRMDqkuRvBoiIy1b_jJj1oOvNVB6uRNDKeEBjd4aaBI8jUOKo0S7g0Z3awce17Ut2_zlbexWiQG2JDI1ARm_FlshNI1_Hu0BfX24_H6uy86gnR20SGn_k9s4DwJZ8CZavzvDufXwz1WNRLERyqvwvoJiA" />
@@ -10,38 +25,38 @@
             <p class="font-label-caps text-label-caps text-on-surface-variant opacity-60">V1.0.4 Hyperion</p>
         </div>
     </div>
-    <nav class="flex-1 space-y-2" id="sarthi-nav">
-        <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-            href="dashboard.html" data-page="dashboard">
-            <span class="material-symbols-outlined mr-4">home</span>
-            <span class="font-body-lg text-body-lg">Home</span>
-        </a>
-        <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-            href="skills.html" data-page="skills">
-            <span class="material-symbols-outlined mr-4">extension</span>
-            <span class="font-body-lg text-body-lg">Skills</span>
-        </a>
-        <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-            href="memory.html" data-page="memory">
-            <span class="material-symbols-outlined mr-4">psychology</span>
-            <span class="font-body-lg text-body-lg">Memory</span>
-        </a>
-        <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-            href="knowledge.html" data-page="knowledge">
-            <span class="material-symbols-outlined mr-4">database</span>
-            <span class="font-body-lg text-body-lg">Knowledge</span>
-        </a>
-        <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-            href="history.html" data-page="history">
-            <span class="material-symbols-outlined mr-4">history</span>
-            <span class="font-body-lg text-body-lg">History</span>
-        </a>
+    <nav class="flex-1 flex flex-col min-h-0" id="sarthi-nav">
+        <div class="flex-1 overflow-y-auto space-y-2">
+            <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="dashboard.html" data-page="dashboard">
+                <span class="material-symbols-outlined mr-4">home</span>
+                <span class="font-body-lg text-body-lg">Home</span>
+            </a>
+            <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="skills.html" data-page="skills">
+                <span class="material-symbols-outlined mr-4">extension</span>
+                <span class="font-body-lg text-body-lg">Skills</span>
+            </a>
+            <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="memory.html" data-page="memory">
+                <span class="material-symbols-outlined mr-4">psychology</span>
+                <span class="font-body-lg text-body-lg">Memory</span>
+            </a>
+            <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="knowledge.html" data-page="knowledge">
+                <span class="material-symbols-outlined mr-4">database</span>
+                <span class="font-body-lg text-body-lg">Knowledge</span>
+            </a>
+            <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="history.html" data-page="history">
+                <span class="material-symbols-outlined mr-4">history</span>
+                <span class="font-body-lg text-body-lg">History</span>
+            </a>
+            <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="settings.html" data-page="settings">
+                <span class="material-symbols-outlined mr-4">settings</span>
+                <span class="font-body-lg text-body-lg">Settings</span>
+            </a>
+        </div>
     </nav>
-    <div class="px-8 mt-auto">
-        <a class="nav-item flex items-center py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-            href="settings.html" data-page="settings">
-            <span class="material-symbols-outlined mr-4">settings</span>
-            <span class="font-body-lg text-body-lg">Settings</span>
-        </a>
-    </div>
 </aside>

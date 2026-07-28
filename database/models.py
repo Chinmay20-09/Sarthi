@@ -47,14 +47,44 @@ CREATE TABLE IF NOT EXISTS github_summary (
 """
 
 # =============================================================================
-# Knowledge / Discovery Tables (future)
+# Command History Table
 # =============================================================================
 
-# CREATE_APPLICATIONS = """
-# CREATE TABLE IF NOT EXISTS applications (
-#     ...
-# )
-# """
+CREATE_COMMAND_HISTORY = """
+CREATE TABLE IF NOT EXISTS command_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    command TEXT,
+    action TEXT,
+    target TEXT,
+    success INTEGER,
+    timestamp TEXT
+)
+"""
+
+# =============================================================================
+# Knowledge Memory Table
+# =============================================================================
+
+CREATE_KNOWLEDGE_MEMORY = """
+CREATE TABLE IF NOT EXISTS knowledge_memory (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    expires_at TEXT,
+    updated_at TEXT
+)
+"""
+
+# =============================================================================
+# Settings Table
+# =============================================================================
+
+CREATE_SETTINGS = """
+CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    updated_at TEXT
+)
+"""
 
 # =============================================================================
 # Registry: all known table schemas
@@ -64,4 +94,7 @@ CREATE TABLE IF NOT EXISTS github_summary (
 ALL_TABLES: dict[str, str] = {
     "github_projects": CREATE_GITHUB_PROJECTS,
     "github_summary": CREATE_GITHUB_SUMMARY,
+    "command_history": CREATE_COMMAND_HISTORY,
+    "knowledge_memory": CREATE_KNOWLEDGE_MEMORY,
+    "settings": CREATE_SETTINGS,
 }

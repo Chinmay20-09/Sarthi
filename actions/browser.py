@@ -1,14 +1,21 @@
 """
-Browser Skill for Sarthi.
+Browser Skill — BACKWARD COMPATIBILITY SHIM.
 
-Opens websites discovered by the knowledge system.
+Website opening has moved to skills/browser/ as a proper BaseSkill.
+This module is preserved for existing code that imports from actions.browser.
 
-Uses KnowledgeManager for all lookups.
-Does NOT have hardcoded website list.
+ARCHITECTURE:
+    Website opening is now a skill (skills/browser/).
+    New code should use the skill system instead.
+
+NEW CODE SHOULD USE:
+    from skills.registry import get_registry
+    registry = get_registry()
+    browser = registry.get_skill("browser")
+    browser.execute(intent)
 """
 
 import logging
-import webbrowser
 
 logger = logging.getLogger(__name__)
 
@@ -17,45 +24,15 @@ def open_site(target: str) -> bool:
     """
     Open a website by name or alias.
 
-    Args:
-        target: Website name or alias
-
-    Returns:
-        True if website opened successfully
+    BACKWARD COMPATIBLE: delegates to BrowserSkill.
+    New callers should go through the skill system directly.
     """
-    from knowledge.manager import get_manager
+    from brain.intent import Intent
+    from skills.browser.main import BrowserSkill
 
-    logger.debug(f"Opening website: {target}")
+    logger.debug(f"open_site (shim): {target}")
 
-    target = target.lower().strip()
+    skill = BrowserSkill()
+    result = skill.execute(Intent(action="open", target=target))
 
-    if not target:
-        logger.warning("Empty target provided")
-        return False
-
-    try:
-        manager = get_manager()
-
-        # Find website via manager
-        website = manager.find_website(target)
-
-        if website is None:
-            logger.warning(f"Website not found: {target}")
-            return False
-
-        url = website.get("url")
-        name = website.get("name")
-
-        if not url:
-            logger.error(f"No URL found for website: {name}")
-            return False
-
-        logger.debug(f"Opening: {url}")
-
-        webbrowser.open(url)
-        logger.info(f"Opened {name}")
-        return True
-
-    except Exception as e:
-        logger.error(f"Error opening website: {e}")
-        return False
+    return result.get("success", False)

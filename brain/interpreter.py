@@ -4,7 +4,7 @@ Interpreter for Sarthi.
 Parses natural language commands into structured Intent objects.
 
 Responsibilities:
-- Detect action keywords (open, search, play, close)
+- Detect action keywords (open, search, play, close, check, status, sync, etc.)
 - Extract target entities by filtering filler words
 - Return a normalized Intent for downstream processing
 """
@@ -12,6 +12,7 @@ Responsibilities:
 from brain.intent import Intent
 
 ACTION_WORDS = {
+    # App / web actions
     "open": "open",
     "launch": "open",
     "start": "open",
@@ -20,6 +21,17 @@ ACTION_WORDS = {
     "find": "search",
     "play": "play",
     "close": "close",
+    # Project tracker actions
+    "check": "check",
+    "status": "status",
+    "sync": "sync",
+    "show": "show",
+    "list": "show",
+    "track": "track",
+    "how": "how",
+    "what": "what",
+    "pending": "pending",
+    "update": "sync",
 }
 
 FILLER_WORDS = {
@@ -37,6 +49,13 @@ FILLER_WORDS = {
     "to",
     "on",
     "of",
+    "is",
+    "are",
+    "do",
+    "does",
+    "tell",
+    "me",
+    "about",
 }
 
 

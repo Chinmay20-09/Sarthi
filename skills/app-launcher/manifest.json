@@ -1,0 +1,13 @@
+{
+    "id": "app_launcher",
+    "name": "App Launcher",
+    "description": "Launches desktop applications discovered by the Knowledge Layer.",
+    "version": "1.0.0",
+    "enabled": true,
+    "icon": "open_in_new",
+    "commands": [
+        "Open Chrome",
+        "Launch Visual Studio Code",
+        "Start Spotify"
+    ]
+}
