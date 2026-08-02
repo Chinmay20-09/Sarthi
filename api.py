@@ -175,3 +175,6 @@ if __name__ == "__main__":
 
     bus.publish("system_startup", {}, source="api")
     uvicorn.run("api:app", host="127.0.0.1", port=8000, reload=True)
+from skills.browser.routes import router as browser_router
+
+app.include_router(browser_router)
