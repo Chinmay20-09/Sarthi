@@ -73,8 +73,7 @@ source .venv/bin/activate    # macOS/Linux
 pip install fastapi uvicorn pywin32
 
 # 4. Install dev dependencies (optional)
-pip install ruff mypy pre-commit
-pre-commit install
+pip install ruff mypy
 
 # 5. Run tests (optional)
 python -m pytest tests/ -v
@@ -588,19 +587,8 @@ ruff format .
 ruff check --fix .
 
 # Type check (advisory)
-pre-commit run --hook-stage manual mypy
+mypy .
 ```
-
-### Pre-commit Hooks
-
-| Hook | Action |
-|---|---|
-| `ruff-format` | Blocks unformatted code |
-| `ruff-lint` | Auto-fixes lint issues |
-| `trailing-whitespace` | Trims whitespace |
-| `end-of-file-fixer` | Ensures newline at EOF |
-| `check-yaml` / `check-toml` | Validates config files |
-| `mypy` | Manual-only type checking |
 
 ### Verification Checklist
 
@@ -666,7 +654,7 @@ pre-commit run --hook-stage manual mypy
 | 6 | UI consolidation (shared components) | ✅ Complete |
 | 7 | Unit tests (109+ tests) | ✅ Complete |
 | 8 | Automation engine cleanup | ✅ Complete |
-| 9 | Linting, formatting, pre-commit hooks | ✅ Complete |
+| 9 | Linting, formatting | ✅ Complete |
 | 10 | Clean architecture refactoring (Knowledge System) | ✅ Complete |
 | **11** | **Documentation** | **⬅️ This file** |
 | 12+ | Memory, vision, multi-agent, CI/CD | 🔮 Future |
@@ -686,12 +674,11 @@ pre-commit run --hook-stage manual mypy
 
 ## 🧑‍💻 Contributing
 
-1. Install pre-commit hooks: `pre-commit install`
-2. Create a feature branch: `git checkout -b feat/my-feature`
-3. Make changes and ensure tests pass: `python -m pytest tests/ -v`
-4. Format and lint: `ruff format . && ruff check --fix .`
-5. Commit (hooks will auto-check): `git commit -m "feat: add my feature"`
-6. Push and open a pull request
+1. Create a feature branch: `git checkout -b feat/my-feature`
+2. Make changes and ensure tests pass: `python -m pytest tests/ -v`
+3. Format and lint: `ruff format . && ruff check --fix .`
+4. Commit: `git commit -m "feat: add my feature"`
+5. Push and open a pull request
 
 ---
 

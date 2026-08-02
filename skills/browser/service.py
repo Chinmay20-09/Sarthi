@@ -1,9 +1,9 @@
 from database.cache.browser_cache import browser_cache
-from .models import BrowserPage, BrowserSelection, BrowserAction
+
+from .models import BrowserAction, BrowserPage, BrowserSelection
 
 
 class BrowserService:
-
     def receive_page(self, page: BrowserPage):
         browser_cache.set_current_page(page)
         return page
@@ -24,10 +24,7 @@ class BrowserService:
     def execute_action(self, action: BrowserAction):
         # Placeholder until browser extension exists
         print(f"Browser Action Requested: {action}")
-        return {
-            "status": "pending",
-            "action": action.action
-        }
+        return {"status": "pending", "action": action.action}
 
 
 browser_service = BrowserService()

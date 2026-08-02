@@ -1,7 +1,7 @@
 from skills.browser.models import (
-    BrowserSession,
     BrowserPage,
     BrowserSelection,
+    BrowserSession,
 )
 
 

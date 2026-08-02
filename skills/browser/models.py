@@ -1,11 +1,13 @@
-from typing import Optional, List, Literal
-from pydantic import BaseModel,Field
+from typing import Literal
+
+from pydantic import BaseModel, Field
+
 
 class BrowserPage(BaseModel):
     title: str
     url: str
     text: str
-    html: Optional[str] = None
+    html: str | None = None
 
 
 class BrowserSelection(BaseModel):
@@ -31,17 +33,17 @@ class BrowserAction(BaseModel):
         "focus_tab",
         "back",
         "forward",
-        "refresh"
+        "refresh",
     ]
 
-    selector: Optional[str] = None
-    text: Optional[str] = None
-    amount: Optional[int] = None
-    url: Optional[str] = None
-    tab_id: Optional[int] = None
+    selector: str | None = None
+    text: str | None = None
+    amount: int | None = None
+    url: str | None = None
+    tab_id: int | None = None
 
 
 class BrowserSession(BaseModel):
-    current_page: Optional[BrowserPage] = None
-    selected_text: Optional[BrowserSelection] = None
-    tabs: List[BrowserTab] = Field(default_factory=list)
+    current_page: BrowserPage | None = None
+    selected_text: BrowserSelection | None = None
+    tabs: list[BrowserTab] = Field(default_factory=list)

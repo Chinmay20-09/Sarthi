@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from skills.browser.models import BrowserPage, BrowserSelection, BrowserAction
+from skills.browser.models import BrowserAction, BrowserPage, BrowserSelection
 from skills.browser.service import browser_service
 
 router = APIRouter(prefix="/browser", tags=["Browser"])
