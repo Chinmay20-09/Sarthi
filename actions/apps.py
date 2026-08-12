@@ -1,11 +1,11 @@
 """
 Application Executor — BACKWARD COMPATIBILITY SHIM.
 
-Application launching has moved to skills/app-launcher/ as a proper BaseSkill.
+Application launching has moved to skills/app_launcher/ as a proper BaseSkill.
 This module is preserved for existing code that imports from actions.apps.
 
 ARCHITECTURE:
-    Application launching is now a skill (skills/app-launcher/).
+    Application launching is now a skill (skills/app_launcher/).
     New code should use the skill system instead.
 
 NEW CODE SHOULD USE:

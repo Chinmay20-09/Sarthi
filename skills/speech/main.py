@@ -25,7 +25,7 @@ class SpeechSkill(BaseSkill):
     Provides voice input capabilities:
         - Record audio from microphone
         - Transcribe using Whisper
-        - Detect wake word
+        - Detect wake word (phrase configured in variable.py)
 
     Usage:
         skill = SpeechSkill(knowledge_manager=manager, event_bus=bus)
@@ -101,7 +101,15 @@ class SpeechSkill(BaseSkill):
         try:
             from speech.wake_word import detect_wake_word
 
-            detected = detect_wake_word()
+            # Honor the user-configured phrase from variable.py when available
+            try:
+                import variable
+
+                wake_words = getattr(variable, "WAKE_WORDS", None)
+            except ImportError:
+                wake_words = None
+
+            detected = detect_wake_word(wake_words)
             return {
                 "success": True,
                 "status": "wakeword_checked",

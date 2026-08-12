@@ -101,6 +101,24 @@ python main.py
 # Press ENTER to speak a command
 ```
 
+### Run the Wake Word Launcher
+
+```bash
+python wakeword.py            # keep listening (Ctrl+C to stop)
+python wakeword.py --once     # listen for one wake word, then exit
+```
+
+Say your wake word (default: **"hey sarthi"**) and Sarthi automatically runs
+`start.bat`, booting the API + UI and opening the website in your browser.
+
+**Change the wake word anytime** by editing `variable.py` at the project root —
+no code changes needed:
+
+```python
+# variable.py
+WAKE_WORDS = ["hey sarthi", "hey sarti"]
+```
+
 ### Open the Web UI
 
 Open `http://127.0.0.1:8000` in your browser while the API is running — it automatically serves the dashboard.
@@ -194,8 +212,8 @@ sarthi/
 │
 ├── speech/         # Audio processing
 │   ├── recorder.py     # Microphone recording
-│   ├── speech_to_text.py # Whisper transcription
-│   └── wake_word.py    # Wake word detection
+│   ├── speech_to_text.py # Whisper transcription (lazy model)
+│   └── wake_word.py    # Wake word detection (WakeWordListener)
 │
 ├── actions/        # Built-in action handlers
 │   ├── apps.py         # Application launcher (dynamic)
@@ -218,6 +236,8 @@ sarthi/
 │
 ├── api.py          # FastAPI server
 ├── main.py         # CLI entry point
+├── wakeword.py     # Wake word launcher (runs start.bat on detection)
+├── variable.py     # User config — change the wake word here
 ├── config.py       # Central configuration
 └── tests/          # 109+ pytest unit tests
 ```
