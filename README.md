@@ -111,6 +111,31 @@ python wakeword.py --once     # listen for one wake word, then exit
 Say your wake word (default: **"hey sarthi"**) and Sarthi automatically runs
 `start.bat`, booting the API + UI and opening the website in your browser.
 
+**Run it in the background:** just double-click **`wakeword.bat`** — it starts a
+fully windowless `pythonw` supervisor (`wakeword.py --supervise`) that runs the
+listener as a child with a **Sarthi microphone icon in your system tray**:
+right-click it to Launch Sarthi, **Stop Sarthi**, open `logs/wakeword.log`, or
+**Exit** (which also stops the auto-restart loop). No console windows are ever
+created. The supervisor restarts the listener if it crashes, and uses the
+lightweight Whisper `tiny` model so it stays light on your system. Use
+`wakeword.bat debug` to run it in a visible console window instead.
+
+**Start it automatically at login:** run `wakeword.bat install` once — it adds a
+`HKCU\...\Run` entry that launches `pythonw wakeword.py --supervise` directly
+(no console flash at logon, no admin needed). `wakeword.bat status` shows
+whether autostart is on, and `wakeword.bat uninstall` removes it.
+
+**No terminal windows when Sarthi launches:** saying the wake word runs
+`start.bat` in its windowless *background* mode — the API and UI servers start
+under `pythonw` (no consoles), and only your browser opens. Run `start.bat`
+manually for the classic dev experience with visible server windows.
+
+**It sleeps while Sarthi is open:** after a wake word launches Sarthi, the
+listener goes dormant — it stops using the microphone entirely — until Sarthi
+is closed, then listens again automatically. No more false triggers while you
+work. Tune this in `variable.py` (`DORMANT_WHILE_RUNNING`, `SARTHI_HEALTH_URL`,
+`SARTHI_START_TIMEOUT`, `SARTHI_POLL_INTERVAL`).
+
 **Change the wake word anytime** by editing `variable.py` at the project root —
 no code changes needed:
 
@@ -202,7 +227,9 @@ sarthi/
 ├── database/       # Persistent storage
 │   ├── manager.py      # DatabaseManager (SQLite)
 │   ├── models.py       # Table schemas
-│   └── cache.py        # In-memory query cache
+│   └── cache/          # In-memory query + browser caches
+│       ├── query_cache.py   # QueryCache (TTL query cache)
+│       └── browser_cache.py # BrowserCache (browser session)
 │
 ├── skills/         # Pluggable capabilities
 │   ├── base.py         # BaseSkill ABC
@@ -237,6 +264,7 @@ sarthi/
 ├── api.py          # FastAPI server
 ├── main.py         # CLI entry point
 ├── wakeword.py     # Wake word launcher (runs start.bat on detection)
+├── wakeword.bat    # Background launcher — windowless, tray icon, auto-restart
 ├── variable.py     # User config — change the wake word here
 ├── config.py       # Central configuration
 └── tests/          # 109+ pytest unit tests

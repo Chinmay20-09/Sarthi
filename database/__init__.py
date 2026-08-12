@@ -7,7 +7,8 @@ This prevents duplicated registries and scattered database files.
 ARCHITECTURE:
     manager.py    — DatabaseManager: SQLite connection + query API
     models.py     — Shared table schemas and dataclass models
-    cache.py      — Query result caching
+    cache/        — Query + browser session caching
+                    (query_cache.py: QueryCache, browser_cache.py: BrowserCache)
 
 USAGE:
     from database.manager import get_database, DatabaseManager

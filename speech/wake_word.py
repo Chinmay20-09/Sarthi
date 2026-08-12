@@ -107,6 +107,7 @@ class WakeWordListener:
         self._record = record_fn or self._record_chunk
         self._transcribe = transcribe_fn or transcribe
         self._stop = False
+        self._dormant = False
 
         if not self.wake_words:
             logger.warning("No wake words configured — listener will never trigger.")
@@ -118,6 +119,25 @@ class WakeWordListener:
     def stop(self) -> None:
         """Stop the listening loop at the next safe point."""
         self._stop = True
+
+    def pause(self, reason: str = "") -> None:
+        """Pause listening until resume() is called.
+
+        While dormant the microphone is never touched — useful, for
+        example, while Sarthi is already running.
+        """
+        self._dormant = True
+        logger.info("Listener dormant — %s", reason or "paused")
+
+    def resume(self) -> None:
+        """Resume listening after a dormant period."""
+        self._dormant = False
+        logger.info("Listener resumed.")
+
+    @property
+    def dormant(self) -> bool:
+        """True while the listener is paused and not using the microphone."""
+        return self._dormant
 
     # ------------------------------------------------------------------
     # Listening
@@ -156,6 +176,9 @@ class WakeWordListener:
             The transcribed text, or None if no speech started within the
             timeout (or the listener was stopped).
         """
+        if self._dormant:
+            return None
+
         utterance: list[np.ndarray] = []
         silence_chunks = 0
         max_chunks = max(1, int(round(self.max_utterance / self.chunk_duration)))
@@ -197,6 +220,10 @@ class WakeWordListener:
         logger.info("Listening for wake word(s): %s", ", ".join(self.wake_words))
 
         while not self._stop:
+            if self._dormant:
+                # Dormant (e.g. Sarthi is running) — don't touch the mic.
+                time.sleep(0.5)
+                continue
             try:
                 text = self.listen_once()
             except Exception:

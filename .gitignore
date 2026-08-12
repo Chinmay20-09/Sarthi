@@ -78,6 +78,9 @@ desktop.ini
 *.temp
 *.bak
 
+# Wake word single-instance lock
+wakeword.pid
+
 # ==========================================
 # Audio Files (Temporary)
 # ==========================================

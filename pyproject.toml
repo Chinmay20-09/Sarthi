@@ -12,6 +12,8 @@ dependencies = [
     "uvicorn",
     "httpx",
     "python-dotenv",
+    "pystray",
+    "pillow",
 ]
 
 # ============================================================================

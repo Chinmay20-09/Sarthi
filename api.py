@@ -10,6 +10,18 @@ ARCHITECTURE:
     Brain orchestrates everything. EventBus enables decoupled communication.
 """
 
+import os
+import sys
+
+# Under pythonw (start.bat's windowless background mode) there is no
+# console: sys.stdout/sys.stderr are None, which would crash uvicorn's
+# logging setup and every print() in the request handlers. Route them to
+# devnull so the API runs fine without a terminal window.
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, "w", encoding="utf-8")
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, "w", encoding="utf-8")
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse

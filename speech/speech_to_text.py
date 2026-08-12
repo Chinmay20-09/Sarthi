@@ -16,25 +16,32 @@ logger = logging.getLogger(__name__)
 _model = None
 
 
-def get_model() -> Any:
+def get_model(model: str | None = None) -> Any:
     """
     Load the Whisper model once and return the cached instance.
+
+    Args:
+        model: Optional model size override (e.g. "tiny" for lightweight
+            background listening). Defaults to config.WHISPER_MODEL.
+            Only the first call loads anything; later calls return the
+            cached model regardless of the requested name.
 
     Returns:
         faster_whisper.WhisperModel instance
     """
     global _model
+    name = model or WHISPER_MODEL
     if _model is None:
         logger.info(
             "Loading Whisper model '%s' (device=%s, compute_type=%s)...",
-            WHISPER_MODEL,
+            name,
             WHISPER_DEVICE,
             WHISPER_COMPUTE_TYPE,
         )
         from faster_whisper import WhisperModel
 
         _model = WhisperModel(
-            WHISPER_MODEL,
+            name,
             device=WHISPER_DEVICE,
             compute_type=WHISPER_COMPUTE_TYPE,
         )

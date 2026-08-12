@@ -1,6 +1,6 @@
-"""Tests for database/cache.py.
+"""Tests for database/cache/query_cache.py.
 
-Tests the in-memory TTL-based query cache.
+Tests the in-memory TTL-based query cache (QueryCache).
 """
 
 import time

@@ -65,8 +65,8 @@ def setup_logging(
 
     handlers: list[logging.Handler] = []
 
-    # Console handler
-    if console:
+    # Console handler (skipped under pythonw, where sys.stderr is None)
+    if console and sys.stderr is not None:
         console_handler = logging.StreamHandler(sys.stderr)
         console_handler.setFormatter(logging.Formatter(resolved_format))
         handlers.append(console_handler)
