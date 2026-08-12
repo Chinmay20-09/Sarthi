@@ -604,6 +604,12 @@ def _listen(args: argparse.Namespace) -> int:
             return 0
 
         if args.tray:
+            # If Sarthi is already running (e.g. this tray process was
+            # restarted by the supervisor after a crash while dormant),
+            # go straight back into dormant mode so the mic stays off
+            # until Sarthi exits.
+            if getattr(variable, "DORMANT_WHILE_RUNNING", True) and _sarthi_is_up():
+                _enter_dormancy()
             return _run_with_tray(listener, args.log_file)
 
         listener.listen_forever()

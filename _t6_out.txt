@@ -1,5 +1,0 @@
-started
-closed fd 0
-closed fd 1
-closed fd 2
-still alive at 30s
