@@ -87,14 +87,34 @@ class ScannerSkill(BaseSkill):
             logger.info("Starting application scan...")
             applications = scan_all()
 
-            # Save via Knowledge Layer (DI)
-            self.knowledge.save_applications(applications)
+            # Save via Knowledge Layer (DI) — preserves categories and
+            # collects brand-new apps that landed in `unattended`.
+            merge = self.knowledge.merge_scan_results(applications)
+            new_unattended = merge.get("new_unattended", [])
+
+            games = sum(1 for a in applications if a.get("category") == "game")
 
             return {
                 "success": True,
-                "status": "scan_complete",
+                "status": (
+                    f"Scan complete — discovered {len(applications)} applications "
+                    f"and {games} game(s)."
+                    + (f" {len(new_unattended)} new app(s) awaiting categorization." if new_unattended else "")
+                ),
                 "result": {
                     "applications_found": len(applications),
+                    "visual": {
+                        "type": "scan_results",
+                        "data": {
+                            "total": len(applications),
+                            "applications": len(applications) - games,
+                            "games": games,
+                            "new_unattended": [
+                                {"name": a.get("name"), "path": a.get("path")} for a in new_unattended
+                            ],
+                            "last_scan": self.knowledge.last_scan,
+                        },
+                    },
                 },
             }
         except Exception as e:

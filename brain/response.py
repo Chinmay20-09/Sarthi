@@ -34,14 +34,32 @@ class BrainResponse:
     action_result: dict[str, Any] | None = field(default=None)
     execution_ms: float = 0.0
     error: str | None = field(default=None)
+    resolved: bool = False
 
     def to_api_dict(self) -> dict[str, Any]:
         """Serialize to a dict suitable for API responses."""
+        # Human-readable message shown in the chat bubble.
+        if not self.success and self.error:
+            message = self.error
+        elif self.status and self.status not in ("completed", "executed"):
+            message = self.status
+        else:
+            message = "Done." if self.success else "Something went wrong."
+
+        # Guard against a missing intent (pipeline error before interpretation)
+        intent = self.intent
         return {
-            "action": self.intent.action,
-            "target": self.intent.target,
-            "confidence": self.intent.confidence,
+            "action": getattr(intent, "action", None),
+            "target": getattr(intent, "target", None),
+            "confidence": getattr(intent, "confidence", None),
             "status": self.status,
             "success": self.success,
             "execution_ms": round(self.execution_ms, 1),
+            # Assistant message text for the chat bubble
+            "text": message,
+            # Structured result payload (skills emit visual cards via result.visual)
+            "result": self.action_result,
+            "error": self.error,
+            # True only when the resolver actually rewrote an intent target
+            "resolved": bool(self.resolved),
         }

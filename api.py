@@ -62,6 +62,20 @@ class CommandRequest(BaseModel):
     text: str
 
 
+class CategorizeRequest(BaseModel):
+    name: str
+    status: str
+
+
+class RunRequest(BaseModel):
+    name: str
+
+
+class SettingRequest(BaseModel):
+    key: str
+    value: str
+
+
 @app.get("/", include_in_schema=False)
 def root():
     return RedirectResponse(url="/ui/dashboard.html")
@@ -82,7 +96,7 @@ def command(request: CommandRequest):
     bus.publish("intent_received", {"text": request.text}, source="api")
     response = engine.process(request.text)
     result = response.to_api_dict()
-    result["text"] = request.text
+    result["input"] = request.text
     bus.publish("command_completed", result, source="api")
     return result
 
@@ -112,7 +126,7 @@ def listen_command():
 
     response = engine.process(text)
     api_result = response.to_api_dict()
-    api_result["text"] = text
+    api_result["input"] = text
 
     bus.publish("command_completed", api_result, source="api")
     return api_result
@@ -128,15 +142,84 @@ def knowledge_stats():
         "total": len(applications),
         "applications": len(apps),
         "games": len(games),
-        "last_scan": None,
+        "last_scan": knowledge.last_scan,
     }
 
 
 @app.get("/applications")
 def list_applications():
-    """List all discovered applications."""
+    """List all discovered applications (with their user category)."""
     apps = knowledge.load_applications()
-    return [{"name": app["name"], "category": app["category"]} for app in apps]
+    return [
+        {
+            "name": app.get("name", ""),
+            "category": app.get("category", "application"),
+            "app_status": app.get("app_status", "unattended"),
+        }
+        for app in apps
+    ]
+
+
+@app.get("/applications/categories")
+def application_categories():
+    """Get applications grouped by user category (favourite / ignored / unattended)."""
+    return {
+        "favourite": knowledge.get_applications_by_status("favourite"),
+        "ignored": knowledge.get_applications_by_status("ignored"),
+        "unattended": knowledge.get_applications_by_status("unattended"),
+    }
+
+
+@app.post("/applications/categorize")
+def categorize_application(request: CategorizeRequest):
+    """Move an application to a category (favourite / ignored / unattended)."""
+    app = knowledge.categorize_application(request.name, request.status)
+    if app is None:
+        return {"success": False, "error": f"Application not found: {request.name}"}
+    return {"success": True, "app": app}
+
+
+@app.post("/applications/run")
+def run_application(request: RunRequest):
+    """Launch an application directly (Run Anyway — bypasses the favourites gate)."""
+    from brain.intent import Intent
+    from skills.app_launcher.main import AppLauncherSkill
+
+    result = AppLauncherSkill().execute(Intent(action="run_anyway", target=request.name))
+    return {
+        "success": result.get("success", False),
+        "status": result.get("status", "error"),
+        "result": result.get("result"),
+        "error": result.get("error"),
+    }
+
+
+@app.post("/settings")
+def save_setting(request: SettingRequest):
+    """Persist a user setting (e.g. github_username) so it survives restarts."""
+    from database.manager import get_database
+    from database.models import CREATE_SETTINGS
+
+    db = get_database()
+    db.create_table(CREATE_SETTINGS)
+    db.execute(
+        "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))",
+        (request.key, request.value),
+    )
+    logger.info(f"Saved setting: {request.key}")
+    return {"success": True, "key": request.key, "value": request.value}
+
+
+@app.get("/settings/{key}")
+def get_setting(key: str):
+    """Read a previously saved user setting by key."""
+    from database.manager import get_database
+    from database.models import CREATE_SETTINGS
+
+    db = get_database()
+    db.create_table(CREATE_SETTINGS)
+    row = db.fetch_one("SELECT value FROM settings WHERE key = ?", (key,))
+    return {"key": key, "value": row["value"] if row else None}
 
 
 @app.get("/skills")

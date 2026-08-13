@@ -248,7 +248,7 @@ class TestFindWebsite:
 
 class TestSave:
     def test_save_applications(self, manager, tmp_path):
-        """save_applications should persist data."""
+        """save_applications should persist data (merged with existing)."""
         new_apps = [
             {"name": "Firefox", "path": "/usr/bin/firefox", "aliases": []},
         ]
@@ -256,10 +256,12 @@ class TestSave:
         assert result is True
         # Cache should be invalidated
         assert manager._applications_cache is None
-        # Reload should return new data
+        # Reload should include the new app (merged alongside existing ones)
         loaded = manager.load_applications()
-        assert len(loaded) == 1
-        assert loaded[0]["name"] == "Firefox"
+        names = [a["name"] for a in loaded]
+        assert "Firefox" in names
+        firefox = next(a for a in loaded if a["name"] == "Firefox")
+        assert firefox["app_status"] == "unattended"
 
     def test_save_websites(self, manager):
         """save_websites should persist data."""
@@ -275,6 +277,81 @@ class TestSave:
         assert manager._applications_cache is not None
         manager.save_applications([{"name": "New", "aliases": []}])
         assert manager._applications_cache is None
+
+    def test_save_preserves_category(self, manager):
+        """Save/load round trip must preserve the category field."""
+        new_apps = [
+            {"name": "Steam", "path": "C:/Steam/steam.exe", "aliases": [], "category": "game"},
+        ]
+        assert manager.save_applications(new_apps) is True
+        loaded = manager.load_applications()
+        steam = next(a for a in loaded if a["name"] == "Steam")
+        assert steam["category"] == "game"
+
+
+# ---------------------------------------------------------------------------
+# Categories (favourite / ignored / unattended)
+# ---------------------------------------------------------------------------
+
+
+class TestCategories:
+    def test_new_apps_land_in_unattended(self, manager):
+        """merge_scan_results should place brand-new apps in unattended."""
+        result = manager.merge_scan_results(
+            [{"name": "NewApp", "path": "/usr/bin/newapp", "aliases": []}]
+        )
+        assert result["success"] is True
+        assert len(result["new_unattended"]) == 1
+        names = [a["name"] for a in manager.get_applications_by_status("unattended")]
+        assert "NewApp" in names
+
+    def test_categorize_moves_app(self, manager):
+        """categorize_application should move an app between categories."""
+        manager.merge_scan_results(
+            [{"name": "Chrome", "path": "/usr/bin/chrome", "aliases": []}]
+        )
+        app = manager.categorize_application("Chrome", "favourite")
+        assert app is not None
+        assert app["app_status"] == "favourite"
+        assert manager.get_applications_by_status("favourite")[0]["name"] == "Chrome"
+        unattended_names = [a["name"] for a in manager.get_applications_by_status("unattended")]
+        assert "Chrome" not in unattended_names
+        # app_status is stamped on load
+        loaded = manager.load_applications()
+        chrome = next(a for a in loaded if a["name"] == "Chrome")
+        assert chrome["app_status"] == "favourite"
+
+    def test_categorize_unknown_app(self, manager):
+        """Categorizing an unknown app returns None."""
+        assert manager.categorize_application("Nope", "favourite") is None
+
+    def test_categorize_invalid_status(self, manager):
+        """Categorizing with an invalid status returns None."""
+        manager.merge_scan_results(
+            [{"name": "Chrome", "path": "/usr/bin/chrome", "aliases": []}]
+        )
+        assert manager.categorize_application("Chrome", "bogus") is None
+
+    def test_merge_keeps_existing_categorization(self, manager):
+        """Rescanning must not reset a user's favourite/ignored choice."""
+        manager.merge_scan_results(
+            [{"name": "Chrome", "path": "/usr/bin/chrome", "aliases": []}]
+        )
+        manager.categorize_application("Chrome", "ignored")
+        # Rescan reports the same app again — it must stay ignored
+        result = manager.merge_scan_results(
+            [{"name": "Chrome", "path": "/usr/bin/chrome", "aliases": ["google chrome"]}]
+        )
+        assert result["new_unattended"] == []
+        assert manager.get_applications_by_status("ignored")[0]["name"] == "Chrome"
+        # metadata refreshed
+        assert "google chrome" in manager.get_applications_by_status("ignored")[0]["aliases"]
+
+    def test_last_scan_populated_after_save(self, manager):
+        """last_scan should reflect the most recent save."""
+        assert manager.save_applications([{"name": "Firefox", "aliases": []}]) is True
+        assert manager.last_scan is not None
+        assert manager._last_scan_cache == manager.last_scan
 
 
 # ---------------------------------------------------------------------------

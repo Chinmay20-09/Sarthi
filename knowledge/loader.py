@@ -106,7 +106,11 @@ class KnowledgeLoader:
             if "version" not in data:
                 return False
 
-            if "entities" not in data or not isinstance(data["entities"], list):
+            # Version 2 uses categories; version 1 used a flat entities list
+            if "categories" in data:
+                if not isinstance(data["categories"], dict):
+                    return False
+            elif "entities" not in data or not isinstance(data["entities"], list):
                 return False
 
             return True

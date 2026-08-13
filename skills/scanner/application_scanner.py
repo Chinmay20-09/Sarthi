@@ -12,7 +12,7 @@ ARCHITECTURE:
 Supports:
 - .exe executables from Program Files, Start Menu, PATH
 - .lnk shortcuts via VBScript resolution
-- Game directories (Steam, Epic Games, GOG)
+- Game directories (Steam, Epic Games, GOG, C:\\Games)
 - Smart deduplication with priority-based merging
 - Automatic alias generation from metadata and display names
 """
@@ -118,6 +118,7 @@ GAME_DIRECTORIES = [
     Path("C:\\Program Files (x86)\\Steam\\steamapps\\common"),
     Path("C:\\Program Files\\Epic Games"),
     Path("C:\\GOG Games"),
+    Path("C:\\Games"),
     Path.home() / "Games",
 ]
 
@@ -142,6 +143,7 @@ class Application:
             "name": self.name,
             "aliases": self.aliases,
             "path": str(self.path),
+            "category": self.category,
         }
 
     @classmethod
@@ -151,6 +153,7 @@ class Application:
             name=data["name"],
             path=Path(data["path"]),
             aliases=data.get("aliases", []),
+            category=data.get("category", "application"),
         )
 
 
@@ -164,6 +167,12 @@ def should_ignore(path: Path) -> bool:
     for part in path.parts:
         if part.lower() in IGNORED_FOLDERS:
             return True
+
+    # Skip Windows system executables (System32 can appear on PATH).
+    # as_posix() normalizes separators so this matches on both
+    # backslash (Windows) and forward-slash (POSIX) paths.
+    if "windows/system32" in path.as_posix().lower():
+        return True
 
     filename = path.name.lower()
     if filename in IGNORED_EXECUTABLES:
@@ -242,7 +251,9 @@ def generate_aliases(exe_name: str, display_name: str | None = None) -> list[str
     if exe_base in APP_METADATA:
         metadata = APP_METADATA[exe_base]
         if display_name is None:
-            display_name = metadata.get("display_name")
+            fallback = metadata.get("display_name")
+            if isinstance(fallback, str):
+                display_name = fallback
         aliases.update(metadata.get("aliases", []))
 
     # Add base executable name
@@ -297,10 +308,6 @@ def scan_directory(
                 if item.is_file():
                     if item.suffix.lower() == ".exe":
                         if should_ignore(item):
-                            continue
-
-                        # Skip system executables
-                        if "windows\\system32" in str(item).lower():
                             continue
 
                         exe_name = item.stem
@@ -370,6 +377,8 @@ def scan_game_directories() -> list[Application]:
                         "update",
                         "helper",
                         "crashpad",
+                        "crashhandler",
+                        "bootstrapper",
                         "service",
                         "launcherhelper",
                         "redist",
@@ -544,6 +553,7 @@ def scan_all() -> list[dict]:
     - Applications from Program Files
     - Applications from Program Files (x86)
     - Games from recognized game directories
+    - Executables on PATH
 
     Returns:
         List of application dictionaries (not saved to file).
@@ -560,6 +570,7 @@ def scan_all() -> list[dict]:
         scan_program_files(),
         scan_program_files_x86(),
         scan_game_directories(),
+        scan_path(),
     ]
 
     registry = merge_results(results)

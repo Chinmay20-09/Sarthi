@@ -16,14 +16,17 @@
         }
     </style>
     <div class="px-8 mb-12 flex flex-col items-center flex-shrink-0">
-        <img alt="Sarthi Logo"
-            class="w-16 h-16 object-contain mb-4 filter drop-shadow-[0_0_12px_rgba(0,217,255,0.6)]"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsKS1C0ncF1QaIs4yZ-Ktfsj0KXYNm2KxZrhGvcsdGKkyViETMsXLB-v4ASdiK0_ajiDBsH2gFwRbNWnIyxXdOCKqFiCNGFPRMDqkuRvBoiIy1b_jJj1oOvNVB6uRNDKeEBjd4aaBI8jUOKo0S7g0Z3awce17Ut2_zlbexWiQG2JDI1ARm_FlshNI1_Hu0BfX24_H6uy86gnR20SGn_k9s4DwJZ8CZavzvDufXwz1WNRLERyqvwvoJiA" />
-        <div class="text-center">
-            <h1 class="font-display-lg text-display-lg tracking-tighter text-primary-container drop-shadow-[0_0_8px_rgba(0,217,255,0.4)] leading-tight">
-                Sarthi</h1>
-            <p class="font-label-caps text-label-caps text-on-surface-variant opacity-60">V1.0.4 Hyperion</p>
-        </div>
+        <a href="chat.html" title="Open Chat"
+            class="flex flex-col items-center group transition-all duration-300 hover:scale-105 active:scale-95">
+            <img alt="Sarthi Logo"
+                class="w-16 h-16 object-contain mb-4 filter drop-shadow-[0_0_12px_rgba(0,217,255,0.6)] transition-all duration-300 group-hover:drop-shadow-[0_0_20px_rgba(0,217,255,0.9)]"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsKS1C0ncF1QaIs4yZ-Ktfsj0KXYNm2KxZrhGvcsdGKkyViETMsXLB-v4ASdiK0_ajiDBsH2gFwRbNWnIyxXdOCKqFiCNGFPRMDqkuRvBoiIy1b_jJj1oOvNVB6uRNDKeEBjd4aaBI8jUOKo0S7g0Z3awce17Ut2_zlbexWiQG2JDI1ARm_FlshNI1_Hu0BfX24_H6uy86gnR20SGn_k9s4DwJZ8CZavzvDufXwz1WNRLERyqvwvoJiA" />
+            <div class="text-center">
+                <h1 class="font-display-lg text-display-lg tracking-tighter text-primary-container drop-shadow-[0_0_8px_rgba(0,217,255,0.4)] leading-tight transition-all duration-300 group-hover:drop-shadow-[0_0_14px_rgba(0,217,255,0.7)]">
+                    Sarthi</h1>
+                <p class="font-label-caps text-label-caps text-on-surface-variant opacity-60">V1.0.4 Hyperion</p>
+            </div>
+        </a>
     </div>
     <nav class="flex-1 flex flex-col min-h-0" id="sarthi-nav">
         <div class="flex-1 overflow-y-auto space-y-2">
@@ -31,6 +34,11 @@
                 href="dashboard.html" data-page="dashboard">
                 <span class="material-symbols-outlined mr-4">home</span>
                 <span class="font-body-lg text-body-lg">Home</span>
+            </a>
+            <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+                href="chat.html" data-page="chat">
+                <span class="material-symbols-outlined mr-4">chat</span>
+                <span class="font-body-lg text-body-lg">Chat</span>
             </a>
             <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
                 href="skills.html" data-page="skills">

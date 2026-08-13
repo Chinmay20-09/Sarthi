@@ -59,6 +59,45 @@ class GitHubProjectSkill(BaseSkill):
         self.database = GitHubDatabase()
 
     # ------------------------------------------------------------------
+    # GitHub configuration
+    # ------------------------------------------------------------------
+
+    def _load_saved_username(self) -> str:
+        """
+        Read the GitHub username saved via the user_config skill.
+
+        Returns:
+            The saved username, or empty string if not configured yet
+        """
+        try:
+            from database.manager import get_database
+
+            row = get_database().fetch_one(
+                "SELECT value FROM settings WHERE key = ?", ("github_username",)
+            )
+            return row["value"] if row else ""
+        except Exception as e:
+            logger.debug(f"Could not load saved GitHub username: {e}")
+            return ""
+
+    def _ensure_github(self) -> str:
+        """
+        Make sure a GitHub client exists for the configured username.
+
+        Resolution order:
+            1. Explicit constructor argument / SKILL_PROJECT_TRACKER_USERNAME env var
+            2. Username saved via the user_config skill (persistent, chat-configured)
+
+        Returns:
+            The resolved username (may be empty if GitHub is not configured)
+        """
+        username = self.username or self._load_saved_username()
+        if username and self.github is None:
+            self.github = GitHubClient(username=username, token=self.token)
+            logger.info(f"GitHub configured for user: {username}")
+        return username
+
+    # ------------------------------------------------------------------
     # BaseSkill interface
     # ------------------------------------------------------------------
 
@@ -82,16 +121,46 @@ class GitHubProjectSkill(BaseSkill):
         action = intent.action.lower() if intent.action else ""
         target = intent.target.lower() if intent.target else ""
 
-        # Check if GitHub is configured before making API calls
-        if self.github is None:
+        # Configuration commands ("set/configure github username ...") and
+        # username queries belong to the user_config skill, not to tracking.
+        if action in ("set", "configure") or "username" in target:
             return {
                 "success": False,
-                "status": "not_configured",
-                "error": (
-                    "GitHub is not configured. "
-                    "Set the SKILL_PROJECT_TRACKER_USERNAME environment variable "
-                    "to enable project tracking."
-                ),
+                "status": "unknown",
+                "error": f"Unknown command: {intent.action} {intent.target}",
+            }
+
+        # Does this skill own this intent?
+        owns = (
+            action in ("check", "status", "how", "what", "show", "pending", "sync")
+            or "project" in target
+            or "github" in target
+        )
+
+        # Resolve the GitHub username (explicit arg > env var > saved setting)
+        # before deciding whether we can fulfill the command.
+        username = self._ensure_github()
+
+        # Check if GitHub is configured before making API calls
+        if not username:
+            if owns:
+                # We recognize the command but can't fulfill it — signal
+                # ownership so the executor surfaces this helpful message.
+                return {
+                    "success": False,
+                    "status": "not_configured",
+                    "handled": True,
+                    "error": (
+                        "GitHub is not configured. "
+                        "Say 'set my github username to <your-username>' in the chat "
+                        "to save it permanently."
+                    ),
+                }
+            # Not our command — let other skills try
+            return {
+                "success": False,
+                "status": "unknown",
+                "error": f"Unknown command: {intent.action} {intent.target}",
             }
 
         # Check / scan GitHub for new repos
@@ -101,8 +170,20 @@ class GitHubProjectSkill(BaseSkill):
 
         # Project status / summary
         if action in ("status", "how", "what", "show", "pending") or "project" in target:
-            result = self.project_status()
-            return {"success": True, "status": result}
+            # Query once — both the text summary and the visual cards use the
+            # same repository + summary data so they never diverge.
+            repositories = self.database.get_all_repositories()
+            result = self.project_status(repositories)
+            cards = self._project_cards(repositories)
+            payload: dict[str, Any] = {"success": True, "status": result}
+            if cards:
+                payload["result"] = {
+                    "visual": {
+                        "type": "project_status",
+                        "data": {"projects": cards},
+                    }
+                }
+            return payload
 
         # Sync repositories
         if action in ("sync",) or "sync" in target:
@@ -183,9 +264,10 @@ class GitHubProjectSkill(BaseSkill):
 
         return f"Synced {synced}/{len(repositories)} repositories successfully."
 
-    def project_status(self) -> str:
+    def project_status(self, repositories: list[dict[str, Any]] | None = None) -> str:
         """Get a summary of all tracked projects."""
-        repositories = self.database.get_all_repositories()
+        if repositories is None:
+            repositories = self.database.get_all_repositories()
 
         if not repositories:
             return (
@@ -193,13 +275,73 @@ class GitHubProjectSkill(BaseSkill):
                 "Try saying 'check github' to find your repositories."
             )
 
-        summaries = []
-        for repo in repositories:
-            summary = self.database.get_summary(repo["name"])
-            if summary:
-                summaries.append(summary)
+        cards = self._project_cards(repositories)
 
-        if not summaries:
+        if not cards:
             return f"Tracking {len(repositories)} repositories but no data synced yet. Try 'sync repositories'."
 
+        summaries = [
+            {
+                "repository": card["name"],
+                "open_issues": card["open_issues"],
+                "open_pull_requests": card["open_pull_requests"],
+                "stars": card["stars"],
+                "last_updated": card["last_updated"],
+            }
+            for card in cards
+        ]
+
         return PROJECT_SUMMARY + "\n\n" + format_project_summary(summaries)
+
+    def _project_cards(self, repositories: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+        """
+        Build structured project card data for the chat UI.
+
+        Joins tracked repositories with their latest synced summaries so
+        the frontend can render a visual health card per project.
+
+        Args:
+            repositories: Tracked repositories. If None, loads from database.
+
+        Returns:
+            List of card dicts (one per tracked repo with data synced)
+        """
+        if repositories is None:
+            repositories = self.database.get_all_repositories()
+        cards: list[dict[str, Any]] = []
+
+        for repo in repositories:
+            summary = self.database.get_summary(repo["name"])
+            if not summary:
+                continue
+
+            open_issues = int(summary.get("open_issues") or 0)
+            open_prs = int(summary.get("open_pull_requests") or 0)
+            # Simple health heuristic: open issues/PRs chip away from 100.
+            health = max(0, min(100, 100 - (open_issues * 2 + open_prs * 3)))
+
+            cards.append(
+                {
+                    "name": repo.get("name"),
+                    "full_name": repo.get("full_name"),
+                    "description": repo.get("description"),
+                    "private": bool(repo.get("private")),
+                    "html_url": repo.get("html_url"),
+                    "language": repo.get("language") or summary.get("language"),
+                    "stars": summary.get("stars", 0),
+                    "forks": summary.get("forks", 0),
+                    "open_issues": open_issues,
+                    "open_pull_requests": open_prs,
+                    "health": health,
+                    "last_updated": summary.get("last_updated"),
+                    "latest_commit": {
+                        "sha": summary.get("latest_commit_sha"),
+                        "message": summary.get("latest_commit_message"),
+                        "author": summary.get("latest_commit_author"),
+                        "date": summary.get("latest_commit_date"),
+                        "url": summary.get("latest_commit_url"),
+                    },
+                }
+            )
+
+        return cards

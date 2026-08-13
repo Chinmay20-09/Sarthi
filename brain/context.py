@@ -35,6 +35,8 @@ class BrainContext:
     stage: str = "initialized"
     metadata: dict[str, Any] = field(default_factory=dict)
     error: str | None = None
+    # True when the resolver actually rewrote an intent target
+    resolved: bool = False
 
     @property
     def elapsed_ms(self) -> float:

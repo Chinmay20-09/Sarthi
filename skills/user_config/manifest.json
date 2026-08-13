@@ -1,0 +1,12 @@
+{
+    "id": "user_config",
+    "name": "User Config",
+    "description": "Saves user settings (like your GitHub username) so Sarthi remembers them.",
+    "version": "1.0.0",
+    "enabled": true,
+    "icon": "settings",
+    "commands": [
+        "Set my github username to <name>",
+        "What is my github username?"
+    ]
+}
