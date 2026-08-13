@@ -26,7 +26,7 @@ from brain.executor import BrainExecutor
 from brain.intent import Intent
 from brain.interpreter import interpret
 from brain.planner import Planner
-from brain.resolver import EntityResolver
+from brain.entity_resolver import EntityResolver
 from brain.response import BrainResponse
 
 logger = logging.getLogger(__name__)

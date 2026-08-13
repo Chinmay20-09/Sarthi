@@ -32,6 +32,7 @@ from brain.engine import BrainEngine
 from brain.intent import Intent
 from events import get_bus
 from knowledge.manager import get_manager
+from skills.browser.routes import router as browser_router
 from skills.registry import get_registry
 from utils.logger import get_logger, setup_logging
 
@@ -47,6 +48,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include router for browser skill
+app.include_router(browser_router)
 
 # Serve Frontend
 app.mount("/ui", StaticFiles(directory="UI"), name="ui")
@@ -270,6 +274,3 @@ if __name__ == "__main__":
 
     bus.publish("system_startup", {}, source="api")
     uvicorn.run("api:app", host="127.0.0.1", port=8000, reload=True)
-from skills.browser.routes import router as browser_router
-
-app.include_router(browser_router)

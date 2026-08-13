@@ -144,7 +144,11 @@ class UserConfigSkill(BaseSkill):
                 return {
                     "success": True,
                     "status": "executed",
-                    "result": {"setting": GITHUB_USERNAME_KEY, "value": username},
+                    "result": {
+                        "setting": GITHUB_USERNAME_KEY,
+                        "value": username,
+                        "message": f"Your GitHub username has been saved as {username}.",
+                    },
                 }
             # No value provided — prompt for it in the chat UI
             return self._prompt_result()
