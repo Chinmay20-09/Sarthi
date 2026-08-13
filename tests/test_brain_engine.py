@@ -176,6 +176,21 @@ class TestPipelineStages:
         response = engine.process("open youtube")
         assert response.intent.target == "YouTube"
 
+    def test_pipeline_scan_stage(self, engine):
+        """'scan my system' should parse to the scan action."""
+        response = engine.process("scan my system")
+        assert response.intent.action == "scan"
+
+    def test_pipeline_refresh_maps_to_scan(self, engine):
+        """'refresh applications' should map to the scan action."""
+        response = engine.process("refresh applications")
+        assert response.intent.action == "scan"
+
+    def test_pipeline_discover_maps_to_scan(self, engine):
+        """'discover installed games' should map to the scan action."""
+        response = engine.process("discover installed games")
+        assert response.intent.action == "scan"
+
     def test_pipeline_without_resolver(self):
         """Pipeline should work without a resolver."""
         engine = BrainEngine()

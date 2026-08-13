@@ -110,6 +110,15 @@ class BrainExecutor:
         if handler:
             try:
                 result = handler(intent)
+                # Dict results carry their own success/status/result through
+                # (e.g. a needs_decision prompt from the app launcher)
+                if isinstance(result, dict):
+                    return {
+                        "success": result.get("success", True),
+                        "status": result.get("status", "executed"),
+                        "result": result.get("result", result),
+                        "error": result.get("error"),
+                    }
                 return {
                     "success": True,
                     "status": "executed",
@@ -145,6 +154,7 @@ class BrainExecutor:
                 }
 
         # Step 3: Try registered skills as fallback
+        meaningful_error: dict[str, Any] | None = None
         for skill in self._skills:
             try:
                 result = skill.execute(intent)
@@ -156,9 +166,28 @@ class BrainExecutor:
                         "result": result.get("result", result),
                         "error": None,
                     }
+
+                # A skill signals ownership of an intent it couldn't fulfill
+                # (e.g. not_configured) with handled=True. Surface the first
+                # such message instead of a generic "unknown action" error.
+                if (
+                    isinstance(result, dict)
+                    and meaningful_error is None
+                    and result.get("handled")
+                ):
+                    meaningful_error = {
+                        "success": False,
+                        "status": result.get("status", "error"),
+                        "result": result.get("result"),
+                        "error": result.get("error")
+                        or f"Skill '{skill.name}' could not handle: {action} {intent.target}",
+                    }
             except Exception as e:
                 logger.debug(f"Skill '{skill.name}' could not handle intent: {e}")
                 continue
+
+        if meaningful_error is not None:
+            return meaningful_error
 
         # No handler found
         logger.warning(f"No handler for action '{action}'")
@@ -176,24 +205,39 @@ class BrainExecutor:
     def _register_builtin_handlers(self) -> None:
         """Register default action handlers (apps, websites)."""
         try:
-            from actions.apps import open_app
-            from actions.browser import open_site
+            from skills.app_launcher.main import AppLauncherSkill
+            from skills.browser.main import BrowserSkill
 
             def handle_open(intent: Intent) -> dict[str, Any] | None:
                 """Handle 'open' action — try website first, then app."""
                 target = intent.target
                 if not target:
-                    return {"message": "No target specified"}
+                    return {"success": False, "status": "error", "error": "No target specified"}
 
                 # Try opening as a website first
-                if open_site(target):
-                    return {"action": "open_website", "target": target}
+                site_result = BrowserSkill().execute(Intent(action="open", target=target))
+                if site_result.get("success"):
+                    info = site_result.get("result") or {}
+                    return {
+                        "action": "open_website",
+                        "target": target,
+                        "website": info.get("website", target),
+                        "url": info.get("url", ""),
+                    }
 
-                # Fall back to opening as an application
-                if open_app(target):
-                    return {"action": "open_application", "target": target}
+                # Fall back to opening as an application (favourites-gated)
+                app_result = AppLauncherSkill().execute(Intent(action="open", target=target))
+                if app_result.get("success"):
+                    info = app_result.get("result") or {}
+                    return {
+                        "action": "open_application",
+                        "target": target,
+                        "application": info.get("application", target),
+                        "path": info.get("path", ""),
+                    }
 
-                return {"message": f"Could not open '{target}'"}
+                # needs_decision (ignored/unattended) and failures pass through
+                return app_result
 
             self.register_handler("open", handle_open)
 

@@ -157,6 +157,7 @@ class BrainEngine:
                 action_result=result.get("result"),
                 execution_ms=elapsed,
                 error=result.get("error"),
+                resolved=context.resolved,
             )
 
         except Exception as e:
@@ -178,10 +179,12 @@ class BrainEngine:
     def _resolve_plan(self, plan: list[Intent], context: BrainContext) -> list[Intent]:
         """Resolve entities for all intents in the plan."""
         resolved = []
+        resolved_any = False
         for intent in plan:
             if intent.target:
                 resolved_target = self.resolver.resolve(intent.target)
                 if resolved_target != intent.target:
+                    resolved_any = True
                     logger.debug(f"Resolved '{intent.target}' -> '{resolved_target}'")
                 intent.target = resolved_target
             resolved.append(intent)
@@ -190,6 +193,8 @@ class BrainEngine:
         if resolved:
             context.intent = resolved[-1]
 
+        # Tell downstream consumers whether resolution actually happened
+        context.resolved = resolved_any
         return resolved
 
     def _execute_plan(self, plan: list[Intent], context: BrainContext) -> dict[str, Any]:

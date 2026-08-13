@@ -49,7 +49,15 @@ class EntityResolver:
         - Perform reasoning
     """
 
-    MIN_CONFIDENCE = 70
+    # Minimum WRatio confidence. Kept high (80) to reject weak partial
+    # matches like "time it" -> "timeout" (76.9); real references still
+    # score 90+ thanks to indexed aliases, so recall is not hurt.
+    MIN_CONFIDENCE = 80
+    # Reject fuzzy matches where one side is much shorter than the other.
+    # WRatio's partial scoring lets a short phrase attach to a much longer
+    # name through a shared substring (e.g. "hello" -> "ShellMcpServers.Packaging"
+    # via the "hell" fragment, or "time" -> "timeout" via the "time" prefix).
+    MIN_LENGTH_RATIO = 0.62
     STOP_WORDS = {
         "open",
         "launch",
@@ -81,6 +89,7 @@ class EntityResolver:
         """
         self.entities: list[dict] = []
         self.entity_names: list[str] = []
+        self._name_owners: list[int] = []
 
         if entities:
             self._build_index(entities)
@@ -168,6 +177,11 @@ class EntityResolver:
         """
         Find best matching entity for a phrase.
 
+        Applies two quality guards on the raw WRatio score:
+            1. Minimum confidence threshold.
+            2. Length proportionality — a phrase and candidate must be of
+               comparable length, otherwise the partial match is rejected.
+
         Args:
             phrase: Text to match
 
@@ -175,19 +189,24 @@ class EntityResolver:
             Dict with match info, or None
         """
         cleaned_phrase = self.clean(phrase)
+        if not cleaned_phrase:
+            return None
 
         match = process.extractOne(cleaned_phrase, self.entity_names, scorer=fuzz.WRatio)
         if match is None:
             return None
 
         _, score, index = match
-        entity = self.entities[index]
+        entity = self.entities[self._name_owners[index]]
+        candidate_clean = self.entity_names[index]
 
-        # Exact alias match = 100 confidence
-        for alias in entity.get("aliases", []):
-            if self.clean(alias) == cleaned_phrase:
-                score = 100
-                break
+        # Length guard (both directions): reject substring-style partial
+        # matches between a short phrase and a much longer candidate (or
+        # vice versa), e.g. "chrome" latching onto a junk "MEM" utility.
+        if len(cleaned_phrase) < self.MIN_LENGTH_RATIO * len(candidate_clean):
+            return None
+        if len(candidate_clean) < self.MIN_LENGTH_RATIO * len(cleaned_phrase):
+            return None
 
         return {
             "input": phrase,
@@ -236,7 +255,41 @@ class EntityResolver:
         return "".join(c.lower() for c in text if c.isalnum())
 
     def _build_index(self, entities: list[dict]) -> None:
-        """Build fast lookup index for fuzzy matching."""
+        """Build fast lookup index for fuzzy matching.
+
+        Indexes both canonical names and aliases (mapping each candidate
+        string back to its owning entity via ``_name_owners``, which stays
+        in lockstep with ``entity_names``) so partial references like
+        "chrome" can reach "Google Chrome" through its alias.
+
+        All canonical names are indexed before any aliases, and candidates
+        are deduplicated, so an exact name match always wins over an alias
+        that happens to contain the same string (extractOne returns the
+        first candidate on a tie).
+        """
         self.entities = entities
-        self.entity_names = [self.clean(entity.get("name", "")) for entity in self.entities]
-        logger.debug(f"Built entity resolver index with {len(self.entities)} entities")
+        self.entity_names = []
+        self._name_owners = []
+        seen: set[str] = set()
+
+        # Pass 1: canonical names (exact names must beat aliases)
+        for index, entity in enumerate(entities):
+            name = self.clean(entity.get("name", ""))
+            if name and name not in seen:
+                seen.add(name)
+                self.entity_names.append(name)
+                self._name_owners.append(index)
+
+        # Pass 2: aliases
+        for index, entity in enumerate(entities):
+            for alias in entity.get("aliases", []):
+                alias_clean = self.clean(alias)
+                if alias_clean and alias_clean not in seen:
+                    seen.add(alias_clean)
+                    self.entity_names.append(alias_clean)
+                    self._name_owners.append(index)
+
+        logger.debug(
+            f"Built entity resolver index: {len(self.entities)} entities, "
+            f"{len(self.entity_names)} unique names+aliases"
+        )

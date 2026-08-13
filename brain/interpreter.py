@@ -32,6 +32,13 @@ ACTION_WORDS = {
     "what": "what",
     "pending": "pending",
     "update": "sync",
+    # Scanner actions
+    "scan": "scan",
+    "refresh": "scan",
+    "discover": "scan",
+    # User config actions (set/configure github username)
+    "set": "set",
+    "configure": "set",
 }
 
 FILLER_WORDS = {

@@ -436,6 +436,47 @@ class TestDormancy:
         assert wakeword._launched_at == 0.0
 
 
+class TestDormancyOnRestart:
+    """A tray process restarted while Sarthi is up must go dormant again.
+
+    If the supervisor restarts the listener after a crash while dormant,
+    the new process should re-enter dormant mode immediately instead of
+    using the microphone while Sarthi is still running.
+    """
+
+    def _run_listen(self, monkeypatch, sarthi_up):
+        import sys
+        from types import SimpleNamespace
+
+        import wakeword
+
+        # Fake mic so _listen never touches real audio hardware
+        class FakeSD:
+            def check_input_settings(self):
+                pass
+
+        monkeypatch.setitem(sys.modules, "sounddevice", FakeSD())
+        monkeypatch.setattr(wakeword, "get_model", lambda model=None: None)
+        monkeypatch.setattr(wakeword, "_sarthi_is_up", lambda: sarthi_up)
+        monkeypatch.setattr(
+            wakeword, "_run_with_tray", lambda listener, log_file=None: 3
+        )
+        entered = {"value": False}
+        monkeypatch.setattr(
+            wakeword, "_enter_dormancy", lambda: entered.__setitem__("value", True)
+        )
+
+        args = SimpleNamespace(once=False, tray=True, log_file=None)
+        wakeword._listen(args)
+        return entered["value"]
+
+    def test_tray_start_while_sarthi_up_enters_dormancy(self, monkeypatch):
+        assert self._run_listen(monkeypatch, sarthi_up=True) is True
+
+    def test_tray_start_while_sarthi_down_stays_awake(self, monkeypatch):
+        assert self._run_listen(monkeypatch, sarthi_up=False) is False
+
+
 class TestWindowlessLaunch:
     """wakeword.py launches Sarthi without any visible terminal."""
 
