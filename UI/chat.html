@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html class="dark" lang="en" style="">
+
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Sarthi Chat UI</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-lowest": "#0e0e0e",
+                        "secondary-container": "#474746",
+                        "on-surface": "#e5e2e1",
+                        "on-error-container": "#ffdad6",
+                        "outline-variant": "#3c494d",
+                        "inverse-on-surface": "#313030",
+                        "on-surface-variant": "#bbc9ce",
+                        "surface-container-high": "#2a2a2a",
+                        "primary-container": "#00d9ff",
+                        "on-tertiary-fixed": "#2f1500",
+                        "on-background": "#e5e2e1",
+                        "tertiary-fixed-dim": "#ffb77d",
+                        "inverse-surface": "#e5e2e1",
+                        "surface-bright": "#3a3939",
+                        "on-error": "#690005",
+                        "error": "#ffb4ab",
+                        "surface-container-low": "#1c1b1b",
+                        "surface-variant": "#353534",
+                        "primary-fixed-dim": "#00d9ff",
+                        "inverse-primary": "#00687b",
+                        "secondary-fixed": "#e5e2e1",
+                        "tertiary": "#ffddc4",
+                        "on-secondary-container": "#b7b5b4",
+                        "primary-fixed": "#aeecff",
+                        "on-primary-fixed-variant": "#004e5d",
+                        "outline": "#859398",
+                        "surface-tint": "#00d9ff",
+                        "secondary": "#c8c6c5",
+                        "surface-dim": "#131313",
+                        "secondary-fixed-dim": "#c8c6c5",
+                        "on-secondary-fixed-variant": "#474746",
+                        "error-container": "#93000a",
+                        "on-primary-container": "#005b6c",
+                        "on-primary-fixed": "#001f26",
+                        "surface-container-highest": "#353534",
+                        "surface": "#131313",
+                        "tertiary-container": "#ffb87f",
+                        "on-primary": "#003641",
+                        "surface-container": "#201f1f",
+                        "on-secondary": "#313030",
+                        "on-tertiary-container": "#7f4300",
+                        "on-tertiary-fixed-variant": "#6e3900",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "on-tertiary": "#4d2600",
+                        "primary": "#afecff",
+                        "tertiary-fixed": "#ffdcc3",
+                        "background": "#131313"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "margin-mobile": "20px",
+                        "gutter": "24px",
+                        "margin-desktop": "64px",
+                        "unit": "4px",
+                        "container-max-width": "1440px"
+                    },
+                    fontFamily: {
+                        "data-mono": ["JetBrains Mono"],
+                        "label-caps": ["JetBrains Mono"],
+                        "body-sm": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-md-mobile": ["Inter"],
+                        "headline-md": ["Inter"]
+                    },
+                    fontSize: {
+                        "data-mono": ["13px", { lineHeight: "18px", fontWeight: "400" }],
+                        "label-caps": ["12px", { lineHeight: "16px", letterSpacing: "0.1em", fontWeight: "500" }],
+                        "body-sm": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+                        "display-lg": ["48px", { lineHeight: "56px", letterSpacing: "-0.02em", fontWeight: "700" }],
+                        "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+                        "headline-md-mobile": ["20px", { lineHeight: "28px", fontWeight: "600" }],
+                        "headline-md": ["24px", { lineHeight: "32px", letterSpacing: "-0.01em", fontWeight: "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0e0e0e;
+            color: #e5e2e1;
+        }
+
+        .glass-card {
+            background-color: rgba(28, 27, 27, 0.4);
+            backdrop-filter: blur(30px);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .live-dot {
+            animation: live-pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes live-pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 6px rgba(0, 217, 255, 0.8); }
+            50% { opacity: 0.4; box-shadow: 0 0 0 rgba(0, 217, 255, 0); }
+        }
+
+        .typing-dot {
+            animation: typing-bounce 1.2s ease-in-out infinite;
+        }
+        @keyframes typing-bounce {
+            0%, 100% { transform: translateY(0); opacity: 0.4; }
+            50% { transform: translateY(-4px); opacity: 1; }
+        }
+
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+
+<body class="h-screen w-full flex overflow-hidden font-body-sm">
+
+    <!-- Left Sidebar (shared component) -->
+    <div id="sidebar"></div>
+
+    <!-- Main Content Area -->
+    <main class="ml-64 flex-1 flex flex-col relative h-full bg-surface-container-lowest overflow-hidden">
+
+        <!-- Top App Bar -->
+        <header
+            class="h-20 w-full flex justify-between items-center px-12 border-b border-white/5 bg-transparent backdrop-blur-md z-10 flex-shrink-0">
+            <div class="flex items-center gap-4">
+                <h2 class="font-headline-md text-headline-md font-bold text-primary">Sarthi</h2>
+                <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container border border-white/10">
+                    <span class="w-1.5 h-1.5 rounded-full bg-primary-container live-dot"></span>
+                    <span class="font-data-mono text-data-mono text-on-surface-variant">Ready</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-4 text-on-surface-variant">
+                <button id="header-mic"
+                    class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/5 hover:text-primary transition-colors"
+                    title="Speak a command">
+                    <span class="material-symbols-outlined">mic</span>
+                </button>
+                <button
+                    class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/5 hover:text-primary transition-colors"
+                    title="Notifications">
+                    <span class="material-symbols-outlined">notifications</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Chat Workspace -->
+        <div id="chat-scroll" class="flex-1 overflow-y-auto px-12 py-8 flex flex-col gap-8 pb-40">
+
+            <!-- Messages are appended here by chat.js logic -->
+            <div id="chat-empty"
+                class="flex flex-col items-center justify-center text-center h-full max-w-xl mx-auto gap-3 opacity-80">
+                <span class="material-symbols-outlined text-5xl text-primary/40">smart_toy</span>
+                <p class="font-headline-md text-headline-md text-on-surface">How can I help?</p>
+                <p class="text-on-surface-variant">Ask me to open an app, check your projects, scan your system,
+                    or set your GitHub username. Visual results appear right here in the chat.</p>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div
+            class="absolute bottom-0 left-0 w-full p-8 bg-gradient-to-t from-[#0e0e0e] via-[#0e0e0e]/90 to-transparent flex justify-center items-end pointer-events-none">
+            <div
+                class="glass-card w-full max-w-3xl rounded-2xl p-2 flex items-center gap-2 pointer-events-auto shadow-[0_10px_40px_rgba(0,0,0,0.5)]">
+                <button id="chat-mic"
+                    class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-white/5 transition-all"
+                    title="Speak a command">
+                    <span class="material-symbols-outlined">mic</span>
+                </button>
+                <input id="chat-input"
+                    class="flex-1 bg-transparent border-none text-on-surface font-body-lg text-body-lg focus:ring-0 focus:outline-none placeholder-on-surface-variant/50"
+                    placeholder="Ask Sarthi to do something..." type="text" autocomplete="off">
+                <button id="chat-send"
+                    class="w-10 h-10 rounded-full bg-surface-container border border-white/10 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-white/5 transition-all hover:border-primary/50"
+                    title="Send">
+                    <span class="material-symbols-outlined">arrow_upward</span>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Right Sidebar (Activity) -->
+    <aside class="w-80 h-full bg-surface-container-low border-l border-white/5 flex flex-col z-20 flex-shrink-0">
+        <div class="p-6 border-b border-white/5 flex justify-between items-center">
+            <h3 class="font-label-caps text-label-caps text-on-surface">SYSTEM ACTIVITY</h3>
+            <span class="w-2 h-2 rounded-full bg-primary-container live-dot"></span>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
+            <!-- Current Task -->
+            <div>
+                <div class="text-on-surface-variant text-xs mb-2">CURRENT TASK</div>
+                <div id="current-task-card"
+                    class="glass-card rounded-lg p-3 border-l-2 border-l-white/20 transition-all duration-300">
+                    <div id="current-task-label" class="font-body-sm text-on-surface mb-1">Idle — ready for commands</div>
+                    <div class="font-data-mono text-data-mono text-primary" style="text-shadow: 0 0 8px rgba(0,217,255,0.4);">
+                        Live View</div>
+                </div>
+            </div>
+            <!-- Last Execution -->
+            <div>
+                <div class="text-on-surface-variant text-xs mb-2">LAST EXECUTION</div>
+                <div class="bg-surface-container/30 rounded-lg p-3 border border-white/5 flex flex-col gap-2">
+                    <div class="flex justify-between items-center">
+                        <span class="font-data-mono text-data-mono text-on-surface-variant text-[10px]">TARGET</span>
+                        <span id="last-target" class="text-xs text-on-surface">—</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="font-data-mono text-data-mono text-on-surface-variant text-[10px]">ACTION</span>
+                        <span id="last-action" class="text-xs text-on-surface">—</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="font-data-mono text-data-mono text-on-surface-variant text-[10px]">STATUS</span>
+                        <span id="last-status" class="text-xs text-on-surface-variant">—</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="font-data-mono text-data-mono text-on-surface-variant text-[10px]">TIME</span>
+                        <span id="last-time" class="text-xs text-on-surface-variant">—</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <script src="components.js"></script>
+    <script>
+        // =====================================================================
+        // Sarthi Chat — inline visual output rendering
+        // =====================================================================
+        // NOTE: components.js already declares a global `const API`; a second
+        // top-level `const API` here would throw "Identifier already declared".
+        const SarthiAPI = "http://127.0.0.1:8000";
+
+        let processing = false;
+
+        // ---------------------------------------------------------------------
+        // DOM helpers
+        // ---------------------------------------------------------------------
+        function el(tag, className, html) {
+            const node = document.createElement(tag);
+            if (className) node.className = className;
+            if (html !== undefined) node.innerHTML = html;
+            return node;
+        }
+
+        function esc(value) {
+            const div = document.createElement("div");
+            div.textContent = value == null ? "" : String(value);
+            return div.innerHTML;
+        }
+
+        function fmt(n) {
+            n = Number(n) || 0;
+            if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
+            if (n >= 1000) return (n / 1000).toFixed(1) + "k";
+            return String(n);
+        }
+
+        function shortSha(sha) {
+            return sha ? String(sha).slice(0, 7) : "";
+        }
+
+        function ago(dateStr) {
+            if (!dateStr) return "";
+            const t = new Date(dateStr).getTime();
+            if (isNaN(t)) return "";
+            const secs = Math.floor((Date.now() - t) / 1000);
+            if (secs < 60) return "just now";
+            if (secs < 3600) return Math.floor(secs / 60) + "m ago";
+            if (secs < 86400) return Math.floor(secs / 3600) + "h ago";
+            return Math.floor(secs / 86400) + "d ago";
+        }
+
+        function scrollToBottom() {
+            const scroll = document.getElementById("chat-scroll");
+            if (scroll) scroll.scrollTop = scroll.scrollHeight;
+        }
+
+        // ---------------------------------------------------------------------
+        // Message rendering
+        // ---------------------------------------------------------------------
+        function addUserMessage(text) {
+            document.getElementById("chat-empty")?.remove();
+            const scroll = document.getElementById("chat-scroll");
+            const row = el("div", "flex flex-col gap-4 max-w-4xl mx-auto w-full");
+            const wrapper = el("div", "flex gap-4 justify-end");
+            wrapper.appendChild(
+                el("div",
+                    "bg-surface-container px-5 py-3 rounded-2xl rounded-tr-sm border border-white/10 text-on-surface font-body-lg text-body-lg",
+                    esc(text))
+            );
+            row.appendChild(wrapper);
+            scroll.appendChild(row);
+            scrollToBottom();
+        }
+
+        function addAssistantMessage(payload) {
+            document.getElementById("chat-empty")?.remove();
+            const scroll = document.getElementById("chat-scroll");
+            const row = el("div", "flex flex-col gap-4 max-w-4xl mx-auto w-full");
+            const wrapper = el("div", "flex gap-4");
+
+            const avatar = el("div",
+                "w-8 h-8 rounded-full bg-surface-container border border-white/10 flex-shrink-0 flex items-center justify-center mt-1");
+            avatar.innerHTML = '<span class="material-symbols-outlined text-primary text-sm">smart_toy</span>';
+            wrapper.appendChild(avatar);
+
+            const content = el("div", "flex flex-col gap-3 w-full");
+            content.appendChild(
+                el("div", "text-on-surface font-body-lg text-body-lg", esc(payload.text || "Done."))
+            );
+
+            const card = renderResultCard(payload);
+            if (card) content.appendChild(card);
+
+            // After a scan, offer the newly discovered apps for categorization
+            if (card && payload.result && payload.result.visual && payload.result.visual.type === "scan_results") {
+                const newApps = (payload.result.visual.data || {}).new_unattended || [];
+                if (newApps.length) startCategorizationQueue(newApps);
+            }
+
+            const pipeline = renderPipeline(payload);
+            if (pipeline) content.appendChild(pipeline);
+
+            wrapper.appendChild(content);
+            row.appendChild(wrapper);
+            scroll.appendChild(row);
+            scrollToBottom();
+        }
+
+        function addSystemMessage(text) {
+            const scroll = document.getElementById("chat-scroll");
+            const row = el("div", "flex justify-center max-w-4xl mx-auto w-full");
+            row.appendChild(el("span", "text-xs text-on-surface-variant font-data-mono", esc(text)));
+            scroll.appendChild(row);
+            scrollToBottom();
+        }
+
+        // ---------------------------------------------------------------------
+        // Execution pipeline strip (INTENT → RESOLVE → EXECUTE)
+        // ---------------------------------------------------------------------
+        function renderPipeline(payload) {
+            // ok: true → tick, false → failure, null → neutral (step didn't happen)
+            const intentHappened = !!payload.action;
+            const resolveHappened = !!payload.resolved;
+            const steps = [
+                { label: "INTENT", ok: intentHappened ? true : null, icon: intentHappened ? "check_circle" : "remove" },
+                { label: "RESOLVE", ok: resolveHappened ? true : null, icon: resolveHappened ? "check_circle" : "remove" },
+                { label: "EXECUTE", ok: payload.success, icon: payload.success ? "check_circle" : "error" },
+            ];
+
+            const card = el("div", "glass-card rounded-xl p-4 w-full flex items-center gap-4");
+            steps.forEach((step, i) => {
+                if (i > 0) card.appendChild(el("div", "h-px bg-white/10 flex-1"));
+                const color = step.ok === null ? "text-on-surface-variant" : (step.ok ? "text-primary-container" : "text-error");
+                const node = el("div", "flex flex-col items-center gap-1 flex-1");
+                node.innerHTML =
+                    '<span class="material-symbols-outlined text-xl ' + color + '">' +
+                    step.icon + '</span>' +
+                    '<span class="font-data-mono text-data-mono text-on-surface-variant text-[10px]">' + step.label + '</span>';
+                card.appendChild(node);
+            });
+            return card;
+        }
+
+        // ---------------------------------------------------------------------
+        // Visual cards
+        // ---------------------------------------------------------------------
+        function renderResultCard(payload) {
+            const result = payload.result;
+            if (!result || typeof result !== "object") return null;
+
+            const visual = result.visual;
+            if (visual && typeof visual === "object") {
+                if (visual.type === "project_status") return renderProjectCards(visual.data);
+                if (visual.type === "scan_results") return renderScanCard(visual.data);
+                if (visual.type === "app_decision") return renderAppDecisionCard(visual.data);
+                if (visual.type === "github_username_prompt") return renderGithubUsernamePrompt(visual.data);
+            }
+
+            if (result.application) return renderLaunchCard("application", result);
+            if (result.website) return renderLaunchCard("website", result);
+            return renderGenericCard(result);
+        }
+
+        // GitHub username prompt — asks for the value inline and saves it
+        function renderGithubUsernamePrompt(data) {
+            const card = el("div", "glass-card rounded-xl p-5 w-full border border-primary/20");
+            card.innerHTML =
+                '<div class="flex items-center gap-3 mb-3 border-b border-white/10 pb-2">' +
+                '  <span class="material-symbols-outlined text-primary-container">badge</span>' +
+                '  <span class="font-label-caps text-label-caps text-on-surface">GITHUB SETUP</span>' +
+                '</div>' +
+                '<p class="font-body-lg text-body-lg text-on-surface mb-1">What is your GitHub username?</p>' +
+                '<p class="text-on-surface-variant text-xs mb-4">I\'ll save it permanently so you never have to configure GitHub again.</p>' +
+                '<div class="flex gap-2">' +
+                '  <input id="github-username-input" type="text" class="flex-1 min-w-0 bg-surface-container rounded-lg px-3 py-2 text-on-surface border border-white/10 focus:border-primary/50 focus:outline-none" placeholder="e.g. octocat" autocomplete="off" spellcheck="false">' +
+                '  <button data-act="save" class="px-4 py-2 rounded-lg bg-primary/10 border border-primary/30 text-primary text-xs font-medium hover:bg-primary/20 transition-all flex-shrink-0">Save</button>' +
+                '</div>';
+
+            const input = card.querySelector("#github-username-input");
+            const saveButton = card.querySelector('[data-act="save"]');
+
+            async function saveUsername() {
+                const value = input.value.trim();
+                if (!value) {
+                    addSystemMessage("Please type your GitHub username first.");
+                    input.focus();
+                    return;
+                }
+                saveButton.disabled = true;
+                saveButton.textContent = "Saving...";
+                try {
+                    const response = await fetch(SarthiAPI + "/settings", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ key: data.key || "github_username", value: value }),
+                    });
+                    const result = await response.json();
+                    addSystemMessage(result.success
+                        ? "GitHub username saved as " + result.value + " — you're all set!"
+                        : "Could not save username: " + (result.error || "unknown error"));
+                } catch (err) {
+                    console.error(err);
+                    addSystemMessage("Could not save the username — is the server running?");
+                }
+                card.remove();
+            }
+
+            saveButton.addEventListener("click", saveUsername);
+            input.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") saveUsername();
+            });
+            input.focus();
+            return card;
+        }
+
+        // App launch needs a user decision (ignored / unattended app)
+        function renderAppDecisionCard(data) {
+            const isIgnored = data.app_status === "ignored";
+            const card = el("div", "glass-card rounded-xl p-5 w-full border border-primary/30");
+            card.innerHTML =
+                '<div class="flex items-center gap-3 mb-3 border-b border-white/10 pb-2">' +
+                '  <span class="material-symbols-outlined text-primary-container">help</span>' +
+                '  <span class="font-label-caps text-label-caps text-on-surface">' + (isIgnored ? "IGNORED APP" : "NEW APP") + '</span>' +
+                '</div>' +
+                '<p class="font-body-lg text-body-lg text-on-surface mb-1">' + esc(data.name) + '</p>' +
+                (data.path ? '<p class="text-on-surface-variant text-xs truncate mb-4">' + esc(data.path) + '</p>' : '') +
+                '<p class="text-on-surface-variant text-xs mb-4">' + (isIgnored
+                    ? "This app is in your ignored list. What would you like to do?"
+                    : "This app hasn't been categorized yet.") + '</p>' +
+                '<div class="flex gap-2 flex-wrap">' +
+                '  <button data-act="favourite" class="px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30 text-primary text-xs font-medium hover:bg-primary/20 transition-all">Favourite &amp; Run</button>' +
+                '  <button data-act="ignored" class="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-on-surface-variant text-xs font-medium hover:bg-white/10 transition-all">Ignore</button>' +
+                '  <button data-act="run" class="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-on-surface-variant text-xs font-medium hover:bg-white/10 transition-all">Run Anyway</button>' +
+                '  <button data-act="cancel" class="px-3 py-1.5 rounded-lg text-on-surface-variant text-xs hover:text-on-surface transition-all">Cancel</button>' +
+                '</div>';
+
+            card.querySelector('[data-act="favourite"]').addEventListener("click", async () => {
+                await apiCategorize(data.name, "favourite");
+                await apiRunApp(data.name);
+                addSystemMessage("Favourited and launching " + data.name + "...");
+                card.remove();
+            });
+            card.querySelector('[data-act="ignored"]').addEventListener("click", async () => {
+                await apiCategorize(data.name, "ignored");
+                addSystemMessage(data.name + " added to ignored.");
+                card.remove();
+            });
+            card.querySelector('[data-act="run"]').addEventListener("click", async () => {
+                await apiRunApp(data.name);
+                addSystemMessage("Running " + data.name + " anyway...");
+                card.remove();
+            });
+            card.querySelector('[data-act="cancel"]').addEventListener("click", () => card.remove());
+            return card;
+        }
+
+        // Project health card(s) — one per tracked repository
+        function renderProjectCards(data) {
+            const projects = (data && data.projects) || [];
+            const wrap = el("div", "flex flex-col gap-4 w-full");
+            if (!projects.length) {
+                wrap.appendChild(el("div", "glass-card rounded-xl p-5 w-full text-on-surface-variant text-sm",
+                    "No synced project data available yet."));
+                return wrap;
+            }
+            projects.forEach((p) => wrap.appendChild(projectCard(p)));
+            return wrap;
+        }
+
+        function projectCard(p) {
+            const commit = p.latest_commit || {};
+            const health = Math.max(0, Math.min(100, Number(p.health) || 0));
+            const card = el("div", "glass-card rounded-xl p-6 w-full border border-primary/20 relative");
+
+            const header = el("div", "flex justify-between items-start mb-6");
+            const title = el("div", "space-y-1");
+            title.innerHTML =
+                '<div class="flex items-center gap-2">' +
+                '  <h3 class="font-headline-md text-xl font-bold text-on-surface">' + esc(p.name || p.full_name) + '</h3>' +
+                '  <span class="px-2 py-0.5 rounded bg-primary/10 text-primary font-data-mono text-[10px] border border-primary/20">' +
+                (p.private ? "Private" : "Public") + '</span>' +
+                '</div>' +
+                (p.description ? '<p class="text-on-surface-variant text-sm">' + esc(p.description) + '</p>' : "");
+            header.appendChild(title);
+
+            const actions = el("div", "flex gap-2");
+            if (p.html_url) {
+                const link = el("a",
+                    "text-on-surface-variant hover:text-primary transition-colors",
+                    '<span class="material-symbols-outlined text-sm">open_in_new</span>');
+                link.href = p.html_url;
+                link.target = "_blank";
+                link.title = "Open on GitHub";
+                actions.appendChild(link);
+            }
+            header.appendChild(actions);
+            card.appendChild(header);
+
+            // Stats grid
+            const grid = el("div", "grid grid-cols-4 gap-4 border-y border-white/5 py-4 mb-6");
+            const stats = [
+                { label: "ISSUES", value: fmt(p.open_issues), cls: "text-primary" },
+                { label: "PRS", value: fmt(p.open_pull_requests), cls: "text-secondary" },
+                { label: "STARS", value: fmt(p.stars), cls: "text-tertiary" },
+                { label: "FORKS", value: fmt(p.forks), cls: "text-on-surface" },
+            ];
+            stats.forEach((s) => {
+                grid.appendChild(el("div", "text-center",
+                    '<span class="text-on-surface-variant text-[10px] font-label-caps block mb-1">' + s.label + '</span>' +
+                    '<p class="text-xl font-bold ' + s.cls + '">' + esc(s.value) + '</p>'));
+            });
+            card.appendChild(grid);
+
+            // Completion / health bar
+            const barWrap = el("div", "space-y-2 mb-6");
+            barWrap.innerHTML =
+                '<div class="flex justify-between text-xs font-bold">' +
+                '  <span class="text-on-surface">Health</span>' +
+                '  <span class="text-primary">' + health + '% — ' + esc(p.language || "On track") + '</span>' +
+                '</div>' +
+                '<div class="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">' +
+                '  <div class="h-full bg-primary shadow-[0_0_8px_rgba(0,217,255,0.6)] transition-all duration-700" style="width: ' + health + '%"></div>' +
+                '</div>';
+            card.appendChild(barWrap);
+
+            // Latest commit
+            if (commit.message) {
+                const commitWrap = el("div", "space-y-3");
+                commitWrap.innerHTML =
+                    '<div class="flex items-center justify-between mb-2">' +
+                    '  <span class="text-xs font-bold flex items-center gap-1"><span class="material-symbols-outlined text-sm">history</span> Latest Commit</span>' +
+                    '</div>' +
+                    '<div class="flex items-center gap-3 text-xs">' +
+                    '  <div class="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center"><span class="material-symbols-outlined text-[12px] text-on-surface-variant">commit</span></div>' +
+                    '  <div class="flex-1 min-w-0">' +
+                    '    <p class="font-medium truncate">' + esc(commit.message) + '</p>' +
+                    '    <p class="text-on-surface-variant text-[10px]">by ' + esc(commit.author || "unknown") + ' • ' + ago(commit.date) + '</p>' +
+                    '  </div>' +
+                    '  <span class="font-data-mono text-on-surface-variant">' + esc(shortSha(commit.sha)) + '</span>' +
+                    '</div>';
+                card.appendChild(commitWrap);
+            }
+
+            return card;
+        }
+
+        // ---------------------------------------------------------------------
+        // First-time categorization queue — asks about each new app
+        // ---------------------------------------------------------------------
+        let pendingQueue = [];
+        let queueIndex = 0;
+
+        async function apiCategorize(name, status) {
+            const response = await fetch(SarthiAPI + "/applications/categorize", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: name, status: status }),
+            });
+            return response.json();
+        }
+
+        async function apiRunApp(name) {
+            const response = await fetch(SarthiAPI + "/applications/run", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: name }),
+            });
+            return response.json();
+        }
+
+        function startCategorizationQueue(apps) {
+            if (!apps || !apps.length) return;
+            pendingQueue = apps;
+            queueIndex = 0;
+            renderQueueCard();
+        }
+
+        function renderQueueCard() {
+            const old = document.getElementById("categorize-queue-card");
+            if (old) old.remove();
+            if (queueIndex >= pendingQueue.length) {
+                pendingQueue = [];
+                return;
+            }
+
+            const app = pendingQueue[queueIndex];
+            const total = pendingQueue.length;
+            const card = el("div", "glass-card rounded-xl p-5 w-full border border-primary/20");
+            card.id = "categorize-queue-card";
+            card.innerHTML =
+                '<div class="flex items-center gap-3 mb-3 border-b border-white/10 pb-2">' +
+                '  <span class="material-symbols-outlined text-primary-container">category</span>' +
+                '  <span class="font-label-caps text-label-caps text-on-surface">NEW APP — ' + (queueIndex + 1) + ' / ' + total + '</span>' +
+                '  <span class="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">CATEGORIZE</span>' +
+                '</div>' +
+                '<p class="font-body-lg text-body-lg text-on-surface mb-1">' + esc(app.name) + '</p>' +
+                (app.path ? '<p class="text-on-surface-variant text-xs truncate mb-4">' + esc(app.path) + '</p>' : '') +
+                '<div class="flex gap-2 flex-wrap">' +
+                '  <button data-act="favourite" class="px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30 text-primary text-xs font-medium hover:bg-primary/20 transition-all">Favourite</button>' +
+                '  <button data-act="ignored" class="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-on-surface-variant text-xs font-medium hover:bg-white/10 transition-all">Ignore</button>' +
+                '  <button data-act="skip" class="ml-auto px-3 py-1.5 rounded-lg text-on-surface-variant text-xs hover:text-on-surface transition-all">Skip</button>' +
+                '  <button data-act="done" class="px-3 py-1.5 rounded-lg text-on-surface-variant text-xs hover:text-on-surface transition-all">Done for now</button>' +
+                '</div>';
+
+            card.querySelector('[data-act="favourite"]').addEventListener("click", () => decideApp(app, "favourite"));
+            card.querySelector('[data-act="ignored"]').addEventListener("click", () => decideApp(app, "ignored"));
+            card.querySelector('[data-act="skip"]').addEventListener("click", () => {
+                queueIndex += 1;
+                renderQueueCard();
+            });
+            card.querySelector('[data-act="done"]').addEventListener("click", () => {
+                pendingQueue = [];
+                queueIndex = 0;
+                card.remove();
+                addSystemMessage("Categorization paused — ask me to 'scan my system' to review new apps anytime.");
+            });
+
+            const scroll = document.getElementById("chat-scroll");
+            scroll.appendChild(card);
+            scrollToBottom();
+        }
+
+        async function decideApp(app, status) {
+            try {
+                const result = await apiCategorize(app.name, status);
+                addSystemMessage(result.success
+                    ? app.name + " → " + status
+                    : "Could not categorize " + app.name + ": " + (result.error || "unknown error"));
+            } catch (err) {
+                console.error(err);
+            }
+            queueIndex += 1;
+            renderQueueCard();
+        }
+
+        async function checkPendingApps() {
+            try {
+                const response = await fetch(SarthiAPI + "/applications/categories");
+                const categories = await response.json();
+                const unattended = categories.unattended || [];
+                if (unattended.length) {
+                    // First-time flow: ask about every uncategorized app
+                    startCategorizationQueue(unattended);
+                    return;
+                }
+                // Brand-new install — nothing discovered yet, offer the first scan
+                const favourite = categories.favourite || [];
+                const ignored = categories.ignored || [];
+                if (!favourite.length && !ignored.length) {
+                    renderFirstRunCard();
+                }
+            } catch (err) {
+                console.warn("Could not load pending applications", err);
+            }
+        }
+
+        // Fresh install — no apps discovered yet. Kick off the first scan
+        // so the categorization queue can ask about every app it finds.
+        function renderFirstRunCard() {
+            document.getElementById("chat-empty")?.remove();
+            document.getElementById("first-run-card")?.remove();
+            const card = el("div", "glass-card rounded-xl p-6 w-full border border-primary/20 max-w-xl mx-auto");
+            card.id = "first-run-card";
+            card.innerHTML =
+                '<div class="flex items-center gap-3 mb-4">' +
+                '  <span class="w-10 h-10 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center"><span class="material-symbols-outlined text-primary">apps</span></span>' +
+                '  <div>' +
+                '    <p class="font-headline-md text-lg font-bold text-on-surface">Welcome to Sarthi</p>' +
+                '    <p class="text-on-surface-variant text-xs">Let\'s set up your app launcher.</p>' +
+                '  </div>' +
+                '</div>' +
+                '<p class="text-on-surface-variant text-sm mb-4">I haven\'t discovered any applications yet. Run a quick system scan and I\'ll ask you to favourite or ignore each app I find.</p>' +
+                '<button id="first-run-scan" class="px-4 py-2 rounded-lg bg-primary/10 border border-primary/30 text-primary text-sm font-medium hover:bg-primary/20 transition-all">Scan my system</button>';
+            document.getElementById("chat-scroll").appendChild(card);
+            document.getElementById("first-run-scan").addEventListener("click", () => {
+                card.remove();
+                sendCommand("scan my system");
+            });
+            scrollToBottom();
+        }
+
+        // Scan results summary card
+        function renderScanCard(data) {
+            const card = el("div", "glass-card rounded-xl p-5 w-full border border-primary/20");
+            card.innerHTML =
+                '<div class="flex items-center gap-3 mb-3 border-b border-white/10 pb-2">' +
+                '  <span class="material-symbols-outlined text-primary-container">manage_search</span>' +
+                '  <span class="font-label-caps text-label-caps text-on-surface">SYSTEM SCAN</span>' +
+                '  <span class="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">SUCCESS</span>' +
+                '</div>' +
+                '<div class="grid grid-cols-3 gap-4">' +
+                '  <div class="text-center"><span class="text-on-surface-variant text-[10px] font-label-caps block mb-1">TOTAL</span><p class="text-xl font-bold text-primary">' + esc(data.total) + '</p></div>' +
+                '  <div class="text-center"><span class="text-on-surface-variant text-[10px] font-label-caps block mb-1">APPLICATIONS</span><p class="text-xl font-bold text-secondary">' + esc(data.applications) + '</p></div>' +
+                '  <div class="text-center"><span class="text-on-surface-variant text-[10px] font-label-caps block mb-1">GAMES</span><p class="text-xl font-bold text-tertiary">' + esc(data.games) + '</p></div>' +
+                '</div>' +
+                (data.last_scan ? '<div class="mt-3 text-[10px] font-data-mono text-on-surface-variant">Last scan: ' + esc(data.last_scan) + '</div>' : "");
+            return card;
+        }
+
+        // App / website launch card
+        function renderLaunchCard(kind, result) {
+            const label = kind === "application" ? "APPLICATION" : "WEBSITE";
+            const icon = kind === "application" ? "apps" : "language";
+            const name = result.application || result.website || "";
+            const detail = result.path || result.url || "";
+
+            const card = el("div", "glass-card rounded-xl p-4 w-fit min-w-[300px]");
+            card.innerHTML =
+                '<div class="flex items-center gap-3 mb-3 border-b border-white/10 pb-2">' +
+                '  <span class="material-symbols-outlined text-primary-container">' + icon + '</span>' +
+                '  <span class="font-label-caps text-label-caps text-on-surface">' + esc(name).toUpperCase() + '</span>' +
+                '  <span class="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">SUCCESS</span>' +
+                '</div>' +
+                '<div class="flex flex-col gap-1">' +
+                '  <div class="flex justify-between gap-6"><span class="text-on-surface-variant text-xs">Action:</span><span class="text-on-surface text-xs font-medium">Open</span></div>' +
+                (detail ? '  <div class="flex justify-between gap-6"><span class="text-on-surface-variant text-xs">Target:</span><span class="text-primary text-xs font-medium truncate max-w-[200px]">' + esc(detail) + '</span></div>' : "") +
+                '</div>';
+            return card;
+        }
+
+        // Generic key/value card for any other structured result
+        const GENERIC_META_KEYS = new Set(["visual", "success", "status", "error", "message"]);
+        function renderGenericCard(result) {
+            const keys = Object.keys(result).filter((k) => !GENERIC_META_KEYS.has(k));
+            if (!keys.length) return null;
+
+            const card = el("div", "glass-card rounded-xl p-4 w-fit min-w-[300px]");
+            let rows = "";
+            keys.forEach((k) => {
+                const v = typeof result[k] === "object" ? JSON.stringify(result[k]) : String(result[k]);
+                rows += '<div class="flex justify-between gap-6"><span class="text-on-surface-variant text-xs">' + esc(k) +
+                    ':</span><span class="text-on-surface text-xs font-medium">' + esc(v) + '</span></div>';
+            });
+            card.innerHTML =
+                '<div class="flex items-center gap-3 mb-3 border-b border-white/10 pb-2">' +
+                '  <span class="material-symbols-outlined text-primary-container">info</span>' +
+                '  <span class="font-label-caps text-label-caps text-on-surface">RESULT</span>' +
+                '</div>' +
+                '<div class="flex flex-col gap-1">' + rows + '</div>';
+            return card;
+        }
+
+        // ---------------------------------------------------------------------
+        // Activity sidebar
+        // ---------------------------------------------------------------------
+        function setCurrentTask(text) {
+            const label = document.getElementById("current-task-label");
+            const card = document.getElementById("current-task-card");
+            if (text) {
+                label.textContent = text;
+                card.classList.add("border-l-primary-container");
+                card.classList.remove("border-l-white/20");
+            } else {
+                label.textContent = "Idle — ready for commands";
+                card.classList.add("border-l-white/20");
+                card.classList.remove("border-l-primary-container");
+            }
+        }
+
+        function updateLastExecution(payload) {
+            document.getElementById("last-target").textContent = payload.target || "—";
+            document.getElementById("last-action").textContent = payload.action || "—";
+            document.getElementById("last-status").textContent = payload.success ? "Success" : "Failed";
+            document.getElementById("last-time").textContent =
+                payload.execution_ms != null ? payload.execution_ms + "ms" : "—";
+        }
+
+        // ---------------------------------------------------------------------
+        // Command handling
+        // ---------------------------------------------------------------------
+        async function sendCommand(text) {
+            text = (text || "").trim();
+            if (processing || !text) return;
+
+            addUserMessage(text);
+            setCurrentTask("Processing: " + text);
+            processing = true;
+
+            const input = document.getElementById("chat-input");
+            input.disabled = true;
+            input.placeholder = "Processing...";
+
+            try {
+                const response = await fetch(SarthiAPI + "/command", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: text }),
+                });
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                const payload = await response.json();
+                addAssistantMessage(payload);
+                updateLastExecution(payload);
+            } catch (err) {
+                console.error(err);
+                addAssistantMessage({
+                    text: "I couldn't reach the Sarthi engine at " + SarthiAPI + ". Is the server running?",
+                    action: "", target: "", success: false,
+                });
+            } finally {
+                processing = false;
+                input.disabled = false;
+                input.placeholder = "Ask Sarthi to do something...";
+                input.focus();
+                setCurrentTask("");
+            }
+        }
+
+        async function listenCommand() {
+            if (processing) return;
+            setCurrentTask("Listening...");
+            processing = true;
+            try {
+                const response = await fetch(SarthiAPI + "/listen", { method: "POST" });
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                const payload = await response.json();
+                if (payload.input) addUserMessage(payload.input);
+                addAssistantMessage(payload);
+                updateLastExecution(payload);
+            } catch (err) {
+                console.error(err);
+                addAssistantMessage({
+                    text: "Voice capture failed — is the speech service running?",
+                    action: "", target: "", success: false,
+                });
+            } finally {
+                processing = false;
+                setCurrentTask("");
+            }
+        }
+
+        // ---------------------------------------------------------------------
+        // Wiring
+        // ---------------------------------------------------------------------
+        function initializePage() {
+            const input = document.getElementById("chat-input");
+            const send = document.getElementById("chat-send");
+            const mic = document.getElementById("chat-mic");
+            const headerMic = document.getElementById("header-mic");
+
+            const fire = () => {
+                const value = input.value;
+                input.value = "";
+                sendCommand(value);
+            };
+
+            send.addEventListener("click", fire);
+            headerMic.addEventListener("click", listenCommand);
+            mic.addEventListener("click", listenCommand);
+            input.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") fire();
+            });
+
+            input.focus();
+            checkPendingApps();
+        }
+    </script>
+</body>
+
+</html>

@@ -175,55 +175,8 @@
 
 <body class="font-body-lg text-body-lg selection:bg-primary-container/30">
     <!-- Background Shader -->
-    <!-- SideNavBar (Authority: JSON) -->
-    <aside
-        class="fixed left-0 top-0 h-full flex flex-col py-margin-desktop h-screen w-64 border-r border-white/10 bg-surface/40 backdrop-blur-[40px] z-40">
-        <div class="px-6 mb-12">
-            <h1
-                class="font-display-lg text-display-lg tracking-tighter text-primary-container drop-shadow-[0_0_8px_rgba(0,217,255,0.4)]">
-                Sarthi</h1>
-            <p class="font-data-mono text-data-mono text-on-surface-variant mt-1 opacity-60">V1.0.4 Hyperion</p>
-        </div>
-        <nav class="flex-1 space-y-2">
-            <!-- Home  -->
-            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-                href="dashboard.html">
-                <span class="material-symbols-outlined mr-4">home</span>
-                <span class="font-body-lg text-body-lg">Home</span>
-            </a>
-            <!-- Skills -->
-            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-                href="skills.html">
-                <span class="material-symbols-outlined mr-4">extension</span>
-                <span class="font-body-lg text-body-lg">Skills</span>
-            </a>
-            <!-- Memory -->
-            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-                href="memory.html">
-                <span class="material-symbols-outlined mr-4">psychology</span>
-                <span class="font-body-lg text-body-lg">Memory</span>
-            </a>
-            <!-- Knowledge (Active) -->
-            <a class="flex items-center px-8 py-4 transition-all duration-300 text-primary font-bold border-r-2 border-primary-container bg-primary/5 active:scale-95 duration-150"
-                href="knowledge.html">
-                <span class="material-symbols-outlined mr-4">database</span>
-                <span class="font-body-lg text-body-lg">Knowledge</span>
-            </a>
-            <!-- History -->
-            <a class="flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-                href="history.html">
-                <span class="material-symbols-outlined mr-4">history</span>
-                <span class="font-body-lg text-body-lg">History</span>
-            </a>
-        </nav>
-        <div class="px-8 mt-auto">
-            <a class="flex items-center py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
-                href="settings.html">
-                <span class="material-symbols-outlined mr-4">settings</span>
-                <span class="font-body-lg text-body-lg">Settings</span>
-            </a>
-        </div>
-    </aside>
+    <!-- Sidebar (loaded from shared component) -->
+    <div id="sidebar"></div>
     <!-- Main Content Canvas -->
     <main class="ml-64 min-h-screen relative overflow-y-auto pb-32">
         <!-- TopAppBar (Authority: JSON) -->
@@ -449,93 +402,61 @@
             </section>
         </div>
     </main>
-    <!-- BottomNavBar (Authority: JSON) -->
-    <div class="fixed bottom-0 left-0 w-full z-50 flex justify-center pb-6 pointer-events-none">
-        <div
-            class="rounded-full mb-8 mx-auto w-fit border border-white/10 bg-surface-container/60 backdrop-blur-[30px] shadow-[0_0_20px_rgba(0,217,255,0.1)] px-8 py-2 flex items-center gap-8 pointer-events-auto">
-            <button
-                class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 rounded-full transition-all px-4 py-2 group">
-                <span class="material-symbols-outlined mb-1 group-active:scale-90 duration-100">mic</span>
-                <span class="font-label-caps text-label-caps">Speak</span>
-            </button>
-            <button
-                class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 rounded-full transition-all px-4 py-2 group">
-                <span class="material-symbols-outlined mb-1 group-active:scale-90 duration-100">keyboard</span>
-                <span class="font-label-caps text-label-caps">Type</span>
-            </button>
-            <div class="h-8 w-[1px] bg-white/10 mx-2"></div>
-            <button
-                class="flex flex-col items-center justify-center text-primary drop-shadow-[0_0_4px_rgba(0,217,255,0.8)] hover:bg-white/5 rounded-full transition-all px-4 py-2 group">
-                <span class="material-symbols-outlined mb-1 group-active:scale-90 duration-100">refresh</span>
-                <span class="font-label-caps text-label-caps">Refresh</span>
-            </button>
-            <button
-                class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 rounded-full transition-all px-4 py-2 group">
-                <span class="material-symbols-outlined mb-1 group-active:scale-90 duration-100">apps</span>
-                <span class="font-label-caps text-label-caps">Apps</span>
-            </button>
-            <a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-white/5 rounded-full transition-all px-4 py-2 group"
-                href="{{DATA:SCREEN:SCREEN_2}}">
-                <span class="material-symbols-outlined mb-1 group-active:scale-90 duration-100">bolt</span>
-                <span class="font-label-caps text-label-caps">Skills</span>
-            </a>
-        </div>
-    </div>
-    <!-- UI Interaction Scripts -->
+    <!-- Footer (loaded from shared component) -->
+    <div id="footer"></div>
+    <script src="components.js"></script>
     <script>
-        // Micro-interactions for glass panels
-        document.querySelectorAll('.glass-panel').forEach(panel => {
-            panel.addEventListener('mousemove', (e) => {
-                const rect = panel.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                panel.style.setProperty('--mouse-x', `${x}px`);
-                panel.style.setProperty('--mouse-y', `${y}px`);
-                panel.style.background = `radial-gradient(400px circle at ${x}px ${y}px, rgba(0, 217, 255, 0.05), transparent), rgba(19, 19, 19, 0.4)`;
+        function initializePage() {
+            // Micro-interactions for glass panels
+            document.querySelectorAll('.glass-panel').forEach(panel => {
+                panel.addEventListener('mousemove', (e) => {
+                    const rect = panel.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    panel.style.background = `radial-gradient(400px circle at ${x}px ${y}px, rgba(0, 217, 255, 0.05), transparent), rgba(19, 19, 19, 0.4)`;
+                });
+                panel.addEventListener('mouseleave', () => {
+                    panel.style.background = `rgba(19, 19, 19, 0.4)`;
+                });
             });
 
-            panel.addEventListener('mouseleave', () => {
-                panel.style.background = `rgba(19, 19, 19, 0.4)`;
-            });
-        });
+            // Search Bar Focus
+            const searchInput = document.querySelector('input[type="text"]');
+            if (searchInput) {
+                searchInput.addEventListener('focus', () => {
+                    searchInput.parentElement.classList.add('ring-1', 'ring-primary-container');
+                });
+                searchInput.addEventListener('blur', () => {
+                    searchInput.parentElement.classList.remove('ring-1', 'ring-primary-container');
+                });
+            }
 
-        // Search Bar Focus Effect
-        const searchInput = document.querySelector('input[type="text"]');
-        searchInput.addEventListener('focus', () => {
-            searchInput.parentElement.classList.add('ring-1', 'ring-primary-container');
-        });
-        searchInput.addEventListener('blur', () => {
-            searchInput.parentElement.classList.remove('ring-1', 'ring-primary-container');
-        });
+            // Load applications
+            loadApplications();
+        }
+
         async function loadApplications() {
-
+            try {
                 const response = await fetch("http://127.0.0.1:8000/applications");
-
                 const apps = await response.json();
-
                 const container = document.getElementById("applications-list");
-
+                if (!container) return;
                 container.innerHTML = "";
-
                 apps.slice(0, 10).forEach(app => {
-
                     container.innerHTML += `
             <div class="flex items-center justify-between p-3 rounded-lg border border-white/5 hover:bg-white/5 transition-all">
                 <div>
                     <p class="font-body-lg font-medium">${app.name}</p>
                     <p class="text-xs text-on-surface-variant">${app.category}</p>
                 </div>
-
-                <span class="material-symbols-outlined text-primary">
-                    check_circle
-                </span>
+                <span class="material-symbols-outlined text-primary">check_circle</span>
             </div>
         `;
                 });
-
+            } catch (err) {
+                console.warn("Failed to load applications", err);
             }
-
-            document.addEventListener("DOMContentLoaded", loadApplications);
+        }
     </script>
 </body>
 

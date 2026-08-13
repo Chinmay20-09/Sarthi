@@ -33,30 +33,15 @@ class NotionClient:
         return response.json()
 
     def query_database(self, database_id: str):
-        return self._post(
-            f"/databases/{database_id}/query",
-            {}
-        )
+        return self._post(f"/databases/{database_id}/query", {})
 
     def get_page(self, page_id: str):
         return self._get(f"/pages/{page_id}")
 
     def create_page(self, database_id: str, title: str, properties: dict | None = None):
         payload = {
-            "parent": {
-                "database_id": database_id
-            },
-            "properties": {
-                "Name": {
-                    "title": [
-                        {
-                            "text": {
-                                "content": title
-                            }
-                        }
-                    ]
-                }
-            }
+            "parent": {"database_id": database_id},
+            "properties": {"Name": {"title": [{"text": {"content": title}}]}},
         }
 
         if properties:
@@ -76,9 +61,7 @@ class NotionClient:
         return response.json()
 
     def search(self, query: str):
-        payload = {
-            "query": query
-        }
+        payload = {"query": query}
 
         return self._post("/search", payload)
 

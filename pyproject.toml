@@ -1,0 +1,81 @@
+[build-system]
+requires = ["setuptools>=64.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sarthi"
+version = "1.0.4"
+description = "Local-first AI Desktop Assistant"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "httpx",
+    "python-dotenv",
+    "pystray",
+    "pillow",
+]
+
+# ============================================================================
+# Ruff — linter + formatter (replaces flake8, black, isort)
+# ============================================================================
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+# Files to exclude (mirrors .gitignore)
+exclude = [
+    ".venv",
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    "*.egg-info",
+    "models",
+    ".cache",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.ruff.lint]
+# Start with a sensible rule set — not too strict for existing codebase
+# E: pycodestyle errors, F: pyflakes, W: pycodestyle warnings
+# I: isort, N: pep8-naming, UP: pyupgrade
+select = ["E", "F", "W", "I", "N", "UP"]
+
+# Rules to ignore initially — can be tightened over time
+ignore = [
+    "E501",   # line-too-long (handled by formatter)
+    "E402",   # module-import-not-at-top-of-file
+    "N802",   # function-name (allows lowercase underscores)
+    "N803",   # argument-name
+    "N806",   # variable-in-function
+    "N815",   # mixedCase variable in class scope
+    "N816",   # mixedCase variable in global scope
+]
+
+# Allow unused imports in __init__.py
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+
+# ============================================================================
+# mypy — static type checker
+# ============================================================================
+[tool.mypy]
+python_version = "3.10"
+
+# Progressive mode — don't require annotations everywhere yet
+warn_unused_configs = true
+ignore_missing_imports = true
+implicit_optional = true
+strict_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_return_any = false
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = false

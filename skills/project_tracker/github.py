@@ -7,9 +7,7 @@ class GitHubClient:
     def __init__(self, username: str, token: str | None = None):
         self.username = username
 
-        self.headers = {
-            "Accept": "application/vnd.github+json"
-        }
+        self.headers = {"Accept": "application/vnd.github+json"}
 
         if token:
             self.headers["Authorization"] = f"Bearer {token}"
@@ -48,30 +46,18 @@ class GitHubClient:
         return repositories
 
     def get_repository(self, repository: str):
-        return self._get(
-            f"/repos/{self.username}/{repository}"
-        )
+        return self._get(f"/repos/{self.username}/{repository}")
 
     def get_issues(self, repository: str):
-        issues = self._get(
-            f"/repos/{self.username}/{repository}/issues?state=open"
-        )
+        issues = self._get(f"/repos/{self.username}/{repository}/issues?state=open")
 
-        return [
-            issue
-            for issue in issues
-            if "pull_request" not in issue
-        ]
+        return [issue for issue in issues if "pull_request" not in issue]
 
     def get_pull_requests(self, repository: str):
-        return self._get(
-            f"/repos/{self.username}/{repository}/pulls?state=open"
-        )
+        return self._get(f"/repos/{self.username}/{repository}/pulls?state=open")
 
     def get_latest_commit(self, repository: str):
-        commits = self._get(
-            f"/repos/{self.username}/{repository}/commits?per_page=1"
-        )
+        commits = self._get(f"/repos/{self.username}/{repository}/commits?per_page=1")
 
         if not commits:
             return None

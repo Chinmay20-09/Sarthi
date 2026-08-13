@@ -1,0 +1,13 @@
+{
+    "id": "browser",
+    "name": "Browser",
+    "description": "Opens websites in the default browser via the Knowledge Layer.",
+    "version": "1.0.0",
+    "enabled": true,
+    "icon": "public",
+    "commands": [
+        "Open Google",
+        "Search YouTube",
+        "Go to GitHub"
+    ]
+}

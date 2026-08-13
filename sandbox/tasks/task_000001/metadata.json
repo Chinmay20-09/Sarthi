@@ -1,0 +1,8 @@
+{
+  "task_id": "task_000001",
+  "provider": "OpenRouter",
+  "model": "openai/gpt-5",
+  "status": "error",
+  "timestamp": "2026-08-02T16:08:32.852988+00:00",
+  "duration_ms": 902.9809999992722
+}

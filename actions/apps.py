@@ -1,15 +1,21 @@
 """
-Application Executor for Sarthi.
+Application Executor — BACKWARD COMPATIBILITY SHIM.
 
-Launches applications discovered by the knowledge system.
+Application launching has moved to skills/app_launcher/ as a proper BaseSkill.
+This module is preserved for existing code that imports from actions.apps.
 
-Uses KnowledgeManager for all lookups.
-Does NOT know about JSON files or scanner directly.
+ARCHITECTURE:
+    Application launching is now a skill (skills/app_launcher/).
+    New code should use the skill system instead.
+
+NEW CODE SHOULD USE:
+    from skills.registry import get_registry
+    registry = get_registry()
+    launcher = registry.get_skill("app_launcher")
+    launcher.execute(intent)
 """
 
 import logging
-import subprocess
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -18,50 +24,15 @@ def open_app(target: str) -> bool:
     """
     Open an application by name or alias.
 
-    Args:
-        target: Application name or alias
-
-    Returns:
-        True if application opened successfully
+    BACKWARD COMPATIBLE: delegates to AppLauncherSkill.
+    New callers should go through the skill system directly.
     """
-    from knowledge.manager import get_manager
+    from brain.intent import Intent
+    from skills.app_launcher.main import AppLauncherSkill
 
-    logger.debug(f"Opening application: {target}")
+    logger.debug(f"open_app (shim): {target}")
 
-    target = target.lower().strip()
+    skill = AppLauncherSkill()
+    result = skill.execute(Intent(action="open", target=target))
 
-    if not target:
-        logger.warning("Empty target provided")
-        return False
-
-    try:
-        manager = get_manager()
-
-        # Find application via manager
-        app = manager.find_application(target)
-
-        if app is None:
-            logger.warning(f"Application not found: {target}")
-            return False
-
-        app_path = app.get("path")
-        app_name = app.get("name")
-
-        if not app_path:
-            logger.error(f"No path found for application: {app_name}")
-            return False
-
-        logger.debug(f"Launching: {app_path}")
-
-        try:
-            subprocess.Popen(app_path, shell=True)
-            logger.info(f"Opened {app_name}")
-            return True
-
-        except Exception as e:
-            logger.error(f"Failed to launch {app_name}: {e}")
-            return False
-
-    except Exception as e:
-        logger.error(f"Error in open_app: {e}")
-        return False
+    return result.get("success", False)

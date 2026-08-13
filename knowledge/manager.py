@@ -12,7 +12,7 @@ Manages:
 
 This is the ONLY place that should be imported by:
 - EntityResolver
-- AppExecutor  
+- AppExecutor
 - BrowserSkill
 - Any skill that needs entity data
 
@@ -21,7 +21,7 @@ Nobody should import knowledge.loader directly.
 
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Any
 
 from knowledge.loader import KnowledgeLoader
 
@@ -49,10 +49,10 @@ class KnowledgeManager:
 
     def __init__(
         self,
-        applications_path: Optional[Path] = None,
-        websites_path: Optional[Path] = None,
-        devices_path: Optional[Path] = None,
-        contacts_path: Optional[Path] = None,
+        applications_path: Path | None = None,
+        websites_path: Path | None = None,
+        devices_path: Path | None = None,
+        contacts_path: Path | None = None,
     ):
         """
         Initialize Knowledge Manager.
@@ -78,12 +78,64 @@ class KnowledgeManager:
         self._contact_loader = KnowledgeLoader(self.contacts_path)
 
         # Cache
-        self._applications_cache: Optional[List[Dict]] = None
-        self._websites_cache: Optional[List[Dict]] = None
-        self._devices_cache: Optional[List[Dict]] = None
-        self._contacts_cache: Optional[List[Dict]] = None
+        self._applications_cache: list[dict] | None = None
+        self._websites_cache: list[dict] | None = None
+        self._devices_cache: list[dict] | None = None
+        self._contacts_cache: list[dict] | None = None
+        self._last_scan_cache: str | None = None
+        self._last_scan_loaded = False
 
-    def _load_knowledge_base(self, loader: KnowledgeLoader) -> List[Dict]:
+    # Valid application categories (user-driven classification)
+    CATEGORY_STATUSES = ("favourite", "ignored", "unattended")
+
+    # ------------------------------------------------------------------
+    # Applications — categorized storage (favourite / ignored / unattended)
+    # ------------------------------------------------------------------
+
+    def _load_applications_data(self) -> dict[str, list[dict[str, Any]]]:
+        """Load the categorized applications structure.
+
+        Reads the new ``categories`` schema. Legacy files with a flat
+        ``entities`` list are treated as all-unattended so the first-time
+        categorization flow can classify them.
+        """
+        data = self._app_loader.load()
+        if data is None:
+            return {status: [] for status in self.CATEGORY_STATUSES}
+
+        categories = data.get("categories")
+        if isinstance(categories, dict):
+            return {
+                status: list(categories.get(status) or [])
+                for status in self.CATEGORY_STATUSES
+            }
+
+        entities = data.get("entities", [])
+        if not isinstance(entities, list):
+            entities = []
+        return {"favourite": [], "ignored": [], "unattended": list(entities)}
+
+    def _save_applications_data(self, categories: dict[str, list[dict[str, Any]]]) -> bool:
+        """Persist the categorized applications structure (version 2)."""
+        from datetime import datetime
+
+        data: dict[str, Any] = {
+            "version": 2,
+            "last_scan": datetime.now().isoformat(),
+            "categories": {
+                status: list(categories.get(status, []))
+                for status in self.CATEGORY_STATUSES
+            },
+        }
+
+        success = self._app_loader.save(data)
+        if success:
+            self._applications_cache = None
+            self._last_scan_cache = data["last_scan"]
+            self._last_scan_loaded = True
+        return success
+
+    def _load_knowledge_base(self, loader: KnowledgeLoader) -> list[dict]:
         """
         Load entities from a knowledge base file.
 
@@ -98,10 +150,10 @@ class KnowledgeManager:
             return []
 
         if "entities" in data:
-         return data["entities"]
+            return data["entities"]
 
         entities = []
- 
+
         entities.extend(data.get("applications", []))
         entities.extend(data.get("games", []))
         entities.extend(data.get("websites", []))
@@ -110,9 +162,12 @@ class KnowledgeManager:
 
         return entities
 
-    def load_applications(self) -> List[Dict]:
+    def load_applications(self) -> list[dict]:
         """
-        Load all discovered applications.
+        Load all known applications across every category.
+
+        Each app dict is stamped with its ``app_status``
+        (favourite / ignored / unattended).
 
         Returns:
             List of application dictionaries
@@ -120,11 +175,62 @@ class KnowledgeManager:
         if self._applications_cache is not None:
             return self._applications_cache
 
-        self._applications_cache = self._load_knowledge_base(self._app_loader)
-        logger.info(f"Loaded {len(self._applications_cache)} applications")
-        return self._applications_cache
+        categories = self._load_applications_data()
+        apps: list[dict[str, Any]] = []
+        for status in self.CATEGORY_STATUSES:
+            for app in categories.get(status, []):
+                item = dict(app)
+                item["app_status"] = status
+                apps.append(item)
 
-    def load_websites(self) -> List[Dict]:
+        self._applications_cache = apps
+        logger.info(f"Loaded {len(apps)} applications")
+        return apps
+
+    def get_applications_by_status(self, status: str) -> list[dict[str, Any]]:
+        """Get applications in a specific category."""
+        if status not in self.CATEGORY_STATUSES:
+            return []
+        categories = self._load_applications_data()
+        return [dict(app) for app in categories.get(status, [])]
+
+    def categorize_application(self, name: str, status: str) -> dict[str, Any] | None:
+        """
+        Move an application to a new category by name.
+
+        Args:
+            name: Application name (case-insensitive)
+            status: favourite, ignored, or unattended
+
+        Returns:
+            Updated app dict (with app_status), or None if not found
+        """
+        if status not in self.CATEGORY_STATUSES:
+            logger.warning(f"Invalid application status: {status}")
+            return None
+
+        categories = self._load_applications_data()
+        moved: dict[str, Any] | None = None
+
+        for cat in self.CATEGORY_STATUSES:
+            bucket = categories.get(cat, [])
+            for app in list(bucket):
+                if str(app.get("name", "")).lower() == name.lower():
+                    bucket.remove(app)
+                    moved = app
+                    break
+            if moved is not None:
+                break
+
+        if moved is None:
+            return None
+
+        categories.setdefault(status, []).append(moved)
+        self._save_applications_data(categories)
+        logger.info(f"Categorized '{name}' as {status}")
+        return {**moved, "app_status": status}
+
+    def load_websites(self) -> list[dict]:
         """Load all websites."""
         if self._websites_cache is not None:
             return self._websites_cache
@@ -133,7 +239,7 @@ class KnowledgeManager:
         logger.info(f"Loaded {len(self._websites_cache)} websites")
         return self._websites_cache
 
-    def load_devices(self) -> List[Dict]:
+    def load_devices(self) -> list[dict]:
         """Load all devices."""
         if self._devices_cache is not None:
             return self._devices_cache
@@ -142,7 +248,7 @@ class KnowledgeManager:
         logger.info(f"Loaded {len(self._devices_cache)} devices")
         return self._devices_cache
 
-    def load_contacts(self) -> List[Dict]:
+    def load_contacts(self) -> list[dict]:
         """Load all contacts."""
         if self._contacts_cache is not None:
             return self._contacts_cache
@@ -151,7 +257,7 @@ class KnowledgeManager:
         logger.info(f"Loaded {len(self._contacts_cache)} contacts")
         return self._contacts_cache
 
-    def get_all_entities(self) -> List[Dict]:
+    def get_all_entities(self) -> list[dict]:
         """
         Get all entities across all types.
 
@@ -204,7 +310,7 @@ class KnowledgeManager:
 
         return entities
 
-    def find_entity(self, query: str, category: Optional[str] = None) -> Optional[Dict]:
+    def find_entity(self, query: str, category: str | None = None) -> dict | None:
         """
         Find entity by exact name match.
 
@@ -243,7 +349,7 @@ class KnowledgeManager:
 
         return None
 
-    def find_by_alias(self, alias: str, category: Optional[str] = None) -> Optional[Dict]:
+    def find_by_alias(self, alias: str, category: str | None = None) -> dict | None:
         """
         Find entity by alias.
 
@@ -286,7 +392,7 @@ class KnowledgeManager:
 
         return None
 
-    def find_application(self, name: str) -> Optional[Dict]:
+    def find_application(self, name: str) -> dict | None:
         """
         Find application by name or alias.
 
@@ -306,7 +412,7 @@ class KnowledgeManager:
         # Try alias
         return self.find_by_alias(name, category="applications")
 
-    def find_website(self, name: str) -> Optional[Dict]:
+    def find_website(self, name: str) -> dict | None:
         """
         Find website by name or alias.
 
@@ -326,11 +432,68 @@ class KnowledgeManager:
         # Try alias
         return self.find_by_alias(name, category="websites")
 
-    def save_applications(self, applications: List[Dict]) -> bool:
+    def merge_scan_results(self, applications: list[dict]) -> dict[str, Any]:
         """
-        Save applications to knowledge base.
+        Merge freshly scanned apps into the categorized knowledge base.
 
-        Called by scanner after discovering applications.
+        Apps that are already categorized (favourite/ignored/unattended)
+        keep their status and get refreshed metadata. Brand-new apps land
+        in ``unattended`` so the UI can prompt the user to categorize them.
+
+        Args:
+            applications: List of scanned application dicts
+
+        Returns:
+            Dict with success, new_unattended list, and total count
+        """
+        categories = self._load_applications_data()
+        for status in self.CATEGORY_STATUSES:
+            categories.setdefault(status, [])
+
+        # Index existing apps by path (primary) and name (fallback)
+        by_path: dict[str, tuple[str, dict[str, Any]]] = {}
+        by_name: dict[str, tuple[str, dict[str, Any]]] = {}
+        for cat in self.CATEGORY_STATUSES:
+            for app in categories[cat]:
+                path = str(app.get("path") or "").lower()
+                if path:
+                    by_path.setdefault(path, (cat, app))
+                name = str(app.get("name") or "").lower()
+                if name:
+                    by_name.setdefault(name, (cat, app))
+
+        new_unattended: list[dict[str, Any]] = []
+
+        for app in applications:
+            existing = by_path.get(str(app.get("path") or "").lower())
+            if existing is None:
+                existing = by_name.get(str(app.get("name") or "").lower())
+
+            if existing is not None:
+                # Keep the user's categorization; refresh metadata
+                existing[1].update(app)
+            else:
+                new_unattended.append(dict(app))
+
+        categories["unattended"] = categories["unattended"] + new_unattended
+        self._save_applications_data(categories)
+
+        logger.info(
+            f"Merged {len(applications)} scanned apps; "
+            f"{len(new_unattended)} new app(s) awaiting categorization"
+        )
+        return {
+            "success": True,
+            "new_unattended": new_unattended,
+            "total": len(applications),
+        }
+
+    def save_applications(self, applications: list[dict]) -> bool:
+        """
+        Save scanned applications (backward-compatible).
+
+        Delegates to merge_scan_results, which preserves user categories
+        and places brand-new apps into ``unattended``.
 
         Args:
             applications: List of application dicts
@@ -338,24 +501,9 @@ class KnowledgeManager:
         Returns:
             True if successful
         """
-        from datetime import datetime
+        return self.merge_scan_results(applications).get("success", False)
 
-        data = {
-            "version": 1,
-            "last_scan": datetime.now().isoformat(),
-            "entities": sorted(applications, key=lambda x: x.get("name", "").lower()),
-        }
-
-        success = self._app_loader.save(data)
-
-        if success:
-            # Invalidate cache
-            self._applications_cache = None
-            logger.info(f"Saved {len(applications)} applications")
-
-        return success
-
-    def save_websites(self, websites: List[Dict]) -> bool:
+    def save_websites(self, websites: list[dict]) -> bool:
         """Save websites to knowledge base."""
         from datetime import datetime
 
@@ -377,11 +525,14 @@ class KnowledgeManager:
         """
         Refresh applications by rescanning system.
 
+        Delegates to the ScannerSkill for scanning.
+        Knowledge does NOT orchestrate — it saves the results.
+
         Returns:
             True if successful
         """
         try:
-            from scanner.app_scanner import scan_all
+            from skills.scanner.application_scanner import scan_all
 
             logger.info("Refreshing applications...")
             applications = scan_all()
@@ -399,11 +550,30 @@ class KnowledgeManager:
         self._websites_cache = None
         self._devices_cache = None
         self._contacts_cache = None
+        self._last_scan_cache = None
+        self._last_scan_loaded = False
         logger.debug("Knowledge cache cleared")
+
+    @property
+    def last_scan(self) -> str | None:
+        """
+        Timestamp of the most recent applications scan.
+
+        Cached in memory and refreshed whenever applications are saved,
+        so repeated reads never re-parse the knowledge base file.
+
+        Returns:
+            ISO-8601 timestamp string, or None if never scanned
+        """
+        if not self._last_scan_loaded:
+            data = self._app_loader.load()
+            self._last_scan_cache = data.get("last_scan") if isinstance(data, dict) else None
+            self._last_scan_loaded = True
+        return self._last_scan_cache
 
 
 # Global singleton instance
-_manager: Optional[KnowledgeManager] = None
+_manager: KnowledgeManager | None = None
 
 
 def get_manager() -> KnowledgeManager:

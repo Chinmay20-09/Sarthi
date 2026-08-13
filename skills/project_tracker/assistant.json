@@ -1,0 +1,22 @@
+{
+    "id": "project_tracker",
+    "brain": {
+        "commands": [
+            {
+                "text": "How are my projects?",
+                "action": "how",
+                "target": "projects"
+            },
+            {
+                "text": "Show pending issues",
+                "action": "show",
+                "target": "pending issues"
+            },
+            {
+                "text": "Open Sarthi",
+                "action": "open",
+                "target": "sarthi"
+            }
+        ]
+    }
+}
