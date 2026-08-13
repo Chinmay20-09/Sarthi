@@ -773,7 +773,7 @@
         }
 
         // Generic key/value card for any other structured result
-        const GENERIC_META_KEYS = new Set(["visual", "success", "status", "error"]);
+        const GENERIC_META_KEYS = new Set(["visual", "success", "status", "error", "message"]);
         function renderGenericCard(result) {
             const keys = Object.keys(result).filter((k) => !GENERIC_META_KEYS.has(k));
             if (!keys.length) return null;

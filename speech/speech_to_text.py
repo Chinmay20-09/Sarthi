@@ -68,13 +68,13 @@ def transcribe(audio: Any, language: str = "en", beam_size: int = 5) -> str:
         vad_filter=True,
     )
 
-    print(f"Language: {info.language}")
-    print(f"Probability: {info.language_probability:.2f}")
+    logger.debug(f"Language: {info.language}")
+    logger.debug(f"Probability: {info.language_probability:.2f}")
 
     text = []
 
     for segment in segments:
-        print(segment.text)
+        logger.debug(segment.text)
         text.append(segment.text.strip())
 
     return " ".join(text)

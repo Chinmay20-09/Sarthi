@@ -17,8 +17,8 @@ This skill wrapper provides:
 from typing import Any
 
 from brain.intent import Intent
+from config import SKILLS_DIR
 from skills.base import BaseSkill
-from skills.manager import SKILLS_DIR
 
 from .assistants.brain_assistant.main import BrainAssistant
 from .engine import AutomationEngine
