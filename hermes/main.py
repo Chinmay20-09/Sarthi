@@ -18,31 +18,36 @@ def main() -> None:
     print("Initializing Provider Manager...")
     manager = ProviderManager()
 
+    # Determine if user explicitly requested local-only mode
     provider_name = (config.provider or "openrouter/free").lower()
-    print(f"Selected provider: {provider_name}")
-    if provider_name in ("local", "local_hermes", "localhermes"):
+    explicit_local = provider_name in ("local", "local_hermes", "localhermes")
+
+    if explicit_local:
+        # Explicit local mode: use local provider only, no fallback
+        print(f"Selected provider: {provider_name}")
         print("Initializing Local Hermes...")
         manager.initialize(LocalHermesProvider(config))
+        test_task_id = "task_local_000001"
+        test_prompt = "Reply with exactly: LOCAL_OLLAMA_PROVIDER_OK"
     else:
+        # Default mode: OpenRouter primary with local fallback
+        print(f"Selected provider: openrouter")
         print("Initializing OpenRouter...")
         manager.initialize(OpenRouterProvider(config))
+        print("Initializing Local Hermes as fallback...")
+        manager.set_fallback(LocalHermesProvider(config))
+        test_task_id = "task_000001"
+        test_prompt = "Introduce yourself as Hermes in one paragraph."
 
     orchestrator = HermesOrchestrator(manager)
     sandbox = TaskSandbox(config.sandbox_path)
 
     print("Creating task...")
-    if provider_name in ("local", "local_hermes", "localhermes"):
-        task = Task(
-            id="task_local_000001",
-            prompt="Reply with exactly: LOCAL_OLLAMA_PROVIDER_OK",
-            task_type="test",
-        )
-    else:
-        task = Task(
-            id="task_000001",
-            prompt="Introduce yourself as Hermes in one paragraph.",
-            task_type="test",
-        )
+    task = Task(
+        id=test_task_id,
+        prompt=test_prompt,
+        task_type="test",
+    )
 
     print("Sending task...")
     print("Waiting for response...")
@@ -56,7 +61,10 @@ def main() -> None:
     sandbox.save(task, response, duration_ms)
 
     if response.success:
-        print("Task completed successfully.")
+        if response.provider == "Ollama" and not explicit_local:
+            print("Task completed using local fallback.")
+        else:
+            print("Task completed successfully.")
     else:
         print(f"Task failed: {response.error}")
 
