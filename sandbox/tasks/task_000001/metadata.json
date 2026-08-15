@@ -1,8 +1,8 @@
 {
   "task_id": "task_000001",
   "provider": "OpenRouter",
-  "model": "openai/gpt-5",
+  "model": "hermes3:8b",
   "status": "error",
-  "timestamp": "2026-08-02T16:08:32.852988+00:00",
-  "duration_ms": 902.9809999992722
+  "timestamp": "2026-08-15T10:02:11.437769+00:00",
+  "duration_ms": 1407.0732999998654
 }

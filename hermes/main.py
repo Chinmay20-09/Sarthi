@@ -4,8 +4,9 @@ from .config.loader import ConfigLoader
 from .models import Task
 from .orchestrator import HermesOrchestrator
 from .providers.manager import ProviderManager
-from .providers.openrouter_provider import OpenRouterProvider
 from .sandbox import TaskSandbox
+from .providers.openrouter_provider import OpenRouterProvider
+from .providers.local_provider import LocalHermesProvider
 
 
 def main() -> None:
@@ -17,18 +18,31 @@ def main() -> None:
     print("Initializing Provider Manager...")
     manager = ProviderManager()
 
-    print("Initializing OpenRouter...")
-    manager.initialize(OpenRouterProvider(config))
+    provider_name = (config.provider or "openrouter/free").lower()
+    print(f"Selected provider: {provider_name}")
+    if provider_name in ("local", "local_hermes", "localhermes"):
+        print("Initializing Local Hermes...")
+        manager.initialize(LocalHermesProvider(config))
+    else:
+        print("Initializing OpenRouter...")
+        manager.initialize(OpenRouterProvider(config))
 
     orchestrator = HermesOrchestrator(manager)
     sandbox = TaskSandbox(config.sandbox_path)
 
     print("Creating task...")
-    task = Task(
-        id="task_000001",
-        prompt="Introduce yourself as Hermes in one paragraph.",
-        task_type="test",
-    )
+    if provider_name in ("local", "local_hermes", "localhermes"):
+        task = Task(
+            id="task_local_000001",
+            prompt="Reply with exactly: LOCAL_OLLAMA_PROVIDER_OK",
+            task_type="test",
+        )
+    else:
+        task = Task(
+            id="task_000001",
+            prompt="Introduce yourself as Hermes in one paragraph.",
+            task_type="test",
+        )
 
     print("Sending task...")
     print("Waiting for response...")

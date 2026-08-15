@@ -1,4 +1,4 @@
-﻿import httpx
+import httpx
 
 from hermes.config.settings import HermesConfig
 from hermes.models import Task
@@ -6,32 +6,29 @@ from hermes.models import Task
 from .base import AIProvider, ProviderResponse
 
 
-class OpenRouterProvider(AIProvider):
-    """OpenRouter provider backed by an httpx HTTP client."""
+class LocalHermesProvider(AIProvider):
+    """Local provider backed by Ollama HTTP API."""
 
-    name = "OpenRouter"
-    endpoint = "https://openrouter.ai/api/v1/chat/completions"
+    name = "Ollama"
 
     def __init__(self, config: HermesConfig):
         self._config = config
 
     def generate(self, task: Task) -> ProviderResponse:
-        """Send one chat completion request. Never raises upward."""
-        # support backward-compatible api_key field or the explicit openrouter_api_key
-        api_key = getattr(self._config, "openrouter_api_key", None) or getattr(self._config, "api_key", None)
-        if not api_key:
+        """Send chat completion request to Ollama. Never raises upward."""
+        if not self._config.local_hermes_url:
             return ProviderResponse(
                 success=False,
                 provider=self.name,
                 model=self._config.model,
                 text="",
-                error="Missing API key",
+                error="Missing Ollama URL",
             )
 
         try:
             response = self._post(task.prompt)
             response.raise_for_status()
-            content = response.json()["choices"][0]["message"]["content"]
+            content = response.json()["message"]["content"]
             return ProviderResponse(
                 success=True,
                 provider=self.name,
@@ -82,23 +79,18 @@ class OpenRouterProvider(AIProvider):
             )
 
     def _post(self, prompt: str) -> httpx.Response:
-        api_key = getattr(self._config, "openrouter_api_key", None) or getattr(self._config, "api_key", None)
+        """Post to Ollama chat API."""
+        url = f"{self._config.local_hermes_url}/api/chat"
         headers = {
-            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
-        if getattr(self._config, "openrouter_http_referer", ""):
-            headers["HTTP-Referer"] = self._config.openrouter_http_referer
-        if getattr(self._config, "openrouter_x_title", ""):
-            headers["X-Title"] = self._config.openrouter_x_title
-        url = getattr(self._config, "openrouter_url", self.endpoint)
+
         return httpx.post(
             url,
             headers=headers,
             json={
                 "model": self._config.model,
                 "messages": [{"role": "user", "content": prompt}],
-                "temperature": self._config.temperature,
                 "stream": False,
             },
             timeout=self._config.timeout,

@@ -1,1 +1,1 @@
-HTTP 402 Payment Required
+HTTP 400 Bad Request
