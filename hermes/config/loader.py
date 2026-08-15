@@ -31,4 +31,5 @@ class ConfigLoader:
             openrouter_x_title=os.getenv("OPENROUTER_X_TITLE", HermesConfig.openrouter_x_title),
             local_hermes_url=os.getenv("LOCAL_HERMES_URL", HermesConfig.local_hermes_url),
             local_hermes_api_key=os.getenv("LOCAL_HERMES_API_KEY", HermesConfig.local_hermes_api_key),
+            local_model=os.getenv("LOCAL_HERMES_MODEL", HermesConfig.local_model),
         )

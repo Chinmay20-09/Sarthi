@@ -226,16 +226,23 @@
             </div>
             <!-- Categories Tabs -->
             <div class="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
-                <button
-                    class="px-6 py-2 rounded-full glass-card border-primary-container/50 text-primary-container text-sm font-bold whitespace-nowrap">All
-                    Modules
+                <button id="tab-skills"
+                    class="px-6 py-2 rounded-full glass-card border-primary-container/50 text-primary-container text-sm font-bold whitespace-nowrap">Skills
                 </button>
-
+                <button id="tab-tools"
+                    class="px-6 py-2 rounded-full glass-card border-white/10 text-on-surface-variant text-sm font-bold whitespace-nowrap">Hermes
+                    Tools
+                </button>
             </div>
         </section>
         <!-- Bento Grid Skills Section -->
-        <section class="max-w-6xl mx-auto mb-20">
+        <section id="skills-section" class="max-w-6xl mx-auto mb-20">
             <div id="skills-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            </div>
+        </section>
+        <!-- Hermes Tools Grid Section -->
+        <section id="tools-section" class="max-w-6xl mx-auto mb-20 hidden">
+            <div id="tools-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             </div>
         </section>
         <!-- Store Discover Section -->
@@ -302,6 +309,72 @@
     <div id="footer"></div>
     <script src="components.js"></script>
     <script>
+        function escHtml(value) {
+            const div = document.createElement("div");
+            div.textContent = String(value == null ? "" : value);
+            return div.innerHTML;
+        }
+
+        function setTabActive(button, active) {
+            button.classList.toggle("border-primary-container/50", active);
+            button.classList.toggle("text-primary-container", active);
+            button.classList.toggle("border-white/10", !active);
+            button.classList.toggle("text-on-surface-variant", !active);
+        }
+
+        function switchTab(tab) {
+            const skillsSection = document.getElementById("skills-section");
+            const toolsSection = document.getElementById("tools-section");
+            if (!skillsSection || !toolsSection) return;
+            const isTools = tab === "tools";
+            skillsSection.classList.toggle("hidden", isTools);
+            toolsSection.classList.toggle("hidden", !isTools);
+            setTabActive(document.getElementById("tab-skills"), !isTools);
+            setTabActive(document.getElementById("tab-tools"), isTools);
+        }
+
+        async function loadHermesTools() {
+            const grid = document.getElementById("tools-grid");
+            if (!grid) return;
+            try {
+                const response = await fetch("http://127.0.0.1:8000/hermes/tools");
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                const payload = await response.json();
+                if (!payload.success || !payload.tools.length) {
+                    grid.innerHTML = '<div class="col-span-full text-on-surface-variant text-sm">No tools available.</div>';
+                    return;
+                }
+                grid.innerHTML = "";
+                payload.tools.forEach(tool => {
+                    const props = (tool.parameters && tool.parameters.properties) || {};
+                    const required = (tool.parameters && tool.parameters.required) || [];
+                    const args = Object.keys(props).map(name => {
+                        const isRequired = required.includes(name);
+                        return `<span class="px-2 py-1 rounded-lg ${isRequired ? "bg-primary/10 text-primary" : "bg-white/5 text-on-surface-variant"} text-xs">${escHtml(name)}${isRequired ? " *" : ""}</span>`;
+                    }).join("");
+                    grid.innerHTML += `
+            <div class="glass-card rounded-3xl p-6">
+                <div class="flex justify-between items-start mb-6">
+                    <div class="p-3 bg-primary/10 rounded-2xl">
+                        <span class="material-symbols-outlined text-primary-container text-3xl">handyman</span>
+                    </div>
+                    <span class="font-label-caps text-[10px] px-2 py-1 rounded text-primary-container border border-primary-container/30">Registered</span>
+                </div>
+                <h3 class="font-headline-md text-headline-md mb-2">${escHtml(tool.name)}</h3>
+                <p class="text-on-surface-variant text-sm mb-6">${escHtml(tool.description)}</p>
+                <div class="mt-5">
+                    <p class="text-xs text-on-surface-variant mb-2">Parameters</p>
+                    <div class="flex flex-wrap gap-2">${args}</div>
+                </div>
+                <div class="mt-5 text-xs text-on-surface-variant">Hermes tool</div>
+            </div>`;
+                });
+            } catch (err) {
+                console.warn("Failed to load Hermes tools", err);
+                grid.innerHTML = '<div class="col-span-full text-on-surface-variant text-sm">Tools unavailable.</div>';
+            }
+        }
+
         function initializePage() {
             // Micro-interactions for skill cards
             document.querySelectorAll('.glass-card').forEach(card => {
@@ -316,8 +389,15 @@
                 });
             });
 
+            // Tabs
+            document.getElementById("tab-skills").addEventListener("click", () => switchTab("skills"));
+            document.getElementById("tab-tools").addEventListener("click", () => switchTab("tools"));
+
             // Load skills from API
             loadSkills();
+
+            // Load Hermes tools from API
+            loadHermesTools();
 
             // Search bar hover glow
             const searchInput = document.querySelector('input[type="text"]');

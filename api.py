@@ -34,6 +34,7 @@ from events import get_bus
 from knowledge.manager import get_manager
 from skills.browser.routes import router as browser_router
 from skills.registry import get_registry
+from hermes.routes import router as hermes_router
 from utils.logger import get_logger, setup_logging
 
 setup_logging()
@@ -51,6 +52,9 @@ app.add_middleware(
 
 # Include router for browser skill
 app.include_router(browser_router)
+
+# Include router for Hermes local AI
+app.include_router(hermes_router)
 
 # Serve Frontend
 app.mount("/ui", StaticFiles(directory="UI"), name="ui")

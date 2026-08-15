@@ -62,7 +62,11 @@ class DatabaseManager:
     def _connect(self) -> None:
         """Create the database connection and ensure directory exists."""
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._connection = sqlite3.connect(str(self.db_path))
+        # check_same_thread=False: FastAPI/uvicorn runs sync endpoints in a
+        # threadpool, so the connection (created at startup) is used from
+        # worker threads. SQLite serializes access at the module level and
+        # the file locks handle concurrency.
+        self._connection = sqlite3.connect(str(self.db_path), check_same_thread=False)
         self._connection.row_factory = sqlite3.Row
         self._connection.execute("PRAGMA journal_mode=WAL")
         self._connection.execute("PRAGMA foreign_keys=ON")

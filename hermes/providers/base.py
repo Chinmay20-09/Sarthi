@@ -11,6 +11,9 @@ class ProviderResponse:
     model: str
     text: str
     error: str = ""
+    # Name of the Sarthi tool that was executed to produce this response
+    # (set by the Tool Planner when Hermes requested a registered tool).
+    tool_used: str | None = None
 
 
 class AIProvider(ABC):

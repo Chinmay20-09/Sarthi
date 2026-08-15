@@ -251,6 +251,13 @@
                     </div>
                 </div>
             </div>
+            <!-- Hermes Tools -->
+            <div>
+                <div class="text-on-surface-variant text-xs mb-2">HERMES TOOLS</div>
+                <div id="hermes-tools-list" class="flex flex-col gap-2">
+                    <div class="text-xs text-on-surface-variant">Loading…</div>
+                </div>
+            </div>
         </div>
     </aside>
 
@@ -311,11 +318,20 @@
         // ---------------------------------------------------------------------
         // Message rendering
         // ---------------------------------------------------------------------
+        function currentTime() {
+            return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        }
+
         function addUserMessage(text) {
             document.getElementById("chat-empty")?.remove();
             const scroll = document.getElementById("chat-scroll");
             const row = el("div", "flex flex-col gap-4 max-w-4xl mx-auto w-full");
-            const wrapper = el("div", "flex gap-4 justify-end");
+            const wrapper = el("div", "flex flex-col items-end gap-1.5");
+            const badge = el("div", "flex items-center gap-1.5");
+            badge.innerHTML =
+                '<span class="font-data-mono text-[10px] text-on-surface-variant tracking-wide">YOU · ' +
+                currentTime() + '</span>';
+            wrapper.appendChild(badge);
             wrapper.appendChild(
                 el("div",
                     "bg-surface-container px-5 py-3 rounded-2xl rounded-tr-sm border border-white/10 text-on-surface font-body-lg text-body-lg",
@@ -326,7 +342,56 @@
             scrollToBottom();
         }
 
+        // Friendly display names for the AI providers: OpenRouter is the cloud
+        // engine (Sage), Ollama/Hermes is the local engine (Guardian).
+        function providerDisplayName(provider) {
+            const p = String(provider || "").toLowerCase();
+            if (p.includes("openrouter")) return "SAGE";
+            if (p.includes("ollama") || p.includes("hermes")) return "GUARDIAN";
+            return String(provider || "").toUpperCase();
+        }
+
+        // ---------------------------------------------------------------------
+        // Typing indicator — animated "thinking" bubble while a response is
+        // in flight, so the user never feels stuck.
+        // ---------------------------------------------------------------------
+        let typingIndicator = null;
+
+        function showTypingIndicator() {
+            removeTypingIndicator();
+            document.getElementById("chat-empty")?.remove();
+            const scroll = document.getElementById("chat-scroll");
+            const row = el("div", "flex flex-col gap-4 max-w-4xl mx-auto w-full");
+            const wrapper = el("div", "flex gap-4");
+
+            const avatar = el("div",
+                "w-8 h-8 rounded-full bg-surface-container border border-white/10 flex-shrink-0 flex items-center justify-center mt-1");
+            avatar.innerHTML = '<span class="material-symbols-outlined text-primary text-sm">smart_toy</span>';
+            wrapper.appendChild(avatar);
+
+            const bubble = el("div",
+                "bg-surface-container px-5 py-4 rounded-2xl rounded-tl-sm border border-white/10 flex items-center gap-2");
+            bubble.innerHTML =
+                '<span class="typing-dot w-2 h-2 rounded-full bg-primary-container"></span>' +
+                '<span class="typing-dot w-2 h-2 rounded-full bg-primary-container"></span>' +
+                '<span class="typing-dot w-2 h-2 rounded-full bg-primary-container"></span>';
+            wrapper.appendChild(bubble);
+
+            row.appendChild(wrapper);
+            scroll.appendChild(row);
+            typingIndicator = row;
+            scrollToBottom();
+        }
+
+        function removeTypingIndicator() {
+            if (typingIndicator) {
+                typingIndicator.remove();
+                typingIndicator = null;
+            }
+        }
+
         function addAssistantMessage(payload) {
+            removeTypingIndicator();
             document.getElementById("chat-empty")?.remove();
             const scroll = document.getElementById("chat-scroll");
             const row = el("div", "flex flex-col gap-4 max-w-4xl mx-auto w-full");
@@ -338,6 +403,21 @@
             wrapper.appendChild(avatar);
 
             const content = el("div", "flex flex-col gap-3 w-full");
+
+            // Provider badge — which engine answered: Sarthi, Sage (OpenRouter) or Guardian (Ollama/Hermes)
+            const isHermes = !!payload.provider;
+            const badge = el("div", "flex items-center gap-1.5");
+            badge.innerHTML =
+                '<span class="w-1.5 h-1.5 rounded-full ' + (isHermes ? "bg-tertiary" : "bg-primary-container") + '"></span>' +
+                '<span class="font-data-mono text-[10px] text-on-surface-variant tracking-wide">' +
+                esc(isHermes
+                    ? providerDisplayName(payload.provider)
+                        + (payload.model ? " \u00B7 " + payload.model : "")
+                        + (payload.tool_used ? " \u00B7 " + payload.tool_used : "")
+                    : "SARTHI") +
+                '</span>';
+            content.appendChild(badge);
+
             content.appendChild(
                 el("div", "text-on-surface font-body-lg text-body-lg", esc(payload.text || "Done."))
             );
@@ -819,14 +899,54 @@
                 payload.execution_ms != null ? payload.execution_ms + "ms" : "—";
         }
 
+        // Load the registered Hermes tools from GET /hermes/tools.
+        async function loadHermesTools() {
+            const container = document.getElementById("hermes-tools-list");
+            if (!container) return;
+            try {
+                const response = await fetch(SarthiAPI + "/hermes/tools");
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                const payload = await response.json();
+                if (!payload.success || !payload.tools.length) {
+                    container.innerHTML = '<div class="text-xs text-on-surface-variant">No tools available.</div>';
+                    return;
+                }
+                container.innerHTML = "";
+                payload.tools.forEach((tool) => {
+                    const item = el("div", "bg-surface-container/30 rounded-lg p-3 border border-white/5");
+                    const name = el("div", "font-data-mono text-data-mono text-primary text-xs mb-1", esc(tool.name));
+                    const desc = el("div", "text-xs text-on-surface-variant", esc(tool.description));
+                    item.appendChild(name);
+                    item.appendChild(desc);
+                    container.appendChild(item);
+                });
+            } catch (err) {
+                console.error("Hermes tools error:", err);
+                container.innerHTML = '<div class="text-xs text-on-surface-variant">Tools unavailable.</div>';
+            }
+        }
+
         // ---------------------------------------------------------------------
         // Command handling
         // ---------------------------------------------------------------------
+        // Decide whether a /command response should fall back to Hermes.
+        // Sarthi owns the message when it produced something useful (executed
+        // result or interactive card) or failed an imperative command with an
+        // actionable error (not found / not configured). Open-ended questions
+        // — no recognized handler, or a "what/how" question that half-matched
+        // a skill — go to Hermes.
+        function shouldRouteToHermes(payload) {
+            if (payload.success || (payload.result && payload.result.visual)) return false;
+            if (payload.status === "no_handler" || payload.action === "unknown") return true;
+            return ["what", "how"].includes(payload.action);
+        }
+
         async function sendCommand(text) {
             text = (text || "").trim();
             if (processing || !text) return;
 
             addUserMessage(text);
+            showTypingIndicator();
             setCurrentTask("Processing: " + text);
             processing = true;
 
@@ -842,8 +962,15 @@
                 });
                 if (!response.ok) throw new Error("HTTP " + response.status);
                 const payload = await response.json();
-                addAssistantMessage(payload);
-                updateLastExecution(payload);
+
+                // Show Sarthi's result unless this is an open-ended question
+                // that should go to Hermes.
+                if (!shouldRouteToHermes(payload)) {
+                    addAssistantMessage(payload);
+                    updateLastExecution(payload);
+                    return;
+                }
+                await sendHermesQuestion(text, input);
             } catch (err) {
                 console.error(err);
                 addAssistantMessage({
@@ -852,6 +979,7 @@
                 });
             } finally {
                 processing = false;
+                removeTypingIndicator();
                 input.disabled = false;
                 input.placeholder = "Ask Sarthi to do something...";
                 input.focus();
@@ -862,6 +990,7 @@
         async function listenCommand() {
             if (processing) return;
             setCurrentTask("Listening...");
+            showTypingIndicator();
             processing = true;
             try {
                 const response = await fetch(SarthiAPI + "/listen", { method: "POST" });
@@ -879,6 +1008,53 @@
             } finally {
                 processing = false;
                 setCurrentTask("");
+            }
+        }
+
+        // Hermes fallback for open-ended questions the brain can't handle.
+        // Called from sendCommand() after /command reports no_handler/unknown.
+        async function sendHermesQuestion(text, input) {
+            setCurrentTask("Hermes thinking...");
+            input.placeholder = "Hermes is thinking...";
+            try {
+                const response = await fetch(SarthiAPI + "/hermes/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: text }),
+                });
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                const payload = await response.json();
+
+                if (payload.success) {
+                    addAssistantMessage({
+                        text: payload.response,
+                        action: "",
+                        target: "",
+                        success: true,
+                        provider: payload.provider,
+                        model: payload.model,
+                        tool_used: payload.tool_used || null,
+                    });
+                } else {
+                    addAssistantMessage({
+                        text: "Hermes error: " + (payload.error || "Unknown error"),
+                        action: "",
+                        target: "",
+                        success: false,
+                        provider: payload.provider,
+                        model: payload.model,
+                        tool_used: payload.tool_used || null,
+                    });
+                }
+            } catch (err) {
+                console.error("Hermes error:", err);
+                addAssistantMessage({
+                    text: "Local Hermes is unavailable. Check that Ollama is running.",
+                    action: "",
+                    target: "",
+                    success: false,
+                    provider: "Hermes",
+                });
             }
         }
 
@@ -906,6 +1082,7 @@
 
             input.focus();
             checkPendingApps();
+            loadHermesTools();
         }
     </script>
 </body>

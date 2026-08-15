@@ -16,5 +16,7 @@ class HermesConfig:
     # Local Hermes settings (Ollama)
     local_hermes_url: str = "http://localhost:11434"
     local_hermes_api_key: str = ""
+    # Local model name as installed in Ollama (distinct from the OpenRouter model)
+    local_model: str = "hermes3:8b"
     # legacy
     api_key: str = ""

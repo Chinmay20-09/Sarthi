@@ -29,7 +29,7 @@ class OpenRouterProvider(AIProvider):
             )
 
         try:
-            response = self._post(task.prompt)
+            response = self._post(task)
             response.raise_for_status()
             content = response.json()["choices"][0]["message"]["content"]
             return ProviderResponse(
@@ -81,7 +81,7 @@ class OpenRouterProvider(AIProvider):
                 error="Unexpected error",
             )
 
-    def _post(self, prompt: str) -> httpx.Response:
+    def _post(self, task: Task) -> httpx.Response:
         api_key = getattr(self._config, "openrouter_api_key", None) or getattr(self._config, "api_key", None)
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -92,12 +92,16 @@ class OpenRouterProvider(AIProvider):
         if getattr(self._config, "openrouter_x_title", ""):
             headers["X-Title"] = self._config.openrouter_x_title
         url = getattr(self._config, "openrouter_url", self.endpoint)
+        messages: list[dict] = []
+        if task.instructions:
+            messages.append({"role": "system", "content": task.instructions})
+        messages.append({"role": "user", "content": task.prompt})
         return httpx.post(
             url,
             headers=headers,
             json={
                 "model": self._config.model,
-                "messages": [{"role": "user", "content": prompt}],
+                "messages": messages,
                 "temperature": self._config.temperature,
                 "stream": False,
             },

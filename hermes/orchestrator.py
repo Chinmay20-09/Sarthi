@@ -1,6 +1,8 @@
 from .models import Task
 from .providers.base import ProviderResponse
 from .providers.manager import ProviderManager
+from .tool_planner import ToolPlanner
+from .tool_registry import ToolRegistry
 
 
 class HermesOrchestrator:
@@ -9,34 +11,39 @@ class HermesOrchestrator:
 
     Responsibilities:
     - Accept a Task
-    - Attempt primary provider
-    - If primary fails, attempt fallback provider
+    - Run the Tool Planner (Hermes decides text vs registered Sarthi tool)
+    - Attempt primary provider, then fallback provider for each model call
     - Return the ProviderResponse
 
-    Future responsibilities:
-    - Offline queue
-    - Retry logic
-    - Validation
-    - Notifications
+    Hermes is the reasoning layer only — tool execution is delegated to the
+    Sarthi Tool Registry, never executed directly by Hermes.
     """
 
-    def __init__(self, provider_manager: ProviderManager):
+    def __init__(self, provider_manager: ProviderManager, tool_registry: ToolRegistry | None = None):
         self._provider_manager = provider_manager
+        self._tool_registry = tool_registry
 
     def process(self, task: Task) -> ProviderResponse:
         """
-        Process a Hermes task with fallback support.
-
-        Attempts primary provider first. If it fails (success=False),
-        attempts fallback provider with the original task.
+        Process a Hermes task through the tool loop with provider fallback.
 
         Args:
             task: Task to execute.
 
         Returns:
-            ProviderResponse from primary or fallback provider.
+            ProviderResponse from primary or fallback provider, with
+            tool_used set when a registered Sarthi tool was executed.
         """
-        # Try primary provider
+        if self._tool_registry is None:
+            from .tool_registry import get_tool_registry
+
+            self._tool_registry = get_tool_registry()
+
+        planner = ToolPlanner(self._tool_registry, self._generate_with_fallback)
+        return planner.run(task)
+
+    def _generate_with_fallback(self, task: Task) -> ProviderResponse:
+        """Call the primary provider, falling back to the fallback provider."""
         response = self._provider_manager.generate(task)
 
         # If primary succeeds, return immediately
@@ -44,10 +51,10 @@ class HermesOrchestrator:
             return response
 
         # Primary failed, attempt fallback
-        print("Cloud provider unavailable.")
+        print(f"{response.provider} unavailable.")
         print("Preserving task...")
-        print("Switching to local fallback...")
-        
+        print("Switching to fallback provider...")
+
         try:
             fallback_response = self._provider_manager.generate_fallback(task)
             return fallback_response
@@ -59,6 +66,5 @@ class HermesOrchestrator:
                 provider="Hermes",
                 model="",
                 text="",
-                error=f"Cloud provider failed ({response.error}) and local fallback unavailable",
+                error=f"{response.provider} failed ({response.error}) and fallback unavailable",
             )
-
