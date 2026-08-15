@@ -25,7 +25,7 @@ from config import PROJECT_ROOT
 logger = logging.getLogger(__name__)
 
 # Default database path (relative to project root)
-DEFAULT_DB_PATH = PROJECT_ROOT / "data" / "sarthi.db"
+DEFAULT_DB_PATH = PROJECT_ROOT / "database" / "sarthi.db"
 
 
 class DatabaseManager:
