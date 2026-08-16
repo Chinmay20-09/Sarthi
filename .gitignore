@@ -130,6 +130,13 @@ knowledge/applications.json
 *.sqlite3
 
 # ==========================================
+# Sandbox (Hermes task artifacts / execution traces)
+# ==========================================
+
+sandbox/
+sandbox_test/
+
+# ==========================================
 # Misc
 # ==========================================
 

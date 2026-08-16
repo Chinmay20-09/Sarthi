@@ -100,6 +100,9 @@ class BrainEngine:
 
             registry = get_registry()
             skills = registry.get_all_instances()
+            # Fallback skills (e.g. Natural Language Processor) are tried LAST:
+            # every real tool/skill gets a chance to handle the intent first.
+            skills.sort(key=lambda s: getattr(s, "fallback", False))
             for skill in skills:
                 self.executor.register_skill(skill)
                 logger.info(f"Registered skill: {skill.name} v{skill.version}")

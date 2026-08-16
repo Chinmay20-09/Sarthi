@@ -91,6 +91,16 @@ class LocalHermesProvider(AIProvider):
         messages: list[dict] = []
         if task.instructions:
             messages.append({"role": "system", "content": task.instructions})
+        # Facts the user saved with /remember, injected as a system message so
+        # the model actually remembers them (the memory prompt injection).
+        if task.memory:
+            messages.append({"role": "system", "content": task.memory})
+        # Prior conversation turns from the session, oldest first
+        for turn in task.history or []:
+            role = turn.get("role") if isinstance(turn, dict) else None
+            content = turn.get("content") if isinstance(turn, dict) else None
+            if role in ("user", "assistant") and content:
+                messages.append({"role": role, "content": content})
         messages.append({"role": "user", "content": task.prompt})
         return httpx.post(
             url,

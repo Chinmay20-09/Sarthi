@@ -107,9 +107,11 @@ class GitHubProjectSkill(BaseSkill):
 
         Maps intent action/target combinations to internal handlers:
             - action="check"            → check_new_repositories()
-            - action="status" / "how" / "what" → project_status()
+            - action="status" / "show" / "pending" → project_status()
+            - action="how" / "what"    → project_status(), but only when the
+              target mentions projects/GitHub/repos (casual questions are left
+              to the Natural Language Processor fallback)
             - action="sync" / "update"  → sync_repositories()
-            - action="show" / "pending" → project_status()
 
         Backward compatible: accepts raw strings (routes to execute_text()).
         """
@@ -131,11 +133,28 @@ class GitHubProjectSkill(BaseSkill):
             }
 
         # Does this skill own this intent?
+        # "what"/"how" are conversational words — only claim them when the
+        # question is actually about projects/GitHub/repos, so casual questions
+        # ("what is the capital of France?") fall through to the Natural
+        # Language Processor fallback instead of getting a GitHub status dump.
         owns = (
-            action in ("check", "status", "how", "what", "show", "pending", "sync")
+            action in ("check", "status", "show", "pending", "sync")
+            or (action in ("what", "how") and (
+                "project" in target or "github" in target or "repo" in target
+            ))
             or "project" in target
             or "github" in target
         )
+
+        # Not our command — let other skills try (and the NLP fallback last).
+        # Declining BEFORE resolving GitHub keeps casual conversation out of
+        # the dispatch below entirely.
+        if not owns:
+            return {
+                "success": False,
+                "status": "unknown",
+                "error": f"Unknown command: {intent.action} {intent.target}",
+            }
 
         # Resolve the GitHub username (explicit arg > env var > saved setting)
         # before deciding whether we can fulfill the command.
@@ -143,24 +162,17 @@ class GitHubProjectSkill(BaseSkill):
 
         # Check if GitHub is configured before making API calls
         if not username:
-            if owns:
-                # We recognize the command but can't fulfill it — signal
-                # ownership so the executor surfaces this helpful message.
-                return {
-                    "success": False,
-                    "status": "not_configured",
-                    "handled": True,
-                    "error": (
-                        "GitHub is not configured. "
-                        "Say 'set my github username to <your-username>' in the chat "
-                        "to save it permanently."
-                    ),
-                }
-            # Not our command — let other skills try
+            # We recognize the command but can't fulfill it — signal
+            # ownership so the executor surfaces this helpful message.
             return {
                 "success": False,
-                "status": "unknown",
-                "error": f"Unknown command: {intent.action} {intent.target}",
+                "status": "not_configured",
+                "handled": True,
+                "error": (
+                    "GitHub is not configured. "
+                    "Say 'set my github username to <your-username>' in the chat "
+                    "to save it permanently."
+                ),
             }
 
         # Check / scan GitHub for new repos

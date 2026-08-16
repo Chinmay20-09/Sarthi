@@ -1,0 +1,13 @@
+{
+    "id": "natural_language_processor",
+    "name": "Natural Language Processor",
+    "description": "Holds a normal conversation like a plain AI. Fallback when no tool can handle the request.",
+    "version": "1.0.0",
+    "enabled": true,
+    "icon": "forum",
+    "commands": [
+        "Hello Sarthi",
+        "What is the capital of France?",
+        "Tell me a joke"
+    ]
+}

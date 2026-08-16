@@ -54,6 +54,15 @@ class BrainResponse:
 
         # Guard against a missing intent (pipeline error before interpretation)
         intent = self.intent
+
+        # Lift conversational metadata a skill may attach (e.g. the Natural
+        # Language Processor's source="nlp") to the top level so the UI can
+        # badge the reply distinctly without digging into result.
+        skill_result = self.action_result if isinstance(self.action_result, dict) else {}
+        source = skill_result.get("source")
+        provider = skill_result.get("provider")
+        model = skill_result.get("model")
+
         return {
             "action": getattr(intent, "action", None),
             "target": getattr(intent, "target", None),
@@ -68,4 +77,8 @@ class BrainResponse:
             "error": self.error,
             # True only when the resolver actually rewrote an intent target
             "resolved": bool(self.resolved),
+            # Skill reply metadata (source="nlp" etc.), when present
+            "source": source,
+            "provider": provider,
+            "model": model,
         }

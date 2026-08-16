@@ -28,3 +28,6 @@ class Intent(BaseModel):
     action: str = "unknown"
     target: str = ""
     confidence: float = 0.0
+    # The original user text, preserved through interpretation so skills
+    # (e.g. the Natural Language Processor) can hold a real conversation.
+    raw_text: str = ""

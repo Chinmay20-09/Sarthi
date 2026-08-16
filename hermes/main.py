@@ -1,5 +1,3 @@
-import time
-
 from .config.loader import ConfigLoader
 from .models import Task
 from .orchestrator import HermesOrchestrator
@@ -39,8 +37,10 @@ def main() -> None:
         test_task_id = "task_000001"
         test_prompt = "Introduce yourself as Hermes in one paragraph."
 
-    orchestrator = HermesOrchestrator(manager)
+    # The orchestrator owns the sandbox: every task it processes is saved
+    # to the sandbox, indexed by query, with its full execution trace.
     sandbox = TaskSandbox(config.sandbox_path)
+    orchestrator = HermesOrchestrator(manager, sandbox=sandbox)
 
     print("Creating task...")
     task = Task(
@@ -51,14 +51,7 @@ def main() -> None:
 
     print("Sending task...")
     print("Waiting for response...")
-    started = time.perf_counter()
     response = orchestrator.process(task)
-    duration_ms = (time.perf_counter() - started) * 1000
-
-    print("Response received.")
-
-    print("Saving task...")
-    sandbox.save(task, response, duration_ms)
 
     if response.success:
         if response.provider == "Ollama" and not explicit_local:

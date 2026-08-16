@@ -154,7 +154,6 @@ class BrainExecutor:
                 }
 
         # Step 3: Try registered skills as fallback
-        meaningful_error: dict[str, Any] | None = None
         for skill in self._skills:
             try:
                 result = skill.execute(intent)
@@ -168,14 +167,13 @@ class BrainExecutor:
                     }
 
                 # A skill signals ownership of an intent it couldn't fulfill
-                # (e.g. not_configured) with handled=True. Surface the first
-                # such message instead of a generic "unknown action" error.
-                if (
-                    isinstance(result, dict)
-                    and meaningful_error is None
-                    and result.get("handled")
-                ):
-                    meaningful_error = {
+                # (e.g. not_configured, needs_input) with handled=True. It
+                # owns the intent — return its message immediately so a later
+                # fallback skill (Natural Language Processor) cannot override
+                # it with a generic conversation.
+                if isinstance(result, dict) and result.get("handled"):
+                    logger.debug(f"Skill '{skill.name}' claimed intent: {action} {intent.target}")
+                    return {
                         "success": False,
                         "status": result.get("status", "error"),
                         "result": result.get("result"),
@@ -185,9 +183,6 @@ class BrainExecutor:
             except Exception as e:
                 logger.debug(f"Skill '{skill.name}' could not handle intent: {e}")
                 continue
-
-        if meaningful_error is not None:
-            return meaningful_error
 
         # No handler found
         logger.warning(f"No handler for action '{action}'")
@@ -243,3 +238,122 @@ class BrainExecutor:
 
         except ImportError as e:
             logger.warning(f"Could not register built-in handlers: {e}")
+
+        # Memory commands (/remember, /recall, /forget) — persisted to the
+        # knowledge_memory table so the model can remember user facts.
+        # Registered outside the try block: they need no app/browser imports.
+        self.register_handler("remember", self._handle_remember)
+        self.register_handler("recall", self._handle_recall)
+        self.register_handler("forget", self._handle_forget)
+
+    # ------------------------------------------------------------------
+    # Memory handlers (/remember, /recall, /forget)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _handle_remember(intent: Intent) -> dict[str, Any] | None:
+        """Handle 'remember' — persist a fact to long-term memory."""
+        from knowledge.memory import get_memory
+
+        memory = get_memory()
+        text = (intent.target or "").strip()
+        if not text:
+            return {
+                "success": False,
+                "status": "error",
+                "error": "Nothing to remember. Try: /remember my name is Alice",
+            }
+
+        key, value = BrainExecutor._split_memory_entry(text)
+        if not memory.remember_long(key, value):
+            return {"success": False, "status": "error", "error": "Could not save to memory."}
+        return {
+            "success": True,
+            "status": "executed",
+            "result": {
+                "message": f"Got it — I'll remember: {value}",
+                "key": key,
+                "value": value,
+            },
+        }
+
+    @staticmethod
+    def _handle_recall(intent: Intent) -> dict[str, Any] | None:
+        """Handle 'recall' — return a saved memory (or list them all)."""
+        from knowledge.memory import get_memory
+
+        memory = get_memory()
+        key = (intent.target or "").strip()
+        if not key:
+            memories = memory.list_memories()
+            if not memories:
+                return {
+                    "success": False,
+                    "status": "error",
+                    "error": "I don't have anything saved yet.",
+                }
+            lines = "\n".join(f"{m['key']}: {m['value']}" for m in memories)
+            return {"success": True, "status": "executed", "result": {"message": lines}}
+
+        value = memory.recall_long(key)
+        if value is None:
+            return {
+                "success": False,
+                "status": "error",
+                "error": f"I don't remember anything for '{key}'.",
+            }
+        return {
+            "success": True,
+            "status": "executed",
+            "result": {"message": value, "key": key, "value": value},
+        }
+
+    @staticmethod
+    def _handle_forget(intent: Intent) -> dict[str, Any] | None:
+        """Handle 'forget' — delete a saved memory."""
+        from knowledge.memory import get_memory
+
+        key = (intent.target or "").strip()
+        if not key:
+            return {
+                "success": False,
+                "status": "error",
+                "error": "Forget what? Try: /forget <key>",
+            }
+        if not get_memory().forget_long(key):
+            return {"success": False, "status": "error", "error": "Could not forget that."}
+        return {"success": True, "status": "executed", "result": {"message": f"Forgot: {key}"}}
+
+    @staticmethod
+    def _split_memory_entry(text: str) -> tuple[str, str]:
+        """
+        Split '/remember key: value' into (key, value).
+
+        Accepts "key: value" or "key = value"; otherwise an auto-key
+        (note_1, note_2, ...) is generated so plain facts like
+        "/remember my name is Alice" still get stored.
+        """
+        for sep in (": ", " = "):
+            if sep in text:
+                key, value = text.split(sep, 1)
+                key = key.strip().lower().replace(" ", "_")
+                value = value.strip()
+                if key and value:
+                    return key, value
+
+        return BrainExecutor._next_note_key(), text.strip()
+
+    @staticmethod
+    def _next_note_key() -> str:
+        """Next auto-key like note_1, note_2, ... (past the highest existing)."""
+        from knowledge.memory import get_memory
+
+        numbers = []
+        for m in get_memory().list_memories():
+            key = m.get("key", "")
+            if key.startswith("note_"):
+                try:
+                    numbers.append(int(key[len("note_") :]))
+                except ValueError:
+                    continue
+        return f"note_{max(numbers, default=0) + 1}"

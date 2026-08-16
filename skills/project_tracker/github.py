@@ -72,6 +72,39 @@ class GitHubClient:
             "url": commit["html_url"],
         }
 
+    def search_repositories(self, query: str, sort: str = "stars", order: str = "desc"):
+        """Search GitHub repositories, sorted by stars by default."""
+        response = requests.get(
+            f"{self.BASE_URL}/search/repositories",
+            headers=self.headers,
+            params={"q": query, "sort": sort, "order": order, "per_page": 10},
+            timeout=15,
+        )
+
+        response.raise_for_status()
+        items = response.json().get("items", [])
+
+        return [
+            {
+                "id": repo["id"],
+                "name": repo["name"],
+                "full_name": repo["full_name"],
+                "description": repo.get("description"),
+                "stars": repo["stargazers_count"],
+                "forks": repo["forks_count"],
+                "language": repo.get("language"),
+                "html_url": repo["html_url"],
+                "private": repo["private"],
+            }
+            for repo in items
+        ]
+
+    def get_branches(self, repository: str):
+        return self._get(f"/repos/{self.username}/{repository}/branches?per_page=100")
+
+    def get_releases(self, repository: str):
+        return self._get(f"/repos/{self.username}/{repository}/releases?per_page=10")
+
     def get_repository_summary(self, repository: str):
         repo = self.get_repository(repository)
         issues = self.get_issues(repository)

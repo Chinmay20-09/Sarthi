@@ -178,6 +178,19 @@ def application_categories():
     }
 
 
+@app.get("/applications/favourites")
+def list_favourites():
+    """List the applications the user has marked as favourites."""
+    return [
+        {
+            "name": app.get("name", ""),
+            "category": app.get("category", "application"),
+            "app_status": app.get("app_status", "favourite"),
+        }
+        for app in knowledge.get_applications_by_status("favourite")
+    ]
+
+
 @app.post("/applications/categorize")
 def categorize_application(request: CategorizeRequest):
     """Move an application to a category (favourite / ignored / unattended)."""

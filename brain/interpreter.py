@@ -70,12 +70,29 @@ def interpret(text: str) -> Intent:
     """
     Parse natural language text into a structured Intent.
 
+    Slash commands are handled first: "/remember <stuff>" becomes an
+    Intent with action="remember" and target="<stuff>", so any command
+    prefixed with "/" maps straight to an action name.
+
     Args:
-        text: Raw natural language input (e.g., "open Chrome")
+        text: Raw natural language input (e.g., "open Chrome", "/remember my name is Alice")
 
     Returns:
         Intent with action, target, and confidence.
     """
+    stripped = text.strip()
+    if stripped.startswith("/"):
+        parts = stripped.split(maxsplit=1)
+        name = parts[0][1:].lower().strip()
+        rest = parts[1].strip() if len(parts) > 1 else ""
+        if name:
+            return Intent(
+                action=name,
+                target=rest,
+                confidence=1.0,
+                raw_text=text,
+            )
+
     action = "unknown"
     target_words = []
 
@@ -100,4 +117,6 @@ def interpret(text: str) -> Intent:
         action=action,
         target=target,
         confidence=1.0 if action != "unknown" else 0.0,
+        # Keep the original message so conversational skills can reply to it
+        raw_text=text,
     )

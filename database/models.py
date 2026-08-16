@@ -87,6 +87,23 @@ CREATE TABLE IF NOT EXISTS settings (
 """
 
 # =============================================================================
+# Hermes Conversation History Table
+# =============================================================================
+
+# One row per message turn, per session. Sessions remember earlier turns so
+# Hermes can reference them; persisting them makes that memory survive server
+# restarts. id gives insertion order; the store trims per-session rows to a cap.
+CREATE_CONVERSATION_MESSAGES = """
+CREATE TABLE IF NOT EXISTS conversation_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT
+)
+"""
+
+# =============================================================================
 # Registry: all known table schemas
 # =============================================================================
 
@@ -97,4 +114,5 @@ ALL_TABLES: dict[str, str] = {
     "command_history": CREATE_COMMAND_HISTORY,
     "knowledge_memory": CREATE_KNOWLEDGE_MEMORY,
     "settings": CREATE_SETTINGS,
+    "conversation_messages": CREATE_CONVERSATION_MESSAGES,
 }

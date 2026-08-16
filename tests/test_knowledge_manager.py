@@ -365,3 +365,52 @@ class TestRefresh:
         result = manager.refresh_applications()
         # Should just fail without crashing
         assert result is False or isinstance(result, bool)
+
+
+# ---------------------------------------------------------------------------
+# API: favourites endpoint
+# ---------------------------------------------------------------------------
+
+
+class TestFavouritesEndpoint:
+    def test_list_favourites_returns_only_favourites(self):
+        """GET /applications/favourites returns the favourite apps with metadata."""
+        from unittest.mock import patch
+
+        from fastapi.testclient import TestClient
+
+        from api import app
+
+        client = TestClient(app)
+        fake_favourites = [
+            {"name": "Chrome", "category": "application", "app_status": "favourite"},
+            {"name": "VS Code", "category": "application", "app_status": "favourite"},
+        ]
+
+        with patch("api.knowledge.get_applications_by_status", return_value=fake_favourites) as mock:
+            response = client.get("/applications/favourites")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) == 2
+        assert data[0]["name"] == "Chrome"
+        assert data[0]["category"] == "application"
+        assert data[0]["app_status"] == "favourite"
+        # The endpoint must query the favourite category specifically
+        mock.assert_called_once_with("favourite")
+
+    def test_list_favourites_empty(self):
+        """An empty favourite list returns an empty array."""
+        from unittest.mock import patch
+
+        from fastapi.testclient import TestClient
+
+        from api import app
+
+        client = TestClient(app)
+        with patch("api.knowledge.get_applications_by_status", return_value=[]):
+            response = client.get("/applications/favourites")
+
+        assert response.status_code == 200
+        assert response.json() == []

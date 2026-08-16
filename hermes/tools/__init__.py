@@ -7,10 +7,11 @@ shell execution.
 """
 
 from .base import BaseTool, ToolResult
+from .github import GitHubTool
 from .open_app import OpenAppTool
 from .open_website import OpenWebsiteTool
 
-__all__ = ["BaseTool", "ToolResult", "OpenAppTool", "OpenWebsiteTool", "register_default_tools"]
+__all__ = ["BaseTool", "ToolResult", "GitHubTool", "OpenAppTool", "OpenWebsiteTool", "register_default_tools"]
 
 
 def register_default_tools(registry) -> None:
@@ -22,3 +23,4 @@ def register_default_tools(registry) -> None:
     """
     registry.register(OpenAppTool())
     registry.register(OpenWebsiteTool())
+    registry.register(GitHubTool())

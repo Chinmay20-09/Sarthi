@@ -171,6 +171,11 @@ def _with_instructions(task: Task, instructions: str) -> Task:
         task_type=task.task_type,
         context=task.context,
         instructions=instructions,
+        # Preserve prior conversation turns so decision/follow-up calls see
+        # the full session context, not just the current prompt.
+        history=task.history,
+        # Preserve /remember facts so tool-planning calls see them too.
+        memory=task.memory,
     )
 
 
@@ -188,9 +193,16 @@ class ToolPlanner:
         self,
         tool_registry: ToolRegistry,
         generate: Callable[[Task], ProviderResponse],
+        trace: list[dict] | None = None,
     ) -> None:
         self._tool_registry = tool_registry
         self._generate = generate
+        self._trace = trace
+
+    def _record(self, **step: Any) -> None:
+        """Append an execution step to the trace when one was provided."""
+        if self._trace is not None:
+            self._trace.append(step)
 
     def run(self, task: Task) -> ProviderResponse:
         """
@@ -208,6 +220,7 @@ class ToolPlanner:
             task, build_decision_instructions(task.prompt, self._tool_registry.list_tools())
         )
         response = self._generate(decision_task)
+        self._record(step="decision", provider=response.provider, model=response.model, success=response.success, text=response.text, error=response.error)
         if not response.success:
             return response
 
@@ -221,8 +234,10 @@ class ToolPlanner:
             tool = decision["tool"]
             arguments = decision["arguments"]
             last_tool = tool
+            self._record(step="tool_call", tool=tool, arguments=arguments)
 
             result = self._tool_registry.execute(tool, arguments)
+            self._record(step="tool_result", tool=tool, success=result.success, result=result.result, error=result.error)
             if result.unknown:
                 # Hermes requested a tool that is not registered.
                 return ProviderResponse(
@@ -238,6 +253,7 @@ class ToolPlanner:
                 task, build_followup_instructions(task.prompt, tool, result)
             )
             response = self._generate(followup_task)
+            self._record(step="response", provider=response.provider, model=response.model, success=response.success, text=response.text, error=response.error)
             if not response.success:
                 return response
 

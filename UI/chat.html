@@ -258,6 +258,13 @@
                     <div class="text-xs text-on-surface-variant">Loading…</div>
                 </div>
             </div>
+            <!-- Sandbox Viewer -->
+            <div>
+                <div class="text-on-surface-variant text-xs mb-2">SANDBOX · PAST QUERIES</div>
+                <div id="sandbox-list" class="flex flex-col gap-2">
+                    <div class="text-xs text-on-surface-variant">Loading…</div>
+                </div>
+            </div>
         </div>
     </aside>
 
@@ -404,17 +411,27 @@
 
             const content = el("div", "flex flex-col gap-3 w-full");
 
-            // Provider badge — which engine answered: Sarthi, Sage (OpenRouter) or Guardian (Ollama/Hermes)
-            const isHermes = !!payload.provider;
+            // Provider badge — which engine answered: Sarthi, Sage (OpenRouter),
+            // Guardian (Ollama/Hermes), or the NLP conversational fallback.
+            const isNlp = payload.source === "nlp";
+            const isHermes = !!payload.provider && !isNlp;
+            const dotClass = isNlp ? "bg-tertiary" : (isHermes ? "bg-tertiary" : "bg-primary-container");
+            let badgeText = "SARTHI";
+            if (isNlp) {
+                // Distinct badge: the NLP skill answered conversationally.
+                badgeText = "SARTHI \u00B7 NLP"
+                    + (payload.provider ? " \u00B7 " + providerDisplayName(payload.provider) : "")
+                    + (payload.model ? " \u00B7 " + payload.model : "");
+            } else if (isHermes) {
+                badgeText = providerDisplayName(payload.provider)
+                    + (payload.model ? " \u00B7 " + payload.model : "")
+                    + (payload.tool_used ? " \u00B7 " + payload.tool_used : "");
+            }
             const badge = el("div", "flex items-center gap-1.5");
             badge.innerHTML =
-                '<span class="w-1.5 h-1.5 rounded-full ' + (isHermes ? "bg-tertiary" : "bg-primary-container") + '"></span>' +
+                '<span class="w-1.5 h-1.5 rounded-full ' + dotClass + '"></span>' +
                 '<span class="font-data-mono text-[10px] text-on-surface-variant tracking-wide">' +
-                esc(isHermes
-                    ? providerDisplayName(payload.provider)
-                        + (payload.model ? " \u00B7 " + payload.model : "")
-                        + (payload.tool_used ? " \u00B7 " + payload.tool_used : "")
-                    : "SARTHI") +
+                esc(badgeText) +
                 '</span>';
             content.appendChild(badge);
 
@@ -853,7 +870,9 @@
         }
 
         // Generic key/value card for any other structured result
-        const GENERIC_META_KEYS = new Set(["visual", "success", "status", "error", "message"]);
+        // Keys rendered via the badge/metadata instead of the generic card
+        // (message text, provider/model/source already shown in the badge).
+        const GENERIC_META_KEYS = new Set(["visual", "success", "status", "error", "message", "source", "provider", "model"]);
         function renderGenericCard(result) {
             const keys = Object.keys(result).filter((k) => !GENERIC_META_KEYS.has(k));
             if (!keys.length) return null;
@@ -923,6 +942,95 @@
             } catch (err) {
                 console.error("Hermes tools error:", err);
                 container.innerHTML = '<div class="text-xs text-on-surface-variant">Tools unavailable.</div>';
+            }
+        }
+
+        // ---------------------------------------------------------------------
+        // Sandbox viewer — browse past queries and their execution traces.
+        // ---------------------------------------------------------------------
+        async function loadSandbox() {
+            const container = document.getElementById("sandbox-list");
+            if (!container) return;
+            try {
+                const response = await fetch(SarthiAPI + "/hermes/sandbox");
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                const payload = await response.json();
+                if (!payload.success || !payload.queries.length) {
+                    container.innerHTML =
+                        '<div class="text-xs text-on-surface-variant">No past queries yet.</div>';
+                    return;
+                }
+                container.innerHTML = "";
+                payload.queries.forEach((group) => {
+                    const latest = group.records[group.records.length - 1];
+                    const item = el("div", "bg-surface-container/30 rounded-lg p-3 border border-white/5");
+                    const header = el("div", "flex justify-between items-start gap-2 cursor-pointer hover:text-primary transition-colors", "");
+                    const q = el("div", "font-body-sm text-on-surface text-xs leading-snug", esc(latest.prompt));
+                    const chevron = el("span", "material-symbols-outlined text-primary text-sm flex-shrink-0", "expand_more");
+                    header.appendChild(q);
+                    header.appendChild(chevron);
+                    const meta = el("div", "flex items-center gap-2 mt-1.5 text-[10px] font-data-mono text-on-surface-variant");
+                    const badge = latest.tool_used
+                        ? '<span class="text-tertiary">' + esc(latest.tool_used) + '</span>'
+                        : '<span class="text-primary">' + esc(latest.provider) + '</span>';
+                    meta.innerHTML =
+                        '<span class="' + (latest.status === "success" ? "text-primary" : "text-error") + '">' +
+                        esc(latest.status.toUpperCase()) + '</span>' + badge +
+                        '<span>·</span><span>' + esc(ago(latest.timestamp)) + '</span>';
+                    const detail = el("div", "hidden mt-3 pt-3 border-t border-white/5 flex flex-col gap-2");
+                    detail.innerHTML =
+                        '<div class="text-[10px] font-data-mono text-on-surface-variant">PROVIDER · ' +
+                        esc(latest.provider || "—") + ' · ' + esc(latest.model || "—") +
+                        ' · ' + (latest.duration_ms != null ? Math.round(latest.duration_ms) + "ms" : "—") + '</div>';
+                    item.appendChild(header);
+                    item.appendChild(meta);
+                    item.appendChild(detail);
+                    header.addEventListener("click", () => {
+                        const hidden = detail.classList.toggle("hidden");
+                        chevron.textContent = hidden ? "expand_more" : "expand_less";
+                        if (!hidden && !detail.dataset.loaded) loadSandboxTask(latest.task_id, detail);
+                    });
+                    container.appendChild(item);
+                });
+            } catch (err) {
+                console.error("Sandbox error:", err);
+                container.innerHTML = '<div class="text-xs text-on-surface-variant">Sandbox unavailable.</div>';
+            }
+        }
+
+        // Fetch one task's full artifacts and render its trace + response.
+        async function loadSandboxTask(taskId, detail) {
+            detail.dataset.loaded = "1";
+            detail.innerHTML = '<div class="text-xs text-on-surface-variant">Loading trace…</div>';
+            try {
+                const response = await fetch(SarthiAPI + "/hermes/sandbox/tasks/" + encodeURIComponent(taskId));
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                const payload = await response.json();
+                if (!payload.success) throw new Error(payload.error || "no task");
+                detail.innerHTML = "";
+                const trace = payload.trace || [];
+                if (trace.length) {
+                    const title = el("div", "text-[10px] font-data-mono text-on-surface-variant", "EXECUTION TRACE · " + trace.length + " STEP(S)");
+                    detail.appendChild(title);
+                    trace.forEach((step) => {
+                        const row = el("div", "text-xs leading-snug flex gap-2");
+                        const kind = el("span", "font-data-mono text-primary flex-shrink-0", esc(step.step || "step"));
+                        const text = el("span", "text-on-surface-variant break-words",
+                            esc(step.tool ? step.tool + " → " : "") + esc(step.text || step.result || step.error || ""));
+                        row.appendChild(kind);
+                        row.appendChild(text);
+                        detail.appendChild(row);
+                    });
+                }
+                const resp = el("div", "text-xs leading-snug flex gap-2");
+                const rlabel = el("span", "font-data-mono text-primary flex-shrink-0", "response");
+                const rtext = el("span", "text-on-surface-variant break-words", esc(payload.response || "(no response text)"));
+                resp.appendChild(rlabel);
+                resp.appendChild(rtext);
+                detail.appendChild(resp);
+            } catch (err) {
+                console.error("Sandbox task error:", err);
+                detail.innerHTML = '<div class="text-xs text-on-surface-variant">Trace unavailable.</div>';
             }
         }
 
@@ -1013,6 +1121,16 @@
 
         // Hermes fallback for open-ended questions the brain can't handle.
         // Called from sendCommand() after /command reports no_handler/unknown.
+        // Stable conversation session so Hermes remembers earlier turns.
+        function hermesSessionId() {
+            let sid = localStorage.getItem("sarthi_hermes_session");
+            if (!sid) {
+                sid = "sess_" + Math.random().toString(36).slice(2, 10);
+                localStorage.setItem("sarthi_hermes_session", sid);
+            }
+            return sid;
+        }
+
         async function sendHermesQuestion(text, input) {
             setCurrentTask("Hermes thinking...");
             input.placeholder = "Hermes is thinking...";
@@ -1020,10 +1138,14 @@
                 const response = await fetch(SarthiAPI + "/hermes/chat", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ message: text }),
+                    body: JSON.stringify({ message: text, session_id: hermesSessionId() }),
                 });
                 if (!response.ok) throw new Error("HTTP " + response.status);
                 const payload = await response.json();
+                // Pin whatever session the server resolved, in case it differs
+                if (payload.session_id) {
+                    localStorage.setItem("sarthi_hermes_session", payload.session_id);
+                }
 
                 if (payload.success) {
                     addAssistantMessage({
@@ -1083,6 +1205,7 @@
             input.focus();
             checkPendingApps();
             loadHermesTools();
+            loadSandbox();
         }
     </script>
 </body>

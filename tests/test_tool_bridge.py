@@ -17,7 +17,7 @@ from hermes.providers.base import AIProvider, ProviderResponse
 from hermes.providers.manager import ProviderManager
 from hermes.tool_planner import MAX_TOOL_CALLS_PER_TASK, ToolPlanner, parse_tool_call
 from hermes.tool_registry import ToolRegistry
-from hermes.tools import OpenAppTool, OpenWebsiteTool
+from hermes.tools import GitHubTool, OpenAppTool, OpenWebsiteTool
 from hermes.tools.base import BaseTool, ToolResult
 
 TOOL_CALL_JSON = '{"tool_call": {"tool": "open_app", "arguments": {"target": "Chrome"}}}'
@@ -78,15 +78,17 @@ def make_planner(responses: list[str], name: str = "spy", result: ToolResult | N
 
 
 def test_tool_registration():
-    """open_app and open_website can be registered and discovered."""
+    """open_app, open_website and github can be registered and discovered."""
     registry = ToolRegistry()
     registry.register(OpenAppTool())
     registry.register(OpenWebsiteTool())
+    registry.register(GitHubTool())
 
     names = {tool["name"] for tool in registry.list_tools()}
     assert "open_app" in names
     assert "open_website" in names
-    assert len(registry.list_tools()) == 2
+    assert "github" in names
+    assert len(registry.list_tools()) == 3
 
 
 # ----------------------------------------------------------------------
@@ -429,8 +431,241 @@ def test_hermes_tools_endpoint_lists_registered_tools():
     names = [tool["name"] for tool in data["tools"]]
     assert "open_app" in names
     assert "open_website" in names
+    assert "github" in names
     for tool in data["tools"]:
         assert tool["name"]
         assert tool["description"]
         assert isinstance(tool["parameters"], dict)
         assert "properties" in tool["parameters"]
+
+
+# ----------------------------------------------------------------------
+# 11. GitHub tool
+# ----------------------------------------------------------------------
+
+
+def _fake_github_skill(client):
+    """A GitHubProjectSkill stand-in that resolves a username and exposes a client."""
+    class FakeSkill:
+        def __init__(self):
+            self.github = client
+
+        def _ensure_github(self):
+            return "octocat"
+
+    return FakeSkill()
+
+
+class FakeGitHubClient:
+    """Records calls and returns canned GitHub data."""
+
+    def __init__(self, **results):
+        self.results = results
+        self.calls = []
+
+    def _record(self, name, *args):
+        self.calls.append((name, args))
+        return self.results.get(name)
+
+    def get_repositories(self):
+        return self._record("get_repositories")
+
+    def get_repository_summary(self, repository):
+        return self._record("get_repository_summary", repository)
+
+    def get_issues(self, repository):
+        return self._record("get_issues", repository)
+
+    def get_pull_requests(self, repository):
+        return self._record("get_pull_requests", repository)
+
+    def get_latest_commit(self, repository):
+        return self._record("get_latest_commit", repository)
+
+    def search_repositories(self, query, sort="stars", order="desc"):
+        return self._record("search_repositories", query)
+
+    def get_branches(self, repository):
+        return self._record("get_branches", repository)
+
+    def get_releases(self, repository):
+        return self._record("get_releases", repository)
+
+
+def test_github_unknown_operation_is_invalid():
+    """An unsupported operation is rejected before any GitHub call."""
+    registry = ToolRegistry()
+    registry.register(GitHubTool())
+
+    result = registry.execute("github", {"operation": "delete_all"})
+
+    assert result.success is False
+    assert result.invalid is True
+    assert "Unknown GitHub operation" in result.error
+
+
+def test_github_repository_required_for_repo_operations():
+    """repo-scoped operations require a repository argument."""
+    registry = ToolRegistry()
+    registry.register(GitHubTool())
+
+    result = registry.execute("github", {"operation": "issues"})
+
+    assert result.success is False
+    assert result.invalid is True
+    assert "repository name is required" in result.error
+
+
+def test_github_search_requires_query():
+    """The search operation requires a query argument."""
+    registry = ToolRegistry()
+    registry.register(GitHubTool())
+
+    result = registry.execute("github", {"operation": "search"})
+
+    assert result.success is False
+    assert result.invalid is True
+    assert "search query is required" in result.error
+
+
+def test_github_not_configured_is_graceful(monkeypatch):
+    """No configured username produces a helpful setup message."""
+    registry = ToolRegistry()
+    registry.register(GitHubTool())
+
+    class UnconfiguredSkill:
+        github = None
+
+        def _ensure_github(self):
+            return ""
+
+    monkeypatch.setattr("hermes.tools.github.GitHubTool._get_skill", lambda self: UnconfiguredSkill())
+
+    result = registry.execute("github", {"operation": "repositories"})
+
+    assert result.success is False
+    assert "not configured" in result.error
+
+
+def test_github_repositories_delegates_to_existing_skill(monkeypatch):
+    """The github tool reuses GitHubProjectSkill's client, not a new integration."""
+    client = FakeGitHubClient(
+        get_repositories=[
+            {"name": "sarthi", "description": "AI assistant", "language": "Python", "private": False, "html_url": "https://github.com/octocat/sarthi"},
+            {"name": "notes", "description": None, "language": None, "private": True, "html_url": "https://github.com/octocat/notes"},
+        ]
+    )
+    monkeypatch.setattr("hermes.tools.github.GitHubTool._get_skill", lambda self: _fake_github_skill(client))
+    registry = ToolRegistry()
+    registry.register(GitHubTool())
+
+    result = registry.execute("github", {"operation": "repositories"})
+
+    assert result.success is True
+    assert result.tool == "github"
+    assert "2 repositories" in result.result
+    assert "sarthi" in result.result
+    assert "notes" in result.result
+    assert client.calls == [("get_repositories", ())]
+    assert len(result.data["repositories"]) == 2
+
+
+def test_github_issues_passes_repository(monkeypatch):
+    """Repo-scoped operations forward the repository name to the client."""
+    client = FakeGitHubClient(
+        get_issues=[
+            {"number": 4, "title": "Fix the sidebar", "html_url": "https://github.com/octocat/sarthi/issues/4", "state": "open"},
+        ]
+    )
+    monkeypatch.setattr("hermes.tools.github.GitHubTool._get_skill", lambda self: _fake_github_skill(client))
+    registry = ToolRegistry()
+    registry.register(GitHubTool())
+
+    result = registry.execute("github", {"operation": "issues", "repository": "sarthi"})
+
+    assert result.success is True
+    assert "1 open issues" in result.result
+    assert "#4 Fix the sidebar" in result.result
+    assert client.calls == [("get_issues", ("sarthi",))]
+
+
+def test_github_search_delegates_with_query(monkeypatch):
+    """search forwards the query and reports star counts."""
+    client = FakeGitHubClient(
+        search_repositories=[
+            {"full_name": "torvalds/linux", "stars": 190000, "html_url": "https://github.com/torvalds/linux", "private": False},
+            {"full_name": "microsoft/vscode", "stars": 160000, "html_url": "https://github.com/microsoft/vscode", "private": False},
+        ]
+    )
+    monkeypatch.setattr("hermes.tools.github.GitHubTool._get_skill", lambda self: _fake_github_skill(client))
+    registry = ToolRegistry()
+    registry.register(GitHubTool())
+
+    result = registry.execute("github", {"operation": "search", "query": "linux kernel"})
+
+    assert result.success is True
+    assert "2 repositories found" in result.result
+    assert "torvalds/linux (190000 stars)" in result.result
+    assert "microsoft/vscode" in result.result
+    assert client.calls == [("search_repositories", ("linux kernel",))]
+
+
+def test_github_branches_delegates(monkeypatch):
+    """branches forwards the repository and lists branch names."""
+    client = FakeGitHubClient(
+        get_branches=[{"name": "main"}, {"name": "dev"}, {"name": "feature/x"}]
+    )
+    monkeypatch.setattr("hermes.tools.github.GitHubTool._get_skill", lambda self: _fake_github_skill(client))
+    registry = ToolRegistry()
+    registry.register(GitHubTool())
+
+    result = registry.execute("github", {"operation": "branches", "repository": "sarthi"})
+
+    assert result.success is True
+    assert "3 branches in sarthi" in result.result
+    assert "main, dev, feature/x" in result.result
+    assert client.calls == [("get_branches", ("sarthi",))]
+
+
+def test_github_releases_delegates(monkeypatch):
+    """releases forwards the repository and lists tags with dates."""
+    client = FakeGitHubClient(
+        get_releases=[
+            {"tag_name": "v2.0.0", "published_at": "2026-01-15T00:00:00Z", "html_url": "https://github.com/octocat/sarthi/releases/tag/v2.0.0"},
+            {"tag_name": "v1.5.0", "published_at": "2025-11-02T00:00:00Z", "html_url": "https://github.com/octocat/sarthi/releases/tag/v1.5.0"},
+        ]
+    )
+    monkeypatch.setattr("hermes.tools.github.GitHubTool._get_skill", lambda self: _fake_github_skill(client))
+    registry = ToolRegistry()
+    registry.register(GitHubTool())
+
+    result = registry.execute("github", {"operation": "releases", "repository": "sarthi"})
+
+    assert result.success is True
+    assert "2 releases in sarthi" in result.result
+    assert "v2.0.0" in result.result
+    assert "v1.5.0" in result.result
+    assert client.calls == [("get_releases", ("sarthi",))]
+
+
+def test_github_404_maps_to_friendly_error(monkeypatch):
+    """A missing repository surfaces as a safe, helpful message."""
+    class MissingRepoClient:
+        def get_repository_summary(self, repository):
+            raise _HttpError(404)
+
+    monkeypatch.setattr("hermes.tools.github.GitHubTool._get_skill", lambda self: _fake_github_skill(MissingRepoClient()))
+    registry = ToolRegistry()
+    registry.register(GitHubTool())
+
+    result = registry.execute("github", {"operation": "summary", "repository": "nope"})
+
+    assert result.success is False
+    assert "was not found" in result.error
+
+
+class _HttpError(Exception):
+    """Minimal requests.HTTPError stand-in with a response.status_code."""
+
+    def __init__(self, status_code):
+        self.response = type("Resp", (), {"status_code": status_code})()

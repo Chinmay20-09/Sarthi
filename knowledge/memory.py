@@ -299,6 +299,30 @@ class KnowledgeMemory:
         }
 
 
+def build_memory_prompt() -> str | None:
+    """
+    Format every saved /remember fact as a system-prompt block.
+
+    This is the "prompt injection" for memory: whatever the user stored with
+    /remember is injected into the model's system prompt on the next chat, so
+    Hermes actually remembers it. Returns None when nothing is saved.
+
+    Returns:
+        A block like "The user asked you to remember: ..." or None.
+    """
+    try:
+        memories = get_memory().list_memories()
+    except Exception:
+        return None
+    if not memories:
+        return None
+    lines = [f"- {m['key']}: {m['value']}" for m in memories]
+    return (
+        "The user asked you to remember the following facts. "
+        "Treat them as true and refer to them when relevant:\n" + "\n".join(lines)
+    )
+
+
 # Global singleton instance
 _memory: KnowledgeMemory | None = None
 
