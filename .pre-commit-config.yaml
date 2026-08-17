@@ -1,0 +1,21 @@
+# Pre-commit hooks for Sarthi.
+#
+# Install once per clone:
+#     pip install pre-commit
+#     pre-commit install
+#
+# Run on demand (all files):
+#     pre-commit run --all-files
+repos:
+  - repo: local
+    hooks:
+      - id: no-database-files-staged
+        name: no database files staged
+        description: >-
+          Fails the commit if a SQLite file (*.db, *.db-wal, *.db-shm, ...) is
+          staged — the database contains personal data and must never be committed.
+        entry: python scripts/check_no_db_staged.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]

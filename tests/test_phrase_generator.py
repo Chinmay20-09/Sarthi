@@ -1,4 +1,4 @@
-from brain.entity_resolver import EntityResolver
+from knowledge.entity_resolver import EntityResolver
 
 resolver = EntityResolver()
 

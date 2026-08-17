@@ -342,7 +342,7 @@ class BaseSkill(ABC):
 |---|---|---|
 | `project_tracker` | 1.0.0 | GitHub & Notion project tracking |
 | `automation_engine` | 1.0.0 | Code generation and automation |
-| `speech_recognition` | 1.0.0 | Wake-word detection + Whisper |
+| `speech` | 1.0.0 | Wake-word detection + Whisper |
 
 ### Clean Architecture Refactoring
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="dark" lang="en" style="">
+<html class="dark" lang="en">
 
 <head>
     <meta charset="utf-8">
@@ -7,7 +7,7 @@
     <title>Sarthi Chat UI</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
     <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
@@ -128,6 +128,21 @@
             50% { transform: translateY(-4px); opacity: 1; }
         }
 
+        .toast {
+            animation: toast-in 0.25s ease-out;
+        }
+        @keyframes toast-in {
+            from { transform: translateY(-10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .toast-leave {
+            animation: toast-out 0.3s ease-in forwards;
+        }
+        @keyframes toast-out {
+            from { transform: translateY(0); opacity: 1; }
+            to { transform: translateY(-10px); opacity: 0; }
+        }
+
         /* Custom scrollbar for webkit */
         ::-webkit-scrollbar {
             width: 6px;
@@ -162,8 +177,19 @@
                     <span class="w-1.5 h-1.5 rounded-full bg-primary-container live-dot"></span>
                     <span class="font-data-mono text-data-mono text-on-surface-variant">Ready</span>
                 </div>
+                <!-- Conversation mode badge — click to leave (same as typing /exit) -->
+                <button id="mode-badge" title="Conversation mode — click to exit (or type /exit)"
+                    class="hidden flex items-center gap-2 px-3 py-1 rounded-full bg-tertiary/10 border border-tertiary/30 text-tertiary hover:bg-tertiary/20 transition-colors">
+                    <span class="material-symbols-outlined text-sm">forum</span>
+                    <span class="font-data-mono text-data-mono text-[10px]">CONVERSATION MODE</span>
+                </button>
             </div>
             <div class="flex items-center gap-4 text-on-surface-variant">
+                <button id="reset-chat"
+                    class="w-10 h-10 rounded-full border border-transparent flex items-center justify-center hover:bg-error/10 hover:text-error transition-colors"
+                    title="Reset chat">
+                    <span class="material-symbols-outlined">restart_alt</span>
+                </button>
                 <button id="header-mic"
                     class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/5 hover:text-primary transition-colors"
                     title="Speak a command">
@@ -190,6 +216,10 @@
             </div>
         </div>
 
+        <!-- Toast container — transient confirmations (e.g. /remember saved) -->
+        <div id="toast-container"
+            class="absolute top-24 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none px-4"></div>
+
         <!-- Input Area -->
         <div
             class="absolute bottom-0 left-0 w-full p-8 bg-gradient-to-t from-[#0e0e0e] via-[#0e0e0e]/90 to-transparent flex justify-center items-end pointer-events-none">
@@ -200,9 +230,17 @@
                     title="Speak a command">
                     <span class="material-symbols-outlined">mic</span>
                 </button>
-                <input id="chat-input"
-                    class="flex-1 bg-transparent border-none text-on-surface font-body-lg text-body-lg focus:ring-0 focus:outline-none placeholder-on-surface-variant/50"
-                    placeholder="Ask Sarthi to do something..." type="text" autocomplete="off">
+                <!-- Slash-command live highlight: the mirror below renders the
+                     typed text with /remember, /recall, /forget colored in; the
+                     input itself has transparent text so the highlight shows
+                     through while you type. -->
+                <div class="relative flex-1 min-w-0">
+                    <div id="chat-input-mirror" aria-hidden="true"
+                        class="absolute inset-0 flex items-center pointer-events-none whitespace-pre overflow-hidden font-body-lg text-body-lg text-on-surface"></div>
+                    <input id="chat-input"
+                        class="relative z-10 w-full bg-transparent border-none text-transparent caret-primary font-body-lg text-body-lg focus:ring-0 focus:outline-none placeholder-on-surface-variant/50"
+                        placeholder="Ask Sarthi to do something..." type="text" autocomplete="off" spellcheck="false">
+                </div>
                 <button id="chat-send"
                     class="w-10 h-10 rounded-full bg-surface-container border border-white/10 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-white/5 transition-all hover:border-primary/50"
                     title="Send">
@@ -251,6 +289,20 @@
                     </div>
                 </div>
             </div>
+            <!-- Saved Memory (from /remember) -->
+            <div>
+                <div class="text-on-surface-variant text-xs mb-2">MEMORY · SAVED FACTS</div>
+                <div class="bg-surface-container/30 rounded-lg p-3 border border-white/5">
+                    <div class="flex justify-between items-center">
+                        <span class="font-data-mono text-data-mono text-on-surface-variant text-[10px]">REMEMBERED</span>
+                        <span id="memory-count"
+                            class="px-2 py-0.5 rounded-full text-[10px] font-data-mono bg-tertiary/10 text-tertiary border border-tertiary/20">0</span>
+                    </div>
+                    <div id="memory-list" class="mt-2 flex flex-col gap-1.5">
+                        <div class="text-xs text-on-surface-variant">Loading…</div>
+                    </div>
+                </div>
+            </div>
             <!-- Hermes Tools -->
             <div>
                 <div class="text-on-surface-variant text-xs mb-2">HERMES TOOLS</div>
@@ -278,6 +330,39 @@
         const SarthiAPI = "http://127.0.0.1:8000";
 
         let processing = false;
+
+        // ---------------------------------------------------------------------
+        // Chat modes (conversation vs default)
+        // ---------------------------------------------------------------------
+        // Source of truth is the server (brain/modes.py): conversation mode
+        // makes /command answer conversationally WITHOUT running any task.
+        // This client mirror only drives the badge + placeholder and adds a
+        // guard so the UI never falls through to Hermes tool planning.
+        const CONVERSATION_PLACEHOLDER =
+            "Conversation mode — ask me anything, no tasks run. Type /exit to leave.";
+        let chatMode = "default";
+
+        function syncModeBadge(mode) {
+            chatMode = mode === "conversation" ? "conversation" : "default";
+            const badge = document.getElementById("mode-badge");
+            if (badge) badge.classList.toggle("hidden", chatMode !== "conversation");
+            const input = document.getElementById("chat-input");
+            if (input) {
+                input.placeholder = chatMode === "conversation"
+                    ? CONVERSATION_PLACEHOLDER
+                    : "Ask Sarthi to do something...";
+            }
+        }
+
+        async function loadMode() {
+            try {
+                const response = await fetch(SarthiAPI + "/mode");
+                const payload = await response.json();
+                syncModeBadge(payload.mode);
+            } catch (err) {
+                console.warn("Mode load failed:", err);
+            }
+        }
 
         // ---------------------------------------------------------------------
         // DOM helpers
@@ -397,7 +482,8 @@
             }
         }
 
-        function addAssistantMessage(payload) {
+        function addAssistantMessage(payload, opts) {
+            opts = opts || {};
             removeTypingIndicator();
             document.getElementById("chat-empty")?.remove();
             const scroll = document.getElementById("chat-scroll");
@@ -442,8 +528,10 @@
             const card = renderResultCard(payload);
             if (card) content.appendChild(card);
 
-            // After a scan, offer the newly discovered apps for categorization
-            if (card && payload.result && payload.result.visual && payload.result.visual.type === "scan_results") {
+            // After a scan, offer the newly discovered apps for categorization.
+            // Skipped when restoring a persisted transcript (silent restore).
+            if (!opts.silent && card && payload.result && payload.result.visual &&
+                payload.result.visual.type === "scan_results") {
                 const newApps = (payload.result.visual.data || {}).new_unattended || [];
                 if (newApps.length) startCategorizationQueue(newApps);
             }
@@ -463,6 +551,49 @@
             row.appendChild(el("span", "text-xs text-on-surface-variant font-data-mono", esc(text)));
             scroll.appendChild(row);
             scrollToBottom();
+        }
+
+        // Transient confirmation banner — used when /remember saves successfully.
+        // Stacks multiple toasts; each auto-dismisses after ~3s.
+        function showToast(message, opts) {
+            opts = opts || {};
+            const container = document.getElementById("toast-container");
+            if (!container) return;
+            const toast = el("div",
+                "toast glass-card rounded-xl px-4 py-2.5 flex items-center gap-2.5 " +
+                "border border-primary/30 shadow-[0_8px_30px_rgba(0,0,0,0.5)] pointer-events-auto");
+            toast.innerHTML =
+                '<span class="material-symbols-outlined text-primary-container text-sm">' +
+                esc(opts.icon || "check_circle") + '</span>' +
+                '<span class="text-xs text-on-surface">' + esc(message) + '</span>';
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add("toast-leave");
+                setTimeout(() => toast.remove(), 350);
+            }, opts.duration || 3000);
+        }
+
+        // Confirmation banner for /remember, /recall and /forget results.
+        // Remember: result has {key, value}. Recall with a key: {key, value};
+        // recall without a key lists everything in a single multiline message.
+        // Forget: only a message ("Forgot: <key>").
+        function memoryToast(payload) {
+            if (!payload.success || !payload.result) return;
+            const r = payload.result;
+            if (payload.action === "remember") {
+                showToast("Saved to memory: " + (r.value || r.key), { icon: "check_circle" });
+            } else if (payload.action === "forget") {
+                showToast("Forgot: " + (r.key || String(r.message || "").replace(/^Forgot:\s*/i, "") || "it"),
+                    { icon: "delete" });
+            } else if (payload.action === "recall") {
+                if (r.key) {
+                    showToast("Recalled: " + r.value, { icon: "memory" });
+                } else {
+                    const facts = String(r.message || "").split("\n").filter(Boolean).length;
+                    showToast("Recalled " + facts + " saved fact" + (facts === 1 ? "" : "s"),
+                        { icon: "memory" });
+                }
+            }
         }
 
         // ---------------------------------------------------------------------
@@ -945,6 +1076,168 @@
             }
         }
 
+        // Load saved /remember facts into the sidebar memory card.
+        async function loadMemory() {
+            const countEl = document.getElementById("memory-count");
+            const listEl = document.getElementById("memory-list");
+            if (!countEl || !listEl) return;
+            try {
+                const response = await fetch(SarthiAPI + "/memory");
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                const payload = await response.json();
+                const memories = payload.memories || [];
+                countEl.textContent = String(payload.count || 0);
+                if (!memories.length) {
+                    listEl.innerHTML =
+                        '<div class="text-xs text-on-surface-variant">Nothing saved yet — try /remember.</div>';
+                    return;
+                }
+                listEl.innerHTML = "";
+                memories.slice(0, 10).forEach((m) => {
+                    const row = el("div", "flex items-start gap-2");
+                    const key = el("span",
+                        "font-data-mono text-data-mono text-tertiary text-xs flex-shrink-0", esc(m.key));
+                    const val = el("span", "text-xs text-on-surface-variant break-words", esc(m.value));
+                    row.appendChild(key);
+                    row.appendChild(val);
+                    listEl.appendChild(row);
+                });
+                if (memories.length > 10) {
+                    listEl.appendChild(
+                        el("div", "text-xs text-on-surface-variant", "+" + (memories.length - 10) + " more")
+                    );
+                }
+            } catch (err) {
+                console.error("Memory error:", err);
+                countEl.textContent = "—";
+                listEl.innerHTML = '<div class="text-xs text-on-surface-variant">Memory unavailable.</div>';
+            }
+        }
+
+        // ---------------------------------------------------------------------
+        // Chat transcript persistence ("memory of one chat")
+        // ---------------------------------------------------------------------
+        // The transcript is stored server-side per session (same session id
+        // Hermes uses), so it survives reloads and restarts. "Reset chat"
+        // wipes the transcript AND Hermes' session context, but /remember
+        // facts (knowledge_memory) are deliberately left in the database.
+
+        function showEmptyState() {
+            const scroll = document.getElementById("chat-scroll");
+            if (!scroll || document.getElementById("chat-empty")) return;
+            const empty = el("div",
+                "flex flex-col items-center justify-center text-center h-full max-w-xl mx-auto gap-3 opacity-80");
+            empty.id = "chat-empty";
+            empty.innerHTML =
+                '<span class="material-symbols-outlined text-5xl text-primary/40">smart_toy</span>' +
+                '<p class="font-headline-md text-headline-md text-on-surface">How can I help?</p>' +
+                '<p class="text-on-surface-variant">Ask me to open an app, check your projects, scan your system, ' +
+                'or set your GitHub username. Visual results appear right here in the chat.</p>';
+            scroll.appendChild(empty);
+        }
+
+        // Persist one rendered message to the transcript (fire-and-forget).
+        // sendCommand awaits the user write before sending the command, so the
+        // assistant message for the same turn is always stored after it.
+        function persistChatMessage(role, content) {
+            return fetch(SarthiAPI + "/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    session_id: hermesSessionId(),
+                    role: role,
+                    content: content,
+                }),
+            }).catch((err) => console.warn("Chat persist failed:", err));
+        }
+
+        // Restore the persisted transcript for this chat session on page load.
+        async function loadChatHistory() {
+            const sid = hermesSessionId();
+            try {
+                const response = await fetch(SarthiAPI + "/chat?session_id=" + encodeURIComponent(sid));
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                const payload = await response.json();
+                const messages = payload.messages || [];
+                if (!messages.length) {
+                    showEmptyState();
+                    return;
+                }
+                document.getElementById("chat-empty")?.remove();
+                messages.forEach((m) => {
+                    const content = (m.content && typeof m.content === "object") ? m.content : null;
+                    if (m.role === "user" && content && content.text) {
+                        addUserMessage(content.text);
+                    } else if (m.role === "assistant" && content && content.text) {
+                        // silent: don't re-trigger side effects (categorization queue…)
+                        addAssistantMessage(content, { silent: true });
+                    }
+                });
+                scrollToBottom();
+            } catch (err) {
+                console.error("Chat history error:", err);
+                showEmptyState();
+            }
+        }
+
+        // Clear this chat session — transcript + Hermes session context. The
+        // /remember facts in the database are kept; the toast reports that.
+        async function resetChat() {
+            const sid = hermesSessionId();
+            let remembered = 0;
+            try {
+                const response = await fetch(SarthiAPI + "/chat?session_id=" + encodeURIComponent(sid), {
+                    method: "DELETE",
+                });
+                const payload = await response.json();
+                remembered = payload.remembered_facts || 0;
+            } catch (err) {
+                console.error("Chat reset error:", err);
+            }
+            const scroll = document.getElementById("chat-scroll");
+            if (scroll) scroll.innerHTML = "";
+            showEmptyState();
+            showToast(remembered
+                ? "Chat cleared \u2014 " + remembered + " /remember fact" + (remembered === 1 ? "" : "s") + " still saved."
+                : "Chat cleared.", { icon: "delete_sweep" });
+            loadMemory();
+        }
+
+        // Two-click reset: first click arms the button (red check), a second
+        // click within 3s actually clears the chat. Prevents fat-finger wipes.
+        let resetArmed = false;
+        let resetArmTimer = null;
+
+        function armResetButton() {
+            const btn = document.getElementById("reset-chat");
+            if (!btn) return;
+            if (!resetArmed) {
+                resetArmed = true;
+                btn.classList.remove("border-transparent");
+                btn.classList.add("text-error", "bg-error/10", "border-error/30");
+                btn.title = "Click again to clear this chat";
+                const icon = btn.querySelector(".material-symbols-outlined");
+                if (icon) icon.textContent = "check";
+                resetArmTimer = setTimeout(disarmResetButton, 3000);
+                return;
+            }
+            clearTimeout(resetArmTimer);
+            disarmResetButton();
+            resetChat();
+        }
+
+        function disarmResetButton() {
+            const btn = document.getElementById("reset-chat");
+            if (!btn) return;
+            resetArmed = false;
+            clearTimeout(resetArmTimer);
+            btn.classList.remove("text-error", "bg-error/10", "border-error/30");
+            btn.classList.add("border-transparent");
+            btn.title = "Reset chat";
+            const icon = btn.querySelector(".material-symbols-outlined");
+            if (icon) icon.textContent = "restart_alt";
+        }
+
         // ---------------------------------------------------------------------
         // Sandbox viewer — browse past queries and their execution traces.
         // ---------------------------------------------------------------------
@@ -1057,6 +1350,9 @@
             showTypingIndicator();
             setCurrentTask("Processing: " + text);
             processing = true;
+            // Persist the user turn (awaited so the assistant turn is stored
+            // after it — keeps the restored transcript in the right order).
+            await persistChatMessage("user", { text: text });
 
             const input = document.getElementById("chat-input");
             input.disabled = true;
@@ -1066,19 +1362,37 @@
                 const response = await fetch(SarthiAPI + "/command", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ text: text }),
+                    body: JSON.stringify({ text: text, session_id: hermesSessionId() }),
                 });
                 if (!response.ok) throw new Error("HTTP " + response.status);
                 const payload = await response.json();
+                syncModeBadge(payload.mode);
+
+                // Conversation mode: the server already answered conversationally
+                // and never executed a task. Never fall through to Hermes tool
+                // planning here — /hermes/chat can run registered tools.
+                if (chatMode === "conversation") {
+                    addAssistantMessage(payload);
+                    updateLastExecution(payload);
+                    memoryToast(payload);
+                    loadMemory();
+                    persistChatMessage("assistant", payload);
+                    return;
+                }
 
                 // Show Sarthi's result unless this is an open-ended question
                 // that should go to Hermes.
                 if (!shouldRouteToHermes(payload)) {
                     addAssistantMessage(payload);
                     updateLastExecution(payload);
+                    // Confirmation banner for the memory commands.
+                    memoryToast(payload);
+                    loadMemory(); // /remember may have changed the saved facts
+                    persistChatMessage("assistant", payload);
                     return;
                 }
                 await sendHermesQuestion(text, input);
+                loadMemory();
             } catch (err) {
                 console.error(err);
                 addAssistantMessage({
@@ -1104,9 +1418,14 @@
                 const response = await fetch(SarthiAPI + "/listen", { method: "POST" });
                 if (!response.ok) throw new Error("HTTP " + response.status);
                 const payload = await response.json();
-                if (payload.input) addUserMessage(payload.input);
+                syncModeBadge(payload.mode);
+                if (payload.input) {
+                    addUserMessage(payload.input);
+                    await persistChatMessage("user", { text: payload.input });
+                }
                 addAssistantMessage(payload);
                 updateLastExecution(payload);
+                persistChatMessage("assistant", payload);
             } catch (err) {
                 console.error(err);
                 addAssistantMessage({
@@ -1147,37 +1466,60 @@
                     localStorage.setItem("sarthi_hermes_session", payload.session_id);
                 }
 
-                if (payload.success) {
-                    addAssistantMessage({
-                        text: payload.response,
-                        action: "",
-                        target: "",
-                        success: true,
-                        provider: payload.provider,
-                        model: payload.model,
-                        tool_used: payload.tool_used || null,
-                    });
-                } else {
-                    addAssistantMessage({
-                        text: "Hermes error: " + (payload.error || "Unknown error"),
-                        action: "",
-                        target: "",
-                        success: false,
-                        provider: payload.provider,
-                        model: payload.model,
-                        tool_used: payload.tool_used || null,
-                    });
-                }
+                const rendered = payload.success
+                    ? { text: payload.response, action: "", target: "", success: true,
+                        provider: payload.provider, model: payload.model, tool_used: payload.tool_used || null }
+                    : { text: "Hermes error: " + (payload.error || "Unknown error"), action: "", target: "",
+                        success: false, provider: payload.provider, model: payload.model,
+                        tool_used: payload.tool_used || null };
+                addAssistantMessage(rendered);
+                persistChatMessage("assistant", rendered);
             } catch (err) {
                 console.error("Hermes error:", err);
-                addAssistantMessage({
+                const rendered = {
                     text: "Local Hermes is unavailable. Check that Ollama is running.",
                     action: "",
                     target: "",
                     success: false,
                     provider: "Hermes",
-                });
+                };
+                addAssistantMessage(rendered);
+                persistChatMessage("assistant", rendered);
             }
+        }
+
+        // ---------------------------------------------------------------------
+        // Slash-command live highlight
+        // ---------------------------------------------------------------------
+        // Slash commands that map to the memory feature are shown in a distinct
+        // color while typing, so you get instant visual confirmation that
+        // /remember (and /recall, /forget) are recognized.
+        const MEMORY_COMMANDS = new Set(["remember", "recall", "forget"]);
+
+        function highlightSlashCommand(text) {
+            // Match a leading slash command: "/remember", "/recall", "/forget"
+            const m = text.match(/^(\s*)(\/[a-z][a-z0-9_-]*)/i);
+            if (!m) return esc(text);
+            const cmd = m[2];
+            const isMemory = MEMORY_COMMANDS.has(cmd.slice(1).toLowerCase());
+            const cls = isMemory ? "text-primary-container" : "text-tertiary";
+            return (
+                esc(m[1]) +
+                '<span class="' + cls + ' font-semibold">' + esc(cmd) + '</span>' +
+                esc(text.slice(m[0].length))
+            );
+        }
+
+        function syncInputHighlight() {
+            const input = document.getElementById("chat-input");
+            const mirror = document.getElementById("chat-input-mirror");
+            if (!input || !mirror) return;
+            const value = input.value;
+            // Mirror the input text (with a trailing nbsp so the caret width
+            // stays in sync), highlighting the leading slash command.
+            mirror.innerHTML = value ? highlightSlashCommand(value) + "\u00A0" : "";
+            // Keep the mirror scrolled in sync with the input for long text.
+            mirror.style.transform = "translateX(" + -input.scrollLeft + "px)";
         }
 
         // ---------------------------------------------------------------------
@@ -1188,24 +1530,36 @@
             const send = document.getElementById("chat-send");
             const mic = document.getElementById("chat-mic");
             const headerMic = document.getElementById("header-mic");
+            const resetBtn = document.getElementById("reset-chat");
+            const modeBadge = document.getElementById("mode-badge");
 
             const fire = () => {
                 const value = input.value;
                 input.value = "";
+                syncInputHighlight();
                 sendCommand(value);
             };
 
             send.addEventListener("click", fire);
             headerMic.addEventListener("click", listenCommand);
             mic.addEventListener("click", listenCommand);
+            resetBtn.addEventListener("click", armResetButton);
+            modeBadge.addEventListener("click", () => sendCommand("/exit"));
             input.addEventListener("keydown", (e) => {
                 if (e.key === "Enter") fire();
             });
+            input.addEventListener("input", syncInputHighlight);
+            input.addEventListener("scroll", syncInputHighlight);
 
+            syncInputHighlight();
+            hermesSessionId(); // ensure a stable chat session id before anything else
             input.focus();
+            loadMode();
             checkPendingApps();
             loadHermesTools();
             loadSandbox();
+            loadMemory();
+            loadChatHistory();
         }
     </script>
 </body>

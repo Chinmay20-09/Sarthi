@@ -104,6 +104,25 @@ CREATE TABLE IF NOT EXISTS conversation_messages (
 """
 
 # =============================================================================
+# Chat UI Transcript Table
+# =============================================================================
+
+# The chat window's own transcript (user + assistant turns as rendered by the
+# UI), keyed by the same session id Hermes uses. This is the "persistent memory
+# of one chat": it survives reloads/restarts, and "reset chat" clears it along
+# with the Hermes session context in one go. content is a JSON blob of the
+# payload used to render the bubble (text, result cards, pipeline strip).
+CREATE_CHAT_MESSAGES = """
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT
+)
+"""
+
+# =============================================================================
 # Registry: all known table schemas
 # =============================================================================
 
@@ -115,4 +134,5 @@ ALL_TABLES: dict[str, str] = {
     "knowledge_memory": CREATE_KNOWLEDGE_MEMORY,
     "settings": CREATE_SETTINGS,
     "conversation_messages": CREATE_CONVERSATION_MESSAGES,
+    "chat_messages": CREATE_CHAT_MESSAGES,
 }

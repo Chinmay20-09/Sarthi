@@ -16,9 +16,8 @@ PUBLIC API (preferred):
     engine = BrainEngine()
     response = engine.process("open Chrome")
 
-LEGACY (backward compatible):
-    from brain.entity_resolver import EntityResolver
-    from brain.schemas import Intent
+Entity resolution lives in the Knowledge Layer:
+    from knowledge.entity_resolver import EntityResolver
 """
 
 from brain.engine import BrainEngine

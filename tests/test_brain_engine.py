@@ -15,8 +15,8 @@ from brain.engine import BrainEngine
 from brain.executor import BrainExecutor
 from brain.intent import Intent
 from brain.planner import Planner
-from brain.entity_resolver import EntityResolver
 from brain.response import BrainResponse
+from knowledge.entity_resolver import EntityResolver
 
 # ---------------------------------------------------------------------------
 # Mock Components

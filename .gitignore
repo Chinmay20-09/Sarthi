@@ -129,6 +129,20 @@ knowledge/applications.json
 *.sqlite
 *.sqlite3
 
+# SQLite sidecar files (WAL/shm/journal) carry the same database content —
+# chat transcripts, /remember facts, settings, command history, scan results.
+# The database is personal data, so all of its artifacts must stay out of git.
+# (Note: *.db alone does NOT match *.db-shm / *.db-wal — list them explicitly.)
+*.db-shm
+*.db-wal
+*.db-journal
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite-journal
+*.sqlite3-shm
+*.sqlite3-wal
+*.sqlite3-journal
+
 # ==========================================
 # Sandbox (Hermes task artifacts / execution traces)
 # ==========================================

@@ -1,8 +1,7 @@
 """
 Tests for Entity Resolver.
 
-Updated for new architecture: EntityResolver lives in knowledge/entity_resolver.py.
-brain.entity_resolver is now a backward-compat shim.
+EntityResolver lives in knowledge/entity_resolver.py.
 """
 
 from knowledge.entity_resolver import EntityResolver

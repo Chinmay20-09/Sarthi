@@ -1,0 +1,13 @@
+{
+    "id": "personal_context",
+    "name": "Personal Context",
+    "description": "Safely retrieve specific user-provided personal information when required for a task.",
+    "version": "1.0.0",
+    "enabled": true,
+    "icon": "badge",
+    "commands": [
+        "What is my email?",
+        "What is my college?",
+        "What is my GitHub?"
+    ]
+}

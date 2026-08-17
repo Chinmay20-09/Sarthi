@@ -11,6 +11,7 @@ ARCHITECTURE:
 """
 
 import logging
+import os
 import subprocess
 from typing import Any
 
@@ -137,7 +138,7 @@ class AppLauncherSkill(BaseSkill):
                 }
 
             logger.debug(f"Launching: {app_path}")
-            subprocess.Popen(app_path, shell=True)
+            self._launch_path(app_path)
             logger.info(f"Opened {app_name}")
 
             return {
@@ -153,3 +154,24 @@ class AppLauncherSkill(BaseSkill):
                 "status": "error",
                 "error": str(e),
             }
+
+    # ------------------------------------------------------------------
+    # Launching
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _launch_path(app_path: str) -> None:
+        """Launch an application path WITHOUT going through a shell.
+
+        - ``.exe`` targets are started directly via CreateProcess using a
+          list-form Popen (shell=False): nothing is shell-parsed, so shell
+          metacharacters in a path can never be interpreted as commands.
+        - Anything else (``.lnk`` shortcuts, ``.bat``/``.cmd`` wrappers,
+          URLs) can't be launched by CreateProcess, so it uses
+          ``os.startfile`` (ShellExecute), which also involves no cmd.exe
+          and no metacharacter parsing.
+        """
+        if app_path.lower().endswith(".exe"):
+            subprocess.Popen([app_path])
+        else:
+            os.startfile(app_path)
