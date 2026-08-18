@@ -1,0 +1,10 @@
+[
+  {
+    "step": "decision",
+    "provider": "Ollama",
+    "model": "hermes3:8b",
+    "success": false,
+    "text": "",
+    "error": "Connection timeout"
+  }
+]

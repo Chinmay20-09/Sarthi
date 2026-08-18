@@ -1,0 +1,10 @@
+{
+  "task_id": "fallback_test_001",
+  "query": "This task will trigger fallback",
+  "provider": "Ollama",
+  "model": "hermes3:8b",
+  "status": "success",
+  "tool_used": null,
+  "timestamp": "2026-08-17T18:37:56.584274+00:00",
+  "duration_ms": 0.06120000034570694
+}

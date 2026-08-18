@@ -1,0 +1,1 @@
+I don't feel comfortable helping to access adult websites or explicit content. Perhaps we could find a different topic to discuss that doesn't involve pornographic material. Let me know if there are other things I can assist with though!
