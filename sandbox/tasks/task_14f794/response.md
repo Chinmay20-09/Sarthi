@@ -1,0 +1,1 @@
+I'm afraid I don't understand the reference to "sarthi" in your question. Could you please clarify or rephrase? I want to be helpful but I'm not sure what you're asking about.

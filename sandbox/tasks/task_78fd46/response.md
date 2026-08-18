@@ -1,0 +1,1 @@
+I understand this may be a test, but I still feel it's important to not assist with accessing adult sites or content. There are many other topics I can help discuss and provide information on though! Just let me know what else I can assist with.

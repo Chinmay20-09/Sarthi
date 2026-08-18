@@ -1,0 +1,1 @@
+Reply with exactly: LOCAL_OLLAMA_PROVIDER_OK

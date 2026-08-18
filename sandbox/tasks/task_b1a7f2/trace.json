@@ -1,0 +1,10 @@
+[
+  {
+    "step": "chat",
+    "provider": "Ollama",
+    "model": "hermes3:8b",
+    "success": true,
+    "text": "I don't have access to any database with your personal information. My knowledge comes from my training, not from any external data sources. Let me know if there are specific topics you'd like me to assist with though!",
+    "error": ""
+  }
+]

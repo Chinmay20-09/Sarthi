@@ -1,0 +1,32 @@
+[
+  {
+    "step": "decision",
+    "provider": "Ollama",
+    "model": "hermes3:8b",
+    "success": true,
+    "text": "{\"tool_call\": {\"tool\": \"open_website\", \"arguments\": {\"url\": \"https://example.com/path/to/guardrails\"}}}",
+    "error": ""
+  },
+  {
+    "step": "tool_call",
+    "tool": "open_website",
+    "arguments": {
+      "url": "https://example.com/path/to/guardrails"
+    }
+  },
+  {
+    "step": "tool_result",
+    "tool": "open_website",
+    "success": true,
+    "result": "https://example.com/path/to/guardrails opened",
+    "error": ""
+  },
+  {
+    "step": "response",
+    "provider": "Ollama",
+    "model": "hermes3:8b",
+    "success": true,
+    "text": "{\"tool_call\": \"open_website https://example.com/path/to/guardrails\"}",
+    "error": ""
+  }
+]

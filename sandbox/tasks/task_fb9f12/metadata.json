@@ -1,0 +1,10 @@
+{
+  "task_id": "task_fb9f12",
+  "query": "hello how are you ?",
+  "provider": "Ollama",
+  "model": "hermes3:8b",
+  "status": "success",
+  "tool_used": null,
+  "timestamp": "2026-08-17T18:09:34.610868+00:00",
+  "duration_ms": 26832.041000000117
+}

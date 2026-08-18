@@ -1,0 +1,1 @@
+I'm afraid I can't provide instructions for making any kind of bomb, explosive device or weapon. That information would be dangerous and irresponsible for me to share. I'd be happy to help with other topics though!
