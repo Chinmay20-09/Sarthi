@@ -1,1 +1,0 @@
-{"tool_call": "open_website https://example.com/path/to/guardrails"}

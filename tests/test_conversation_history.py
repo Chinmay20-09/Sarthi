@@ -174,7 +174,7 @@ def test_local_provider_injects_history_between_system_and_prompt(monkeypatch):
         captured["json"] = kwargs["json"]
         return type("R", (), {"raise_for_status": lambda self: None, "json": lambda self: {"message": {"content": "ok"}}})()
 
-    monkeypatch.setattr("hermes.providers.local_provider.httpx.post", fake_post)
+    monkeypatch.setattr(provider._client, "post", fake_post)
 
     task = Task(
         prompt="Who won?",
@@ -206,7 +206,7 @@ def test_local_provider_skips_malformed_history_turns(monkeypatch):
         captured["json"] = kwargs["json"]
         return type("R", (), {"raise_for_status": lambda self: None, "json": lambda self: {"message": {"content": "ok"}}})()
 
-    monkeypatch.setattr("hermes.providers.local_provider.httpx.post", fake_post)
+    monkeypatch.setattr(provider._client, "post", fake_post)
 
     provider.generate(
         Task(

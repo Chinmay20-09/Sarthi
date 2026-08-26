@@ -1,18 +1,13 @@
 <html class="dark" lang="en">
 
 <head>
-
-
-
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Sarthi - AI Memory</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap"
-        rel="stylesheet" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
         rel="stylesheet" />
     <link
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
@@ -58,14 +53,15 @@
                         "surface": "#131313",
                         "on-secondary-container": "#b7b5b4",
                         "tertiary-fixed": "#ffdcc3",
-                        "on-primary-fixed-variant": "#004e5d",
+                        "on-primary-fixed": "#001f26",
                         "surface-container-high": "#2a2a2a",
+                        "on-tertiary-container": "#7f4300",
+                        "on-primary-fixed-variant": "#004e5d",
+                        "primary-fixed": "#aeecff",
+                        "surface-bright": "#3a3939",
                         "on-tertiary": "#4d2600",
                         "on-secondary": "#313030",
                         "primary-fixed": "#aeecff",
-                        "surface-bright": "#3a3939",
-                        "on-tertiary-container": "#7f4300",
-                        "on-surface": "#e5e2e1",
                         "surface-container": "#201f1f",
                         "error": "#ffb4ab",
                         "tertiary-fixed-dim": "#ffb77d"
@@ -124,13 +120,10 @@
         }
 
         @keyframes pulse {
-
-            0%,
-            100% {
+            0%, 100% {
                 opacity: 1;
                 filter: drop-shadow(0 0 2px #00d9ff);
             }
-
             50% {
                 opacity: 0.6;
                 filter: drop-shadow(0 0 8px #00d9ff);
@@ -144,9 +137,7 @@
         }
 
         @keyframes dash {
-            to {
-                stroke-dashoffset: 0;
-            }
+            to { stroke-dashoffset: 0; }
         }
 
         .scan-line {
@@ -161,27 +152,60 @@
         }
 
         @keyframes scan {
-            0% {
-                top: 0%;
-                opacity: 0;
-            }
-
-            10% {
-                opacity: 1;
-            }
-
-            90% {
-                opacity: 1;
-            }
-
-            100% {
-                top: 100%;
-                opacity: 0;
-            }
+            0% { top: 0%; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
         }
 
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+
+        /* Side panel overlay */
+        .side-panel-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .side-panel-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .side-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 420px;
+            max-width: 90vw;
+            height: 100vh;
+            background: #131313;
+            border-left: 1px solid rgba(255, 255, 255, 0.08);
+            z-index: 101;
+            transform: translateX(100%);
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+        }
+        .side-panel.open {
+            transform: translateX(0);
+        }
+
+        .side-panel::-webkit-scrollbar { width: 4px; }
+        .side-panel::-webkit-scrollbar-track { background: transparent; }
+        .side-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+
+        /* Live dot */
+        .live-dot {
+            animation: live-pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes live-pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 6px rgba(0,217,255,0.8); }
+            50% { opacity: 0.4; box-shadow: 0 0 0 rgba(0,217,255,0); }
         }
     </style>
 </head>
@@ -189,6 +213,7 @@
 <body class="font-body-lg text-body-lg antialiased">
     <!-- Sidebar (loaded from shared component) -->
     <div id="sidebar"></div>
+
     <!-- Main Content Canvas -->
     <main class="ml-64 min-h-screen relative overflow-hidden">
         <!-- Top App Bar -->
@@ -198,157 +223,105 @@
                     <span class="font-label-caps text-label-caps text-primary tracking-[0.2em]">SYSTEM MODULE</span>
                     <h2 class="font-headline-md text-headline-md font-bold text-primary">Neural Context Engine</h2>
                 </div>
+                <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container border border-white/10">
+                    <span class="w-1.5 h-1.5 rounded-full bg-primary-container live-dot"></span>
+                    <span class="font-data-mono text-[10px] text-on-surface-variant">LIVE</span>
+                </div>
             </div>
             <div class="flex items-center gap-6">
                 <div class="relative group">
                     <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                         <span class="material-symbols-outlined text-on-surface-variant text-sm">search</span>
                     </div>
-                    <input
+                    <input id="memory-search"
                         class="bg-surface-container-lowest border-0 border-b border-primary/20 focus:border-primary focus:ring-0 text-primary placeholder-on-surface-variant/40 font-data-mono text-xs pl-10 pr-4 py-2 w-64 transition-all duration-500 rounded-sm"
                         placeholder="QUERY MEMORY..." type="text" />
                 </div>
                 <div class="flex items-center gap-4">
                     <button
                         class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">notifications</button>
-                    <div class="w-10 h-10 rounded-full border border-primary/30 p-0.5 overflow-hidden">
-                        <img class="w-full h-full object-cover rounded-full"
-                            data-alt="A close-up portrait of a high-tech robotic interface with a glowing human-like iris. The design is sleek and minimalist with chrome and glass finishes. Soft cyan bioluminescent details highlight the intricate mechanical eyelids. The lighting is cold and atmospheric, suggesting a futuristic AI entity in a dark laboratory setting."
-                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuB45SrZb8N_HN6ze4ESCEkFlQdSzK47-WSToK9wk8PO5QnpUgI8deTjP5KYdQ565_HlOh0opcMfT2LdKztsQLtLSHDrLEuPYzLozQYEK7j162lUdiWcCaJ1atte1pBpjUJKKe_J74Ja36d2YexP8FKez-LPebzghv6QX_AeHgJQhjJVxH9CmZ63pTm3Y2W2dQWrBP9zbnPu53mfyGylCnjZ6c06GkXCUSS-RZBWmshX6Y2n8epqeg3ABg" />
-                    </div>
+                    <!-- Avatar — opens user profile side panel -->
+                    <button id="avatar-btn" title="View user profile"
+                        class="w-10 h-10 rounded-full border border-primary/30 p-0.5 overflow-hidden cursor-pointer hover:border-primary/60 hover:shadow-[0_0_12px_rgba(0,217,255,0.3)] transition-all">
+                        <div class="w-full h-full rounded-full bg-surface-container flex items-center justify-center">
+                            <span class="material-symbols-outlined text-primary text-lg">person</span>
+                        </div>
+                    </button>
                 </div>
             </div>
         </header>
+
         <!-- Dynamic Background Animation -->
-        <div class="absolute inset-0 z-0 pointer-events-none opacity-40">
-        </div>
+        <div class="absolute inset-0 z-0 pointer-events-none opacity-40"></div>
+
         <section class="relative z-10 px-margin-desktop pb-32">
             <!-- Neural Visualization Layout -->
             <div class="grid grid-cols-12 gap-gutter items-start">
                 <!-- Left Column: Statistics & Context Focus -->
                 <div class="col-span-12 lg:col-span-3 flex flex-col gap-6">
+                    <!-- Memory Status -->
                     <div class="glass-card p-6 rounded-xl border-t-2 border-primary/20 relative overflow-hidden">
                         <div class="scan-line"></div>
                         <h3 class="font-label-caps text-label-caps text-on-surface-variant mb-4">MEMORY STATUS</h3>
                         <div class="space-y-4">
                             <div>
                                 <div class="flex justify-between font-data-mono text-xs mb-1">
-                                    <span>SYNAPTIC DENSITY</span>
-                                    <span class="text-primary">94%</span>
+                                    <span>SAVED FACTS</span>
+                                    <span id="stat-memory-count" class="text-primary">—</span>
                                 </div>
                                 <div class="w-full h-1 bg-surface-container-highest rounded-full overflow-hidden">
-                                    <div class="h-full bg-primary-container w-[94%] shadow-[0_0_8px_#00d9ff]"></div>
+                                    <div id="stat-memory-bar" class="h-full bg-primary-container w-0 shadow-[0_0_8px_#00d9ff] transition-all duration-700"></div>
                                 </div>
                             </div>
                             <div>
                                 <div class="flex justify-between font-data-mono text-xs mb-1">
-                                    <span>CONTEXT RETENTION</span>
-                                    <span class="text-primary">4.2 TB</span>
+                                    <span>APP INDEX</span>
+                                    <span id="stat-app-count" class="text-primary">—</span>
                                 </div>
                                 <div class="w-full h-1 bg-surface-container-highest rounded-full overflow-hidden">
-                                    <div class="h-full bg-primary-container w-[65%] shadow-[0_0_8px_#00d9ff]"></div>
+                                    <div id="stat-app-bar" class="h-full bg-primary-container w-0 shadow-[0_0_8px_#00d9ff] transition-all duration-700"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Active Clusters -->
                     <div class="glass-card p-6 rounded-xl space-y-4">
                         <h3 class="font-label-caps text-label-caps text-on-surface-variant">ACTIVE CLUSTERS</h3>
-                        <div class="space-y-3">
-                            <div
-                                class="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/5 hover:border-primary/30 transition-all cursor-pointer">
-                                <span class="material-symbols-outlined text-primary text-sm">settings_suggest</span>
-                                <div class="flex-1">
-                                    <p class="font-body-sm text-body-sm text-on-surface font-medium">Preferences</p>
-                                    <p class="text-[10px] text-on-surface-variant/60 font-data-mono">842 ENTRIES</p>
-                                </div>
-                            </div>
-                            <div
-                                class="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/5 hover:border-primary/30 transition-all cursor-pointer">
-                                <span class="material-symbols-outlined text-primary text-sm">psychology</span>
-                                <div class="flex-1">
-                                    <p class="font-body-sm text-body-sm text-on-surface font-medium">Learned Facts</p>
-                                    <p class="text-[10px] text-on-surface-variant/60 font-data-mono">2,104 ENTRIES</p>
-                                </div>
-                            </div>
-                            <div
-                                class="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/5 hover:border-primary/30 transition-all cursor-pointer">
-                                <span class="material-symbols-outlined text-primary text-sm">repeat</span>
-                                <div class="flex-1">
-                                    <p class="font-body-sm text-body-sm text-on-surface font-medium">User Habits</p>
-                                    <p class="text-[10px] text-on-surface-variant/60 font-data-mono">156 PATTERNS</p>
-                                </div>
-                            </div>
-                            <div
-                                class="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/5 hover:border-primary/30 transition-all cursor-pointer">
-                                <span class="material-symbols-outlined text-primary text-sm">cloud_sync</span>
-                                <div class="flex-1">
-                                    <p class="font-body-sm text-body-sm text-on-surface font-medium">Implicit Context
-                                    </p>
-                                    <p class="text-[10px] text-on-surface-variant/60 font-data-mono">DYNAMIC</p>
-                                </div>
-                            </div>
+                        <div id="clusters-list" class="space-y-3">
+                            <!-- Populated by JS -->
                         </div>
                     </div>
                 </div>
-                <!-- Middle Column: Main Node Visualization (Large Bento) -->
+
+                <!-- Middle Column: Main Visualization & Details -->
                 <div class="col-span-12 lg:col-span-9 flex flex-col gap-6">
-                    <div
-                        class="glass-card rounded-2xl h-[500px] relative overflow-hidden flex items-center justify-center border-t border-white/10">
-                        <!-- Simulated Neural Network SVG -->
-                        <svg class="absolute inset-0 w-full h-full opacity-30" preserveaspectratio="none">
+                    <!-- Neural Visualization -->
+                    <div class="glass-card rounded-2xl h-[500px] relative overflow-hidden flex items-center justify-center border-t border-white/10">
+                        <svg class="absolute inset-0 w-full h-full opacity-30" preserveAspectRatio="none">
                             <defs>
-                                <radialgradient cx="50%" cy="50%" id="glow" r="50%">
+                                <radialGradient cx="50%" cy="50%" id="glow" r="50%">
                                     <stop offset="0%" stop-color="#00d9ff" stop-opacity="0.2"></stop>
                                     <stop offset="100%" stop-color="#00d9ff" stop-opacity="0"></stop>
-                                </radialgradient>
+                                </radialGradient>
                             </defs>
                             <path class="neural-line" d="M100 100 L400 200 L700 150 L500 400 L200 350 Z" fill="none"
                                 stroke="#00d9ff" stroke-width="0.5"></path>
                             <path class="neural-line" d="M300 50 L450 180 L800 300 L600 450 L150 400" fill="none"
                                 stroke="#00d9ff" stroke-dasharray="5 10" stroke-width="0.3"></path>
                         </svg>
-                        <!-- Floating Nodes -->
-                        <div class="absolute top-1/4 left-1/4 group cursor-pointer">
-                            <div class="w-3 h-3 rounded-full bg-primary-container node-pulse relative">
-                                <div
-                                    class="absolute -inset-4 rounded-full border border-primary/20 scale-100 group-hover:scale-150 transition-transform duration-500">
-                                </div>
-                            </div>
-                            <div
-                                class="absolute top-full mt-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-surface-container-high px-3 py-1 rounded border border-primary/40 whitespace-nowrap">
-                                <span class="font-data-mono text-[10px] text-primary">ENTITY: COFFEE PREFERENCE</span>
-                            </div>
-                        </div>
-                        <div class="absolute top-1/2 left-2/3 group cursor-pointer">
-                            <div class="w-4 h-4 rounded-full bg-primary-container node-pulse relative">
-                                <div
-                                    class="absolute -inset-6 rounded-full border border-primary/20 scale-100 group-hover:scale-150 transition-transform duration-500">
-                                </div>
-                            </div>
-                            <div
-                                class="absolute top-full mt-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-surface-container-high px-3 py-1 rounded border border-primary/40 whitespace-nowrap">
-                                <span class="font-data-mono text-[10px] text-primary">PATTERN: 08:00 WORK SESSION</span>
-                            </div>
-                        </div>
-                        <div class="absolute bottom-1/4 left-1/3 group cursor-pointer">
-                            <div class="w-2 h-2 rounded-full bg-primary-container node-pulse relative">
-                                <div
-                                    class="absolute -inset-3 rounded-full border border-primary/20 scale-100 group-hover:scale-150 transition-transform duration-500">
-                                </div>
-                            </div>
-                            <div
-                                class="absolute top-full mt-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-surface-container-high px-3 py-1 rounded border border-primary/40 whitespace-nowrap">
-                                <span class="font-data-mono text-[10px] text-primary">FACT: PROJECT HYPERION
-                                    DEADLINE</span>
-                            </div>
-                        </div>
+
+                        <!-- Floating Nodes (populated by JS) -->
+                        <div id="floating-nodes" class="absolute inset-0"></div>
+
                         <!-- Central Interface Overlay -->
                         <div class="relative z-20 text-center pointer-events-none">
                             <h4 class="font-display-lg text-headline-md font-bold tracking-tight text-white mb-2">NEURAL
                                 CORE ACTIVE</h4>
-                            <p class="font-data-mono text-xs text-on-surface-variant uppercase tracking-[0.3em]">Mapping
+                            <p id="neural-status" class="font-data-mono text-xs text-on-surface-variant uppercase tracking-[0.3em]">Mapping
                                 User Consciousness...</p>
                         </div>
+
                         <!-- Context Legend -->
                         <div class="absolute bottom-6 right-6 flex flex-col gap-2">
                             <div class="flex items-center gap-2">
@@ -361,44 +334,673 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Details Bento Grid -->
-                    <div class="grid grid-cols-3 gap-6">
-                        <div class="glass-card p-5 rounded-xl border-l-2 border-primary/40">
-                            <h5 class="font-label-caps text-[10px] text-primary mb-3">LAST LEARNED</h5>
-                            <p class="font-body-sm text-on-surface italic mb-2">"Prefers minimalist UI over complex
-                                dashboards for productivity tasks."</p>
-                            <span class="font-data-mono text-[9px] text-on-surface-variant">2 HOURS AGO via CHAT</span>
+
+                    <!-- Details Bento Grid (populated by JS) -->
+                    <div id="details-grid" class="grid grid-cols-3 gap-6">
+                        <!-- Populated by JS -->
+                    </div>
+
+                    <!-- Saved Memories List -->
+                    <div class="glass-card rounded-xl p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-label-caps text-label-caps text-on-surface-variant">SAVED MEMORIES</h3>
+                            <span id="memories-badge"
+                                class="px-2 py-0.5 rounded-full text-[10px] font-data-mono bg-tertiary/10 text-tertiary border border-tertiary/20">0</span>
                         </div>
-                        <div class="glass-card p-5 rounded-xl border-l-2 border-primary/40">
-                            <h5 class="font-label-caps text-[10px] text-primary mb-3">PREDICTIVE PATTERN</h5>
-                            <p class="font-body-sm text-on-surface mb-2">High probability of "Deep Focus" session
-                                starting at 14:00.</p>
-                            <span class="font-data-mono text-[9px] text-on-surface-variant">92% CONFIDENCE</span>
+                        <div id="memories-list" class="flex flex-col gap-2">
+                            <p class="text-on-surface-variant text-xs">Loading...</p>
                         </div>
-                        <div class="glass-card p-5 rounded-xl border-l-2 border-primary/40">
-                            <h5 class="font-label-caps text-[10px] text-primary mb-3">IMPLICIT BIAS</h5>
-                            <p class="font-body-sm text-on-surface mb-2">Preference for direct communication and concise
-                                summaries.</p>
-                            <span class="font-data-mono text-[9px] text-on-surface-variant">STABLE TREND</span>
+                    </div>
+
+                    <!-- Command History Chart -->
+                    <div class="glass-card rounded-xl p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-label-caps text-label-caps text-on-surface-variant">COMMAND HISTORY CHART</h3>
+                            <div id="chart-legend" class="flex items-center gap-4">
+                                <div class="flex items-center gap-1.5">
+                                    <div class="w-2 h-2 rounded-full bg-[#00d9ff]"></div>
+                                    <span class="font-data-mono text-[9px] text-on-surface-variant">SUCCESS</span>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <div class="w-2 h-2 rounded-full bg-[#ffb4ab]"></div>
+                                    <span class="font-data-mono text-[9px] text-on-surface-variant">FAIL</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="chart-container" class="relative" style="height:220px">
+                            <canvas id="history-chart"></canvas>
+                            <div id="chart-empty" class="absolute inset-0 flex items-center justify-center">
+                                <p class="text-on-surface-variant text-xs italic">No command data yet.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Command History -->
+                    <div class="glass-card rounded-xl p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-label-caps text-label-caps text-on-surface-variant">RECENT COMMANDS</h3>
+                            <span class="w-1.5 h-1.5 rounded-full bg-primary-container live-dot"></span>
+                        </div>
+                        <div id="history-list" class="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
+                            <p class="text-on-surface-variant text-xs">Loading...</p>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
     </main>
+
+    <!-- User Profile Side Panel -->
+    <div id="side-panel-overlay" class="side-panel-overlay"></div>
+    <aside id="side-panel" class="side-panel">
+        <div class="sticky top-0 bg-[#131313] z-10 p-6 border-b border-white/5">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-headline-md text-headline-md font-bold text-primary">User Profile</h3>
+                <button id="close-panel" class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/5 text-on-surface-variant hover:text-on-surface transition-colors">
+                    <span class="material-symbols-outlined text-lg">close</span>
+                </button>
+            </div>
+            <p class="font-data-mono text-[10px] text-on-surface-variant tracking-[0.15em] uppercase">What Sarthi knows about you</p>
+        </div>
+
+        <div class="p-6 flex flex-col gap-6">
+            <!-- User Identity -->
+            <div class="flex flex-col items-center gap-3 py-4 border-b border-white/5">
+                <div class="w-20 h-20 rounded-full border-2 border-primary/30 p-1 bg-surface-container flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary text-4xl">person</span>
+                </div>
+                <div class="text-center">
+                    <p id="panel-user-name" class="font-headline-md text-headline-md font-bold text-on-surface">—</p>
+                    <p id="panel-user-username" class="font-data-mono text-xs text-on-surface-variant mt-1">—</p>
+                </div>
+                <!-- Editable name input -->
+                <div class="w-full flex gap-2 mt-1">
+                    <input id="panel-name-input"
+                        class="flex-1 min-w-0 bg-surface-container-low border border-white/10 rounded-lg px-3 py-2 text-on-surface text-sm font-body-sm focus:border-primary/50 focus:outline-none transition-colors"
+                        placeholder="Enter your name..." type="text" autocomplete="off" spellcheck="false">
+                    <button id="panel-name-save"
+                        class="px-3 py-2 rounded-lg bg-primary/10 border border-primary/30 text-primary text-xs font-medium hover:bg-primary/20 transition-all flex-shrink-0">
+                        Save
+                    </button>
+                </div>
+                <p id="panel-name-status" class="font-data-mono text-[10px] text-on-surface-variant"></p>
+            </div>
+
+            <!-- System Stats -->
+            <div>
+                <h4 class="font-label-caps text-label-caps text-on-surface-variant mb-3">SYSTEM KNOWLEDGE</h4>
+                <div id="panel-stats" class="grid grid-cols-2 gap-3">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Saved Facts -->
+            <div>
+                <h4 class="font-label-caps text-label-caps text-on-surface-variant mb-3">SAVED FACTS</h4>
+                <div id="panel-facts" class="flex flex-col gap-2">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Favourite Apps -->
+            <div>
+                <h4 class="font-label-caps text-label-caps text-on-surface-variant mb-3">FAVOURITE APPS</h4>
+                <div id="panel-favourites" class="flex flex-col gap-2">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Recent Commands -->
+            <div>
+                <h4 class="font-label-caps text-label-caps text-on-surface-variant mb-3">RECENT ACTIVITY</h4>
+                <div id="panel-history" class="flex flex-col gap-2">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+    </aside>
+
     <!-- Footer (loaded from shared component) -->
     <div id="footer"></div>
+
     <script src="components.js"></script>
     <script>
+        const API = "http://127.0.0.1:8000";
+
+        // ----------------------------------------------------------------
+        // Utility helpers
+        // ----------------------------------------------------------------
+        function esc(str) {
+            const d = document.createElement("div");
+            d.textContent = str == null ? "" : String(str);
+            return d.innerHTML;
+        }
+
+        function ago(dateStr) {
+            if (!dateStr) return "";
+            const t = new Date(dateStr).getTime();
+            if (isNaN(t)) return "";
+            const secs = Math.floor((Date.now() - t) / 1000);
+            if (secs < 60) return "just now";
+            if (secs < 3600) return Math.floor(secs / 60) + "m ago";
+            if (secs < 86400) return Math.floor(secs / 3600) + "h ago";
+            return Math.floor(secs / 86400) + "d ago";
+        }
+
+        function fmtNum(n) {
+            n = Number(n) || 0;
+            if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
+            if (n >= 1000) return (n / 1000).toFixed(1) + "k";
+            return String(n);
+        }
+
+        // ----------------------------------------------------------------
+        // Side panel toggle
+        // ----------------------------------------------------------------
+        const overlay = document.getElementById("side-panel-overlay");
+        const panel = document.getElementById("side-panel");
+
+        function openPanel() {
+            overlay.classList.add("open");
+            panel.classList.add("open");
+            loadSidePanel();
+        }
+
+        function closePanel() {
+            overlay.classList.remove("open");
+            panel.classList.remove("open");
+        }
+
+        document.getElementById("avatar-btn").addEventListener("click", openPanel);
+        document.getElementById("close-panel").addEventListener("click", closePanel);
+        overlay.addEventListener("click", closePanel);
+
+        // Name save button
+        document.getElementById("panel-name-save").addEventListener("click", async () => {
+            const input = document.getElementById("panel-name-input");
+            const status = document.getElementById("panel-name-status");
+            const value = input.value.trim();
+            if (!value) { status.textContent = "Name cannot be empty."; status.className = "font-data-mono text-[10px] text-error"; return; }
+            try {
+                const res = await fetch(API + "/settings", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ key: "user_name", value }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById("panel-user-name").textContent = value;
+                    status.textContent = "Saved!";
+                    status.className = "font-data-mono text-[10px] text-primary-container";
+                    setTimeout(() => { status.textContent = ""; }, 2000);
+                } else {
+                    status.textContent = "Failed to save.";
+                    status.className = "font-data-mono text-[10px] text-error";
+                }
+            } catch {
+                status.textContent = "Could not connect to server.";
+                status.className = "font-data-mono text-[10px] text-error";
+            }
+        });
+        // Save on Enter key
+        document.getElementById("panel-name-input").addEventListener("keydown", (e) => {
+            if (e.key === "Enter") document.getElementById("panel-name-save").click();
+        });
+
+        // ----------------------------------------------------------------
+        // Fetch all data in parallel
+        // ----------------------------------------------------------------
+        async function fetchJSON(url) {
+            try {
+                const res = await fetch(url);
+                if (!res.ok) return null;
+                return await res.json();
+            } catch { return null; }
+        }
+
+        // ----------------------------------------------------------------
+        // Load side panel content
+        // ----------------------------------------------------------------
+        async function loadSidePanel() {
+            const [memData, knowledge, apps, history, ghSettings, nameSettings] = await Promise.all([
+                fetchJSON(API + "/memory"),
+                fetchJSON(API + "/knowledge"),
+                fetchJSON(API + "/applications"),
+                fetchJSON(API + "/command-history"),
+                fetchJSON(API + "/settings/github_username"),
+                fetchJSON(API + "/settings/user_name"),
+            ]);
+
+            // User identity
+            const userName = nameSettings?.value || "User";
+            document.getElementById("panel-user-name").textContent = userName;
+            document.getElementById("panel-user-username").textContent = ghSettings?.value ? "@" + ghSettings.value : "No username set";
+            document.getElementById("panel-name-input").value = nameSettings?.value || "";
+
+            // System stats
+            const statsContainer = document.getElementById("panel-stats");
+            const totalApps = apps?.length || 0;
+            const favApps = apps?.filter(a => a.app_status === "favourite").length || 0;
+            const memoryCount = memData?.count || 0;
+            const totalCommands = history?.count || 0;
+            statsContainer.innerHTML = `
+                <div class="bg-surface-container/40 rounded-lg p-3 border border-white/5 text-center">
+                    <p class="text-xl font-bold text-primary">${fmtNum(memoryCount)}</p>
+                    <p class="font-data-mono text-[9px] text-on-surface-variant mt-1">SAVED FACTS</p>
+                </div>
+                <div class="bg-surface-container/40 rounded-lg p-3 border border-white/5 text-center">
+                    <p class="text-xl font-bold text-primary">${fmtNum(totalApps)}</p>
+                    <p class="font-data-mono text-[9px] text-on-surface-variant mt-1">KNOWN APPS</p>
+                </div>
+                <div class="bg-surface-container/40 rounded-lg p-3 border border-white/5 text-center">
+                    <p class="text-xl font-bold text-tertiary">${fmtNum(favApps)}</p>
+                    <p class="font-data-mono text-[9px] text-on-surface-variant mt-1">FAVOURITES</p>
+                </div>
+                <div class="bg-surface-container/40 rounded-lg p-3 border border-white/5 text-center">
+                    <p class="text-xl font-bold text-on-surface">${fmtNum(totalCommands)}</p>
+                    <p class="font-data-mono text-[9px] text-on-surface-variant mt-1">COMMANDS RUN</p>
+                </div>
+            `;
+
+            // Saved facts
+            const factsContainer = document.getElementById("panel-facts");
+            if (memData?.memories?.length) {
+                factsContainer.innerHTML = memData.memories.map(m => `
+                    <div class="bg-surface-container/30 rounded-lg p-3 border border-white/5 group relative" data-panel-mem="${esc(m.key)}">
+                        <div class="flex items-start justify-between">
+                            <div class="min-w-0 flex-1">
+                                <p class="font-data-mono text-[10px] text-primary mb-1">${esc(m.key)}</p>
+                                <p class="text-sm text-on-surface">${esc(m.value)}</p>
+                            </div>
+                            <button class="panel-delete-mem w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 text-on-surface-variant hover:text-error hover:bg-error/10 transition-all flex-shrink-0 ml-2" title="Delete" data-key="${esc(m.key)}">
+                                <span class="material-symbols-outlined text-sm">close</span>
+                            </button>
+                        </div>
+                    </div>
+                `).join("");
+                factsContainer.querySelectorAll(".panel-delete-mem").forEach(btn => {
+                    btn.addEventListener("click", async () => {
+                        const key = btn.dataset.key;
+                        try {
+                            const res = await fetch(API + "/memory/" + encodeURIComponent(key), { method: "DELETE" });
+                            const data = await res.json();
+                            if (data.success) {
+                                const el = document.querySelector(`[data-panel-mem="${CSS.escape(key)}"]`);
+                                if (el) {
+                                    el.style.transition = "opacity 0.2s";
+                                    el.style.opacity = "0";
+                                    setTimeout(() => el.remove(), 250);
+                                }
+                                loadMemoryPage();
+                            }
+                        } catch (err) { console.error(err); }
+                    });
+                });
+            } else {
+                factsContainer.innerHTML = '<p class="text-xs text-on-surface-variant italic">No saved facts yet. Use /remember in chat.</p>';
+            }
+
+            // Favourite apps
+            const favs = apps?.filter(a => a.app_status === "favourite") || [];
+            const favsContainer = document.getElementById("panel-favourites");
+            if (favs.length) {
+                favsContainer.innerHTML = favs.slice(0, 8).map(a => `
+                    <div class="flex items-center gap-2 p-2 rounded-lg bg-white/3 border border-white/5">
+                        <span class="material-symbols-outlined text-primary text-sm">apps</span>
+                        <span class="text-sm text-on-surface">${esc(a.name)}</span>
+                    </div>
+                `).join("");
+            } else {
+                favsContainer.innerHTML = '<p class="text-xs text-on-surface-variant italic">No favourite apps yet.</p>';
+            }
+
+            // Recent activity
+            const histContainer = document.getElementById("panel-history");
+            if (history?.history?.length) {
+                histContainer.innerHTML = history.history.slice(0, 8).map(h => `
+                    <div class="flex items-center gap-2 p-2 rounded-lg bg-white/3 border border-white/5">
+                        <span class="material-symbols-outlined text-sm ${h.success ? 'text-primary-container' : 'text-error'}">
+                            ${h.success ? 'check_circle' : 'error'}
+                        </span>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm text-on-surface truncate">${esc(h.command)}</p>
+                            <p class="font-data-mono text-[9px] text-on-surface-variant">${ago(h.timestamp)}</p>
+                        </div>
+                    </div>
+                `).join("");
+            } else {
+                histContainer.innerHTML = '<p class="text-xs text-on-surface-variant italic">No commands yet.</p>';
+            }
+        }
+
+        // ----------------------------------------------------------------
+        // Delete a saved memory
+        // ----------------------------------------------------------------
+        async function deleteMemory(key) {
+            if (!confirm(`Delete memory "${key}"?`)) return;
+            try {
+                const res = await fetch(API + "/memory/" + encodeURIComponent(key), { method: "DELETE" });
+                const data = await res.json();
+                if (data.success) {
+                    // Remove from UI
+                    const el = document.querySelector(`[data-mem-key="${CSS.escape(key)}"]`);
+                    if (el) {
+                        el.style.transition = "opacity 0.25s, transform 0.25s";
+                        el.style.opacity = "0";
+                        el.style.transform = "translateX(20px)";
+                        setTimeout(() => el.remove(), 300);
+                    }
+                    // Refresh counts
+                    loadMemoryPage();
+                } else {
+                    alert("Failed to delete: " + (data.error || "unknown error"));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Could not connect to server.");
+            }
+        }
+
+        // ----------------------------------------------------------------
+        // Command history chart (Chart.js)
+        // ----------------------------------------------------------------
+        let historyChart = null;
+
+        function renderHistoryChart(histories) {
+            const canvas = document.getElementById("history-chart");
+            const emptyMsg = document.getElementById("chart-empty");
+            if (!histories || !histories.length) {
+                if (emptyMsg) emptyMsg.style.display = "";
+                if (historyChart) { historyChart.destroy(); historyChart = null; }
+                return;
+            }
+            if (emptyMsg) emptyMsg.style.display = "none";
+
+            // Group by time buckets — split history into ~8 buckets (oldest → newest)
+            const bucketCount = Math.min(8, histories.length);
+            const reversed = histories.slice().reverse(); // oldest first
+            const chunkSize = Math.ceil(reversed.length / bucketCount);
+            const labels = [];
+            const successData = [];
+            const failData = [];
+
+            for (let i = 0; i < bucketCount; i++) {
+                const chunk = reversed.slice(i * chunkSize, (i + 1) * chunkSize);
+                const success = chunk.filter(h => h.success).length;
+                const fail = chunk.filter(h => !h.success).length;
+                const firstTs = chunk[0]?.timestamp;
+                labels.push(firstTs ? ago(firstTs) : `#${i + 1}`);
+                successData.push(success);
+                failData.push(fail);
+            }
+
+            if (historyChart) historyChart.destroy();
+
+            const ctx = canvas.getContext("2d");
+            historyChart = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: "Success",
+                            data: successData,
+                            backgroundColor: "rgba(0, 217, 255, 0.6)",
+                            borderColor: "rgba(0, 217, 255, 1)",
+                            borderWidth: 1,
+                            borderRadius: 4,
+                        },
+                        {
+                            label: "Fail",
+                            data: failData,
+                            backgroundColor: "rgba(255, 180, 171, 0.6)",
+                            borderColor: "rgba(255, 180, 171, 1)",
+                            borderWidth: 1,
+                            borderRadius: 4,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: "#1c1b1b",
+                            titleColor: "#e5e2e1",
+                            bodyColor: "#bbc9ce",
+                            borderColor: "rgba(255,255,255,0.1)",
+                            borderWidth: 1,
+                            padding: 10,
+                            cornerRadius: 6,
+                            titleFont: { family: "JetBrains Mono", size: 11 },
+                            bodyFont: { family: "Inter", size: 12 },
+                        },
+                    },
+                    scales: {
+                        x: {
+                            stacked: true,
+                            grid: { color: "rgba(255,255,255,0.04)" },
+                            ticks: {
+                                color: "#859398",
+                                font: { family: "JetBrains Mono", size: 10 },
+                            },
+                        },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            grid: { color: "rgba(255,255,255,0.04)" },
+                            ticks: {
+                                color: "#859398",
+                                font: { family: "JetBrains Mono", size: 10 },
+                                stepSize: 1,
+                            },
+                        },
+                    },
+                },
+            });
+        }
+
+        // ----------------------------------------------------------------
+        // Load main memory page content
+        // ----------------------------------------------------------------
+        async function loadMemoryPage() {
+            const [memData, knowledge, apps, history] = await Promise.all([
+                fetchJSON(API + "/memory"),
+                fetchJSON(API + "/knowledge"),
+                fetchJSON(API + "/applications"),
+                fetchJSON(API + "/command-history"),
+            ]);
+
+            const memoryCount = memData?.count || 0;
+            const appCount = knowledge?.total || apps?.length || 0;
+            const gameCount = knowledge?.games || 0;
+            const appOnlyCount = knowledge?.applications || 0;
+            const lastScan = knowledge?.last_scan;
+            const histories = history?.history || [];
+            const memories = memData?.memories || [];
+            const favs = apps?.filter(a => a.app_status === "favourite") || [];
+
+            // ---- Stats sidebar ----
+            document.getElementById("stat-memory-count").textContent = memoryCount + " FACTS";
+            document.getElementById("stat-memory-bar").style.width = Math.min(100, memoryCount * 5) + "%";
+
+            document.getElementById("stat-app-count").textContent = appCount + " APPS";
+            document.getElementById("stat-app-bar").style.width = Math.min(100, appCount * 2) + "%";
+
+            // ---- Active Clusters ----
+            const clusters = [
+                { icon: "settings_suggest", label: "Saved Memories", count: memoryCount + " ENTRIES" },
+                { icon: "apps", label: "Known Apps", count: appOnlyCount + " ENTRIES" },
+                { icon: "sports_esports", label: "Games", count: gameCount + " ENTRIES" },
+                { icon: "favorite", label: "Favourites", count: favs.length + " APPS" },
+                { icon: "cloud_sync", label: "Last Scan", count: lastScan ? ago(lastScan) : "NEVER" },
+            ];
+            document.getElementById("clusters-list").innerHTML = clusters.map(c => `
+                <div class="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/5 hover:border-primary/30 transition-all cursor-pointer">
+                    <span class="material-symbols-outlined text-primary text-sm">${c.icon}</span>
+                    <div class="flex-1">
+                        <p class="font-body-sm text-body-sm text-on-surface font-medium">${c.label}</p>
+                        <p class="text-[10px] text-on-surface-variant/60 font-data-mono">${c.count}</p>
+                    </div>
+                </div>
+            `).join("");
+
+            // ---- Floating Nodes on visualization ----
+            const nodes = [];
+            memories.slice(0, 5).forEach((m, i) => {
+                const positions = [
+                    { top: "20%", left: "25%" },
+                    { top: "50%", left: "65%" },
+                    { top: "70%", left: "30%" },
+                    { top: "35%", left: "75%" },
+                    { top: "60%", left: "45%" },
+                ];
+                const sizes = ["w-3 h-3", "w-4 h-4", "w-2 h-2", "w-3 h-3", "w-2.5 h-2.5"];
+                const pos = positions[i % positions.length];
+                nodes.push(`
+                    <div class="absolute group cursor-pointer" style="top:${pos.top};left:${pos.left}">
+                        <div class="${sizes[i]} rounded-full bg-primary-container node-pulse relative">
+                            <div class="absolute -inset-4 rounded-full border border-primary/20 scale-100 group-hover:scale-150 transition-transform duration-500"></div>
+                        </div>
+                        <div class="absolute top-full mt-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-surface-container-high px-3 py-1 rounded border border-primary/40 whitespace-nowrap z-30">
+                            <span class="font-data-mono text-[10px] text-primary">MEM: ${esc(m.key)}</span>
+                        </div>
+                    </div>
+                `);
+            });
+            // Add some app nodes
+            favs.slice(0, 3).forEach((a, i) => {
+                const positions = [{ top: "30%", left: "50%" }, { top: "65%", left: "70%" }, { top: "45%", left: "20%" }];
+                const pos = positions[i % positions.length];
+                nodes.push(`
+                    <div class="absolute group cursor-pointer" style="top:${pos.top};left:${pos.left}">
+                        <div class="w-3 h-3 rounded-full bg-tertiary node-pulse relative">
+                            <div class="absolute -inset-4 rounded-full border border-tertiary/20 scale-100 group-hover:scale-150 transition-transform duration-500"></div>
+                        </div>
+                        <div class="absolute top-full mt-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-surface-container-high px-3 py-1 rounded border border-tertiary/40 whitespace-nowrap z-30">
+                            <span class="font-data-mono text-[10px] text-tertiary">APP: ${esc(a.name)}</span>
+                        </div>
+                    </div>
+                `);
+            });
+            document.getElementById("floating-nodes").innerHTML = nodes.join("");
+
+            // ---- Neural status text ----
+            document.getElementById("neural-status").textContent =
+                `Tracking ${memoryCount} memories · ${appCount} entities · ${histories.length} commands`;
+
+            // ---- Details Bento Grid ----
+            const lastMem = memories[memories.length - 1];
+            const successCount = histories.filter(h => h.success).length;
+            const failCount = histories.filter(h => !h.success).length;
+            const recentCmd = histories[0];
+
+            const details = [
+                {
+                    label: "LAST RECALLED",
+                    text: lastMem ? `"${lastMem.key}: ${lastMem.value}"` : "No memories saved yet.",
+                    meta: lastMem ? "FROM MEMORY" : "EMPTY"
+                },
+                {
+                    label: "COMMAND SUCCESS RATE",
+                    text: histories.length ? `${successCount} succeeded · ${failCount} failed out of ${histories.length} total.` : "No commands executed yet.",
+                    meta: histories.length ? `${Math.round(successCount / histories.length * 100)}% SUCCESS RATE` : "NO DATA"
+                },
+                {
+                    label: "LATEST COMMAND",
+                    text: recentCmd ? `"${recentCmd.command}"` : "No recent commands.",
+                    meta: recentCmd ? ago(recentCmd.timestamp) : "IDLE"
+                },
+            ];
+
+            document.getElementById("details-grid").innerHTML = details.map(d => `
+                <div class="glass-card p-5 rounded-xl border-l-2 border-primary/40">
+                    <h5 class="font-label-caps text-[10px] text-primary mb-3">${d.label}</h5>
+                    <p class="font-body-sm text-on-surface italic mb-2">${esc(d.text)}</p>
+                    <span class="font-data-mono text-[9px] text-on-surface-variant">${esc(d.meta)}</span>
+                </div>
+            `).join("");
+
+            // ---- Saved Memories List ----
+            document.getElementById("memories-badge").textContent = memoryCount;
+            const memList = document.getElementById("memories-list");
+            if (memories.length) {
+                memList.innerHTML = memories.map(m => `
+                    <div class="flex items-center justify-between p-3 bg-white/3 rounded-lg border border-white/5 hover:border-primary/20 transition-all group" data-mem-key="${esc(m.key)}">
+                        <div class="flex items-center gap-3 min-w-0 flex-1">
+                            <span class="material-symbols-outlined text-primary text-sm">memory</span>
+                            <div class="min-w-0">
+                                <p class="font-data-mono text-xs text-primary truncate">${esc(m.key)}</p>
+                                <p class="text-xs text-on-surface truncate">${esc(m.value)}</p>
+                            </div>
+                        </div>
+                        <button class="delete-mem-btn w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 text-on-surface-variant hover:text-error hover:bg-error/10 transition-all flex-shrink-0" title="Delete memory" data-key="${esc(m.key)}">
+                            <span class="material-symbols-outlined text-sm">delete</span>
+                        </button>
+                    </div>
+                `).join("");
+                // Attach delete handlers
+                memList.querySelectorAll(".delete-mem-btn").forEach(btn => {
+                    btn.addEventListener("click", () => deleteMemory(btn.dataset.key));
+                });
+            } else {
+                memList.innerHTML = '<p class="text-on-surface-variant text-xs italic">No saved memories. Use /remember in chat to store facts.</p>';
+            }
+
+            // ---- Command History Chart ----
+            renderHistoryChart(histories);
+
+            // ---- Command History ----
+            const histList = document.getElementById("history-list");
+            if (histories.length) {
+                histList.innerHTML = histories.map(h => `
+                    <div class="flex items-center gap-3 p-2.5 rounded-lg bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all">
+                        <span class="material-symbols-outlined text-sm ${h.success ? 'text-primary-container' : 'text-error'}">
+                            ${h.success ? 'check_circle' : 'error'}
+                        </span>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm text-on-surface truncate">${esc(h.command)}</p>
+                            <p class="font-data-mono text-[9px] text-on-surface-variant">
+                                ${h.action ? esc(h.action) : ''} ${h.target ? '→ ' + esc(h.target) : ''}
+                            </p>
+                        </div>
+                        <span class="font-data-mono text-[9px] text-on-surface-variant whitespace-nowrap">${ago(h.timestamp)}</span>
+                    </div>
+                `).join("");
+            } else {
+                histList.innerHTML = '<p class="text-on-surface-variant text-xs italic">No command history yet.</p>';
+            }
+        }
+
+        // ----------------------------------------------------------------
+        // Search filter for memories
+        // ----------------------------------------------------------------
+        document.getElementById("memory-search").addEventListener("input", (e) => {
+            const q = e.target.value.toLowerCase();
+            const items = document.querySelectorAll("#memories-list > div");
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                item.style.display = text.includes(q) ? "" : "none";
+            });
+        });
+
+        // ----------------------------------------------------------------
+        // Initialize
+        // ----------------------------------------------------------------
         function initializePage() {
-            // Initialize scanning line animation cycle
+            // Scanning line animation cycle
             const cards = document.querySelectorAll('.glass-card');
             cards.forEach((card, index) => {
                 const scan = card.querySelector('.scan-line');
-                if (scan) {
-                    scan.style.animationDelay = `${index * 1.5}s`;
-                }
+                if (scan) scan.style.animationDelay = `${index * 1.5}s`;
             });
+
+            // Load all real-time data
+            loadMemoryPage();
+
+            // Auto-refresh every 15 seconds
+            setInterval(loadMemoryPage, 15000);
         }
     </script>
 </body>

@@ -1,1 +1,0 @@
-*I'm doing well, thanks for asking! It's nice to chat and make new friends. I'm feeling happy and full of energy today. How about you - how are you doing? I'd love to hear more about what's going on in your world!*

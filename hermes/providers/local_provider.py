@@ -7,12 +7,18 @@ from .base import AIProvider, ProviderResponse
 
 
 class LocalHermesProvider(AIProvider):
-    """Local provider backed by Ollama HTTP API."""
+    """Local provider backed by a persistent httpx client talking to Ollama."""
 
     name = "Ollama"
 
     def __init__(self, config: HermesConfig):
         self._config = config
+        # Persistent client for connection pooling — avoids a new TCP
+        # handshake on every generate() call.
+        # CPU-only inference on large models can take 60-120s+, so we use
+        # a dedicated, longer timeout for the local provider.
+        local_timeout = getattr(config, "local_timeout", None) or (config.timeout * 3)
+        self._client = httpx.Client(timeout=local_timeout)
 
     @property
     def _model(self) -> str:
@@ -102,7 +108,7 @@ class LocalHermesProvider(AIProvider):
             if role in ("user", "assistant") and content:
                 messages.append({"role": role, "content": content})
         messages.append({"role": "user", "content": task.prompt})
-        return httpx.post(
+        return self._client.post(
             url,
             headers=headers,
             json={
@@ -110,7 +116,6 @@ class LocalHermesProvider(AIProvider):
                 "messages": messages,
                 "stream": False,
             },
-            timeout=self._config.timeout,
         )
 
     @staticmethod

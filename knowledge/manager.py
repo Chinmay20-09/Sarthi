@@ -188,11 +188,16 @@ class KnowledgeManager:
         return apps
 
     def get_applications_by_status(self, status: str) -> list[dict[str, Any]]:
-        """Get applications in a specific category."""
+        """Get applications in a specific category.
+
+        Uses the cached load_applications() data when available to avoid
+        re-reading the JSON file from disk on every call.
+        """
         if status not in self.CATEGORY_STATUSES:
             return []
-        categories = self._load_applications_data()
-        return [dict(app) for app in categories.get(status, [])]
+        # Prefer the cached flat list (avoids a disk read)
+        apps = self.load_applications()
+        return [dict(app) for app in apps if app.get("app_status") == status]
 
     def categorize_application(self, name: str, status: str) -> dict[str, Any] | None:
         """

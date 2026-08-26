@@ -39,6 +39,10 @@ ACTION_WORDS = {
     # User config actions (set/configure github username)
     "set": "set",
     "configure": "set",
+    # Cleanup actions (clean task history)
+    "clean": "clean",
+    "cleanup": "clean",
+    "clear": "clean",
 }
 
 FILLER_WORDS = {

@@ -41,7 +41,7 @@ def test_uses_local_model_not_openrouter_model(monkeypatch):
         captured["json"] = kwargs["json"]
         return _make_response_success()
 
-    monkeypatch.setattr("hermes.providers.local_provider.httpx.post", fake_post)
+    monkeypatch.setattr(provider._client, "post", fake_post)
 
     response = provider.generate(Task(prompt="Say hello"))
 
@@ -68,7 +68,7 @@ def test_falls_back_to_generic_model_when_local_model_empty(monkeypatch):
         captured["json"] = kwargs["json"]
         return _make_response_success()
 
-    monkeypatch.setattr("hermes.providers.local_provider.httpx.post", fake_post)
+    monkeypatch.setattr(provider._client, "post", fake_post)
 
     response = provider.generate(Task(prompt="Say hello"))
 
@@ -86,7 +86,7 @@ def test_404_reports_ollama_error_body(monkeypatch):
         request = httpx.Request("POST", url)
         raise httpx.HTTPStatusError("Not Found", request=request, response=_make_response_404())
 
-    monkeypatch.setattr("hermes.providers.local_provider.httpx.post", fake_post)
+    monkeypatch.setattr(provider._client, "post", fake_post)
 
     response = provider.generate(Task(prompt="Say hello"))
 

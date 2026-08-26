@@ -1,1 +1,0 @@
-Aww, you got me! Now that you've told me not to be professional, I'm feeling pretty relaxed and casual. As your friend Hermes, I'm here to chat, joke around, and have a fun, laid-back time together. Feel free to tell me about your day, share some laughs, or just hang out. I'm all yours! 😊

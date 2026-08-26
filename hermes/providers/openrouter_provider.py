@@ -7,13 +7,16 @@ from .base import AIProvider, ProviderResponse
 
 
 class OpenRouterProvider(AIProvider):
-    """OpenRouter provider backed by an httpx HTTP client."""
+    """OpenRouter provider backed by a persistent httpx HTTP client."""
 
     name = "OpenRouter"
     endpoint = "https://openrouter.ai/api/v1/chat/completions"
 
     def __init__(self, config: HermesConfig):
         self._config = config
+        # Persistent client for connection pooling — avoids a new TCP
+        # handshake on every generate() call.
+        self._client = httpx.Client(timeout=config.timeout)
 
     def generate(self, task: Task) -> ProviderResponse:
         """Send one chat completion request. Never raises upward."""
@@ -106,7 +109,7 @@ class OpenRouterProvider(AIProvider):
             if role in ("user", "assistant") and content:
                 messages.append({"role": role, "content": content})
         messages.append({"role": "user", "content": task.prompt})
-        return httpx.post(
+        return self._client.post(
             url,
             headers=headers,
             json={
@@ -115,5 +118,4 @@ class OpenRouterProvider(AIProvider):
                 "temperature": self._config.temperature,
                 "stream": False,
             },
-            timeout=self._config.timeout,
         )

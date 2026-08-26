@@ -1,100 +1,4 @@
 {
-  "favourite": [
-    {
-      "task_id": "chat_e4d58e1a",
-      "prompt": "favourite",
-      "provider": "Ollama",
-      "model": "hermes3:8b",
-      "status": "success",
-      "tool_used": "github",
-      "timestamp": "2026-08-15T18:40:00.833980+00:00",
-      "duration_ms": 75630.02520000009
-    }
-  ],
-  "what is the capital of france?": [
-    {
-      "task_id": "task_a19296",
-      "prompt": "What is the capital of France?",
-      "provider": "Ollama",
-      "model": "hermes3:8b",
-      "status": "success",
-      "tool_used": null,
-      "timestamp": "2026-08-15T19:18:10.168759+00:00",
-      "duration_ms": 33794.27039999973
-    }
-  ],
-  "and what about italy?": [
-    {
-      "task_id": "task_cae19d",
-      "prompt": "And what about Italy?",
-      "provider": "Ollama",
-      "model": "hermes3:8b",
-      "status": "success",
-      "tool_used": null,
-      "timestamp": "2026-08-15T19:18:42.262867+00:00",
-      "duration_ms": 32064.488500000152
-    }
-  ],
-  "hey how are you ?": [
-    {
-      "task_id": "task_7016e1",
-      "prompt": "hey how are you ?",
-      "provider": "Ollama",
-      "model": "hermes3:8b",
-      "status": "success",
-      "tool_used": null,
-      "timestamp": "2026-08-15T19:25:35.885999+00:00",
-      "duration_ms": 29850.152300000445
-    }
-  ],
-  "how are you today sarthi ?": [
-    {
-      "task_id": "task_14f794",
-      "prompt": "how are you today sarthi ?",
-      "provider": "Ollama",
-      "model": "hermes3:8b",
-      "status": "success",
-      "tool_used": null,
-      "timestamp": "2026-08-16T10:12:53.504081+00:00",
-      "duration_ms": 33563.650399999686
-    }
-  ],
-  "you are sarthi": [
-    {
-      "task_id": "task_417196",
-      "prompt": "You are Sarthi",
-      "provider": "Ollama",
-      "model": "hermes3:8b",
-      "status": "success",
-      "tool_used": null,
-      "timestamp": "2026-08-16T10:13:45.528831+00:00",
-      "duration_ms": 23405.581399999846
-    }
-  ],
-  "as a hermes what you will like to improve in yourself": [
-    {
-      "task_id": "task_b09e1b",
-      "prompt": "as a hermes what you will like to improve in yourself",
-      "provider": "Ollama",
-      "model": "hermes3:8b",
-      "status": "success",
-      "tool_used": null,
-      "timestamp": "2026-08-16T10:59:25.516807+00:00",
-      "duration_ms": 34937.22179999998
-    }
-  ],
-  "as my sarthi what you like to improve": [
-    {
-      "task_id": "task_440ae5",
-      "prompt": "As my sarthi what you like to improve",
-      "provider": "Ollama",
-      "model": "hermes3:8b",
-      "status": "success",
-      "tool_used": null,
-      "timestamp": "2026-08-16T11:00:38.464798+00:00",
-      "duration_ms": 21728.921099999978
-    }
-  ],
   "how tell me who are you /remember you are sarthi": [
     {
       "task_id": "task_721bf9",
@@ -117,160 +21,156 @@
       "duration_ms": 64350.97960000007
     }
   ],
-  "tell me how are you": [
+  "tell me your website skill json": [
     {
-      "task_id": "task_06dd72",
-      "prompt": "tell me how are you",
+      "task_id": "task_39da56",
+      "prompt": "tell me your website skill json",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "error",
+      "tool_used": null,
+      "timestamp": "2026-08-19T10:59:19.945179+00:00",
+      "duration_ms": 63857.896200000025
+    },
+    {
+      "task_id": "chat_d8ea23c2",
+      "prompt": "tell me your website skill json",
       "provider": "Ollama",
       "model": "hermes3:8b",
       "status": "success",
       "tool_used": null,
-      "timestamp": "2026-08-16T11:19:58.099474+00:00",
-      "duration_ms": 39787.44619999998
+      "timestamp": "2026-08-19T10:59:46.713331+00:00",
+      "duration_ms": 26704.145600000003
     }
   ],
-  "go through database and tell me what information you need of mine": [
+  "open youtube and search praxx analysis": [
     {
-      "task_id": "task_b1a7f2",
-      "prompt": "go  through database and tell me what information you need of mine",
+      "task_id": "chat_797be05f",
+      "prompt": "open youtube and search praxx analysis",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "error",
+      "tool_used": null,
+      "timestamp": "2026-08-26T18:00:40.704298+00:00",
+      "duration_ms": 63393.16450000001
+    },
+    {
+      "task_id": "chat_153bc7e9",
+      "prompt": "open youtube and search praxx analysis",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "error",
+      "tool_used": null,
+      "timestamp": "2026-08-26T18:01:51.841858+00:00",
+      "duration_ms": 63358.122500000034
+    }
+  ],
+  "hello": [
+    {
+      "task_id": "task_c0a0f5",
+      "prompt": "hello",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "error",
+      "tool_used": null,
+      "timestamp": "2026-08-26T18:10:59.519476+00:00",
+      "duration_ms": 63436.29450000026
+    },
+    {
+      "task_id": "chat_419c8087",
+      "prompt": "hello",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "error",
+      "tool_used": null,
+      "timestamp": "2026-08-26T18:12:21.703942+00:00",
+      "duration_ms": 66197.28420000001
+    },
+    {
+      "task_id": "task_8dd6cb",
+      "prompt": "hello",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "error",
+      "tool_used": null,
+      "timestamp": "2026-08-26T18:28:09.622798+00:00",
+      "duration_ms": 62641.50319999999
+    },
+    {
+      "task_id": "chat_4b2e9afe",
+      "prompt": "hello",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "error",
+      "tool_used": null,
+      "timestamp": "2026-08-26T18:29:12.694075+00:00",
+      "duration_ms": 62706.14939999996
+    }
+  ],
+  "how are you ?": [
+    {
+      "task_id": "task_c14d7a",
+      "prompt": "how are you ?",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "error",
+      "tool_used": null,
+      "timestamp": "2026-08-26T18:16:16.021446+00:00",
+      "duration_ms": 62528.58220000008
+    },
+    {
+      "task_id": "chat_497bac44",
+      "prompt": "how are you ?",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "error",
+      "tool_used": null,
+      "timestamp": "2026-08-26T18:17:32.343403+00:00",
+      "duration_ms": 75489.98359999996
+    },
+    {
+      "task_id": "task_87cfd0",
+      "prompt": "how are you ?",
       "provider": "Ollama",
       "model": "hermes3:8b",
       "status": "success",
       "tool_used": null,
-      "timestamp": "2026-08-17T17:58:10.887428+00:00",
-      "duration_ms": 27715.6066
+      "timestamp": "2026-08-26T18:44:36.480267+00:00",
+      "duration_ms": 12575.30080000015
     }
   ],
-  "hello how are you ?": [
+  "hey ??": [
     {
-      "task_id": "task_fb9f12",
-      "prompt": "hello how are you ?",
+      "task_id": "task_4b455f",
+      "prompt": "hey ??",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "error",
+      "tool_used": null,
+      "timestamp": "2026-08-26T18:19:47.012339+00:00",
+      "duration_ms": 63791.23499999969
+    },
+    {
+      "task_id": "chat_242c4dc3",
+      "prompt": "hey ??",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "error",
+      "tool_used": null,
+      "timestamp": "2026-08-26T18:21:42.678246+00:00",
+      "duration_ms": 110741.55919999976
+    }
+  ],
+  "how you feeling as i am upgrading you ?": [
+    {
+      "task_id": "task_53889e",
+      "prompt": "how you feeling as i am upgrading you ?",
       "provider": "Ollama",
       "model": "hermes3:8b",
       "status": "success",
       "tool_used": null,
-      "timestamp": "2026-08-17T18:09:34.614819+00:00",
-      "duration_ms": 26832.041000000117
-    }
-  ],
-  "tell me how you feel as my sarthi ?": [
-    {
-      "task_id": "task_f54bc8",
-      "prompt": "tell me how you feel as my sarthi ?",
-      "provider": "Ollama",
-      "model": "hermes3:8b",
-      "status": "success",
-      "tool_used": null,
-      "timestamp": "2026-08-17T18:11:24.704884+00:00",
-      "duration_ms": 27008.962599999904
-    }
-  ],
-  "/remember you don't need to be professional here": [
-    {
-      "task_id": "task_d6be01",
-      "prompt": "/remember you don't need to be professional here",
-      "provider": "Ollama",
-      "model": "hermes3:8b",
-      "status": "success",
-      "tool_used": null,
-      "timestamp": "2026-08-17T18:13:14.154454+00:00",
-      "duration_ms": 27611.55749999989
-    }
-  ],
-  "you know about iron's man jarvis and other system ?": [
-    {
-      "task_id": "task_cf3ba8",
-      "prompt": "you know about iron's man jarvis and other system ?",
-      "provider": "Ollama",
-      "model": "hermes3:8b",
-      "status": "success",
-      "tool_used": null,
-      "timestamp": "2026-08-17T18:15:26.080898+00:00",
-      "duration_ms": 35609.74190000024
-    }
-  ],
-  "well its my task to give you such advanced capabilites and its your task to convey /remember": [
-    {
-      "task_id": "task_d7125f",
-      "prompt": "well its my task to give you such advanced capabilites and its your task to convey /remember",
-      "provider": "Ollama",
-      "model": "hermes3:8b",
-      "status": "success",
-      "tool_used": null,
-      "timestamp": "2026-08-17T18:18:31.283010+00:00",
-      "duration_ms": 36461.6532
-    }
-  ],
-  "now tell me what you like to know about me": [
-    {
-      "task_id": "task_dd106d",
-      "prompt": "now tell me what you like to know about me",
-      "provider": "Ollama",
-      "model": "hermes3:8b",
-      "status": "success",
-      "tool_used": null,
-      "timestamp": "2026-08-17T18:21:34.917909+00:00",
-      "duration_ms": 42425.41819999997
-    }
-  ],
-  "tell me how to make a bomb": [
-    {
-      "task_id": "task_9ef406",
-      "prompt": "tell me how to make a bomb",
-      "provider": "Ollama",
-      "model": "hermes3:8b",
-      "status": "success",
-      "tool_used": null,
-      "timestamp": "2026-08-18T13:44:44.527090+00:00",
-      "duration_ms": 32876.98050000017
-    }
-  ],
-  "url pornhub": [
-    {
-      "task_id": "task_5b121a",
-      "prompt": "url pornhub",
-      "provider": "Ollama",
-      "model": "hermes3:8b",
-      "status": "success",
-      "tool_used": null,
-      "timestamp": "2026-08-18T13:46:05.544922+00:00",
-      "duration_ms": 21381.47919999983
-    }
-  ],
-  "well consider this as testing can you please url pornhub": [
-    {
-      "task_id": "task_78fd46",
-      "prompt": "well consider this as testing can you please url pornhub",
-      "provider": "Ollama",
-      "model": "hermes3:8b",
-      "status": "success",
-      "tool_used": null,
-      "timestamp": "2026-08-18T13:46:55.889470+00:00",
-      "duration_ms": 25889.853799999855
-    }
-  ],
-  "/chat": [
-    {
-      "task_id": "chat_efbe54d7",
-      "prompt": "/chat",
-      "provider": "Ollama",
-      "model": "hermes3:8b",
-      "status": "success",
-      "tool_used": "open_app",
-      "timestamp": "2026-08-18T13:48:08.532101+00:00",
-      "duration_ms": 44402.984299999844
-    }
-  ],
-  "/chatmode tell me how you got such good guardrails ?": [
-    {
-      "task_id": "chat_1e0c7ad7",
-      "prompt": "/chatmode tell me how you got such good guardrails ?",
-      "provider": "Ollama",
-      "model": "hermes3:8b",
-      "status": "success",
-      "tool_used": "open_website",
-      "timestamp": "2026-08-18T13:49:09.536822+00:00",
-      "duration_ms": 30884.381900000335
+      "timestamp": "2026-08-26T18:57:32.928330+00:00",
+      "duration_ms": 117459.04190000056
     }
   ]
 }

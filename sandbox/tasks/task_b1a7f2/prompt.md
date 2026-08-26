@@ -1,1 +1,0 @@
-go  through database and tell me what information you need of mine

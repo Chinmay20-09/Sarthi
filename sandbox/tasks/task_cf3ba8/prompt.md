@@ -1,1 +1,0 @@
-you know about iron's man jarvis and other system ?

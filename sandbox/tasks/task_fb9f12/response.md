@@ -1,1 +1,0 @@
-Hello! I'm doing well, thank you for asking. How are you doing today?

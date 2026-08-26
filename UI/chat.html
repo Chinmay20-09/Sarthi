@@ -636,6 +636,7 @@
                 if (visual.type === "scan_results") return renderScanCard(visual.data);
                 if (visual.type === "app_decision") return renderAppDecisionCard(visual.data);
                 if (visual.type === "github_username_prompt") return renderGithubUsernamePrompt(visual.data);
+                if (visual.type === "clean_tasks") return renderCleanTasksCard(visual.data);
             }
 
             if (result.application) return renderLaunchCard("application", result);
@@ -997,6 +998,111 @@
                 '  <div class="flex justify-between gap-6"><span class="text-on-surface-variant text-xs">Action:</span><span class="text-on-surface text-xs font-medium">Open</span></div>' +
                 (detail ? '  <div class="flex justify-between gap-6"><span class="text-on-surface-variant text-xs">Target:</span><span class="text-primary text-xs font-medium truncate max-w-[200px]">' + esc(detail) + '</span></div>' : "") +
                 '</div>';
+            return card;
+        }
+
+        // Clean tasks card — shows failed commands with keep/delete buttons
+        function renderCleanTasksCard(data) {
+            const failed = data.failed || [];
+            const deletedCount = data.deleted_count || 0;
+
+            const card = el("div", "glass-card rounded-xl p-5 w-full border border-tertiary/20");
+            card.innerHTML =
+                '<div class="flex items-center gap-3 mb-3 border-b border-white/10 pb-2">' +
+                '  <span class="material-symbols-outlined text-primary-container">cleaning_services</span>' +
+                '  <span class="font-label-caps text-label-caps text-on-surface">TASK CLEANUP</span>' +
+                '</div>' +
+                '<p class="text-on-surface-variant text-sm mb-4">' +
+                '  Removed <span class="text-primary font-medium">' + deletedCount + '</span> successful command(s).' +
+                (failed.length
+                    ? ' Found <span class="text-error font-medium">' + failed.length + '</span> failed command(s) below.'
+                    : ' No failed commands to review.') +
+                '</p>' +
+                '<div id="clean-failed-list" class="flex flex-col gap-2"></div>' +
+                (failed.length
+                    ? '<button id="clean-delete-all" class="mt-3 px-3 py-1.5 rounded-lg bg-error/10 border border-error/30 text-error text-xs font-medium hover:bg-error/20 transition-all self-end">Delete All Failed</button>'
+                    : '');
+
+            const listEl = card.querySelector("#clean-failed-list");
+
+            if (!failed.length) {
+                listEl.innerHTML = '<p class="text-on-surface-variant text-xs">All commands cleaned!</p>';
+                showToast("Cleanup complete — " + deletedCount + " successful command(s) removed", { icon: "check_circle" });
+                return card;
+            }
+
+            showToast(
+                "Auto-deleted " + deletedCount + " successful · " + failed.length + " failed remaining — review below",
+                { icon: "cleaning_services" }
+            );
+
+            failed.forEach((item) => {
+                const row = el("div",
+                    "flex items-center justify-between gap-3 bg-surface-container/40 rounded-lg px-3 py-2 border border-white/5");
+                row.innerHTML =
+                    '<div class="flex flex-col gap-0.5 min-w-0 flex-1">' +
+                    '  <span class="text-on-surface text-sm truncate">' + esc(item.command || '—') + '</span>' +
+                    '  <span class="text-on-surface-variant text-[10px] font-data-mono">' +
+                    '    ' + esc(item.action || '—') + ' · ' + esc(item.target || '—') +
+                    '  </span>' +
+                    '</div>' +
+                    '<div class="flex gap-1.5 flex-shrink-0">' +
+                    '  <button data-act="keep" data-id="' + item.id + '" class="px-2 py-1 rounded-md bg-primary/10 border border-primary/30 text-primary text-[10px] font-medium hover:bg-primary/20 transition-all">Keep</button>' +
+                    '  <button data-act="del" data-id="' + item.id + '" class="px-2 py-1 rounded-md bg-error/10 border border-error/30 text-error text-[10px] font-medium hover:bg-error/20 transition-all">Delete</button>' +
+                    '</div>';
+
+                row.querySelector('[data-act="keep"]').addEventListener("click", function () {
+                    addSystemMessage("Kept: " + (item.command || 'unknown'));
+                    row.style.opacity = "0.4";
+                    row.style.pointerEvents = "none";
+                });
+
+                row.querySelector('[data-act="del"]').addEventListener("click", async function () {
+                    this.disabled = true;
+                    this.textContent = "...";
+                    try {
+                        const res = await fetch(SarthiAPI + "/command-history/" + item.id, { method: "DELETE" });
+                        if (res.ok) {
+                            row.remove();
+                            addSystemMessage("Deleted: " + (item.command || 'unknown'));
+                        } else {
+                            addSystemMessage("Failed to delete command.");
+                            this.disabled = false;
+                            this.textContent = "Delete";
+                        }
+                    } catch (e) {
+                        addSystemMessage("Network error — could not delete.");
+                        this.disabled = false;
+                        this.textContent = "Delete";
+                    }
+                });
+
+                listEl.appendChild(row);
+            });
+
+            // Delete All button
+            const deleteAllBtn = card.querySelector("#clean-delete-all");
+            if (deleteAllBtn) {
+                deleteAllBtn.addEventListener("click", async function () {
+                    this.disabled = true;
+                    this.textContent = "Deleting...";
+                    let deleted = 0;
+                    for (const item of failed) {
+                        try {
+                            const res = await fetch(SarthiAPI + "/command-history/" + item.id, { method: "DELETE" });
+                            if (res.ok) deleted++;
+                        } catch (e) { /* skip */ }
+                    }
+                    listEl.innerHTML = '<p class="text-on-surface-variant text-xs">All failed commands deleted.</p>';
+                    this.remove();
+                    showToast(
+                        "Cleanup finished — deleted " + deleted + " failed command(s)",
+                        { icon: "check_circle" }
+                    );
+                    addSystemMessage("Cleanup finished — deleted " + deleted + " failed command(s).");
+                });
+            }
+
             return card;
         }
 

@@ -322,6 +322,18 @@ def list_applications():
     ]
 
 
+@app.delete("/command-history/{cmd_id}")
+def delete_command_history_entry(cmd_id: int):
+    """Delete a single command history entry by id."""
+    from database.manager import get_database
+    from database.models import CREATE_COMMAND_HISTORY
+
+    db = get_database()
+    db.create_table(CREATE_COMMAND_HISTORY)
+    db.execute("DELETE FROM command_history WHERE id = ?", (cmd_id,))
+    return {"success": True, "deleted_id": cmd_id}
+
+
 @app.get("/applications/categories")
 def application_categories():
     """Get applications grouped by user category (favourite / ignored / unattended)."""
@@ -407,6 +419,40 @@ def list_memories():
         "success": True,
         "count": len(memories),
         "memories": [{"key": m.get("key", ""), "value": m.get("value", "")} for m in memories],
+    }
+
+
+@app.delete("/memory/{key}")
+def delete_memory(key: str):
+    """Delete a single saved memory by key."""
+    from knowledge.memory import get_memory
+
+    success = get_memory().forget_long(key)
+    if not success:
+        return {"success": False, "error": f"Memory not found or failed to delete: {key}"}
+    return {"success": True, "deleted": key}
+
+
+@app.get("/command-history")
+def command_history():
+    """Recent command history for the Memory page."""
+    from knowledge.memory import get_memory
+
+    entries = get_memory().get_history(limit=30)
+    return {
+        "success": True,
+        "count": len(entries),
+        "history": [
+            {
+                "id": e.get("id"),
+                "command": e.get("command", ""),
+                "action": e.get("action", ""),
+                "target": e.get("target", ""),
+                "success": bool(e.get("success")),
+                "timestamp": e.get("timestamp", ""),
+            }
+            for e in entries
+        ],
     }
 
 

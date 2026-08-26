@@ -245,6 +245,8 @@ class BrainExecutor:
         self.register_handler("remember", self._handle_remember)
         self.register_handler("recall", self._handle_recall)
         self.register_handler("forget", self._handle_forget)
+        # Task cleanup — clean task history
+        self.register_handler("clean", self._handle_clean)
 
     # ------------------------------------------------------------------
     # Memory handlers (/remember, /recall, /forget)
@@ -357,3 +359,88 @@ class BrainExecutor:
                 except ValueError:
                     continue
         return f"note_{max(numbers, default=0) + 1}"
+
+    # ------------------------------------------------------------------
+    # Cleanup handler (/clean)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _handle_clean(intent: Intent) -> dict[str, Any] | None:
+        """Handle 'clean' — auto-delete successful commands, prompt for failed ones.
+
+        Successful commands are silently removed from history.
+        Failed commands are returned with visual data so the UI can
+        present each one with a keep/delete decision.
+        """
+        from database.manager import get_database
+        from database.models import CREATE_COMMAND_HISTORY
+
+        db = get_database()
+        db.create_table(CREATE_COMMAND_HISTORY)
+
+        # Fetch all history entries
+        all_cmds = db.fetch_all(
+            "SELECT id, command, action, target, success, timestamp "
+            "FROM command_history ORDER BY id DESC"
+        )
+
+        if not all_cmds:
+            return {
+                "success": True,
+                "status": "executed",
+                "result": {
+                    "message": "No command history to clean.",
+                    "deleted_count": 0,
+                    "failed_count": 0,
+                },
+            }
+
+        successful = [c for c in all_cmds if c.get("success")]
+        failed = [c for c in all_cmds if not c.get("success")]
+
+        # Auto-delete all successful commands
+        deleted_count = 0
+        for cmd in successful:
+            db.execute("DELETE FROM command_history WHERE id = ?", (cmd["id"],))
+            deleted_count += 1
+
+        # Build visual data for the failed commands so the UI can
+        # render an interactive card with keep/delete buttons.
+        failed_items = []
+        for cmd in failed:
+            failed_items.append({
+                "id": cmd["id"],
+                "command": cmd.get("command", ""),
+                "action": cmd.get("action", ""),
+                "target": cmd.get("target", ""),
+                "timestamp": cmd.get("timestamp", ""),
+            })
+
+        if failed_items:
+            message = (
+                f"Cleaned {deleted_count} successful command(s). "
+                f"{len(failed_items)} failed command(s) found — "
+                f"review below and choose to keep or delete each one."
+            )
+        else:
+            message = (
+                f"All done! Cleaned {deleted_count} successful command(s). "
+                f"No failed commands to review."
+            )
+
+        return {
+            "success": True,
+            "status": "executed",
+            "result": {
+                "message": message,
+                "deleted_count": deleted_count,
+                "failed_count": len(failed_items),
+                "visual": {
+                    "type": "clean_tasks",
+                    "data": {
+                        "deleted_count": deleted_count,
+                        "failed": failed_items,
+                    },
+                },
+            },
+        }
