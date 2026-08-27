@@ -17,6 +17,22 @@ dependencies = [
     "psutil",
 ]
 
+# ---------------------------------------------------------------------------
+# Package discovery — flat layout with multiple top-level packages
+# ---------------------------------------------------------------------------
+[tool.setuptools.packages.find]
+include = [
+    "actions*",
+    "brain*",
+    "database*",
+    "events*",
+    "hermes*",
+    "knowledge*",
+    "skills*",
+    "speech*",
+    "utils*",
+]
+
 # ============================================================================
 # Ruff — linter + formatter (replaces flake8, black, isort)
 # ============================================================================
