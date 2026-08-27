@@ -15,6 +15,7 @@ import webbrowser
 from typing import Any
 
 from brain.intent import Intent
+from brain.modes import get_test_mode
 from skills.base import BaseSkill
 
 logger = logging.getLogger(__name__)
@@ -100,6 +101,14 @@ class BrowserSkill(BaseSkill):
                     "success": False,
                     "status": "error",
                     "error": f"No URL found for website: {name}",
+                }
+
+            if get_test_mode():
+                logger.info(f"[TEST] Would open {name} at {url}")
+                return {
+                    "success": True,
+                    "status": "test_mode",
+                    "result": {"website": name, "url": url, "test_mode": True},
                 }
 
             webbrowser.open(url)

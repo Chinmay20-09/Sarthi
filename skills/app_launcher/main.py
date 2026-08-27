@@ -16,6 +16,7 @@ import subprocess
 from typing import Any
 
 from brain.intent import Intent
+from brain.modes import get_test_mode
 from skills.base import BaseSkill
 
 logger = logging.getLogger(__name__)
@@ -135,6 +136,14 @@ class AppLauncherSkill(BaseSkill):
                             },
                         }
                     },
+                }
+
+            if get_test_mode():
+                logger.info(f"[TEST] Would launch {app_name} at {app_path}")
+                return {
+                    "success": True,
+                    "status": "test_mode",
+                    "result": {"application": app_name, "path": app_path, "test_mode": True},
                 }
 
             logger.debug(f"Launching: {app_path}")

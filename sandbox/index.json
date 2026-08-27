@@ -105,6 +105,26 @@
       "tool_used": null,
       "timestamp": "2026-08-26T18:29:12.694075+00:00",
       "duration_ms": 62706.14939999996
+    },
+    {
+      "task_id": "task_c46f46",
+      "prompt": "hello",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-27T17:02:29.982374+00:00",
+      "duration_ms": 111815.06580000042
+    },
+    {
+      "task_id": "task_ad0113",
+      "prompt": "hello",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-27T17:04:40.901073+00:00",
+      "duration_ms": 15314.276500000233
     }
   ],
   "how are you ?": [
@@ -161,76 +181,236 @@
       "duration_ms": 110741.55919999976
     }
   ],
-  "how you feeling as i am upgrading you ?": [
+  "how are you?": [
     {
-      "task_id": "task_53889e",
-      "prompt": "how you feeling as i am upgrading you ?",
+      "task_id": "task_a843a3",
+      "prompt": "how are you?",
       "provider": "Ollama",
       "model": "hermes3:8b",
       "status": "success",
       "tool_used": null,
-      "timestamp": "2026-08-26T18:57:32.928330+00:00",
-      "duration_ms": 117459.04190000056
-    }
-  ],
-  "hermes what do you know about me ?": [
+      "timestamp": "2026-08-27T17:02:35.629958+00:00",
+      "duration_ms": 5526.911799999652
+    },
     {
-      "task_id": "task_de38ac",
-      "prompt": "hermes what do you know about me ?",
+      "task_id": "task_31881f",
+      "prompt": "how are you?",
       "provider": "Ollama",
       "model": "hermes3:8b",
       "status": "success",
       "tool_used": null,
-      "timestamp": "2026-08-26T19:17:38.994366+00:00",
-      "duration_ms": 108053.1389000007
-    }
-  ],
-  "hermes what do you know about me from your database ?": [
+      "timestamp": "2026-08-27T17:04:55.735918+00:00",
+      "duration_ms": 14811.184900000626
+    },
     {
-      "task_id": "task_c56158",
-      "prompt": "hermes what do you know about me from your database ?",
+      "task_id": "task_ed93e4",
+      "prompt": "how are you?",
       "provider": "Ollama",
       "model": "hermes3:8b",
       "status": "success",
       "tool_used": null,
-      "timestamp": "2026-08-26T19:19:34.754798+00:00",
-      "duration_ms": 23416.717699999936
-    }
-  ],
-  "/clear": [
+      "timestamp": "2026-08-27T17:13:52.650458+00:00",
+      "duration_ms": 58038.27960000035
+    },
     {
-      "task_id": "chat_59be1d0c",
-      "prompt": "/clear",
-      "provider": "Ollama",
-      "model": "hermes3:8b",
-      "status": "success",
-      "tool_used": "personal_context",
-      "timestamp": "2026-08-27T16:23:01.958438+00:00",
-      "duration_ms": 132105.6816
-    }
-  ],
-  "how is everything going buddy, do you know today's date ?": [
-    {
-      "task_id": "task_4fba52",
-      "prompt": "how is everything going buddy, do you know today's date ?",
+      "task_id": "task_258f27",
+      "prompt": "how are you?",
       "provider": "Ollama",
       "model": "hermes3:8b",
       "status": "success",
       "tool_used": null,
-      "timestamp": "2026-08-27T16:30:23.003876+00:00",
-      "duration_ms": 119909.47639999968
+      "timestamp": "2026-08-27T17:55:11.874258+00:00",
+      "duration_ms": 24196.57879999977
     }
   ],
-  "what if i want you to remember dates and details from my database": [
+  "who are you": [
     {
-      "task_id": "task_340828",
-      "prompt": "what if i want you to remember dates and details from my database",
+      "task_id": "task_73ec24",
+      "prompt": "who are you",
       "provider": "Ollama",
       "model": "hermes3:8b",
       "status": "success",
       "tool_used": null,
-      "timestamp": "2026-08-27T16:35:49.871589+00:00",
-      "duration_ms": 36701.75259999996
+      "timestamp": "2026-08-27T17:02:52.808705+00:00",
+      "duration_ms": 17147.18620000076
+    },
+    {
+      "task_id": "task_45103c",
+      "prompt": "who are you",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-27T17:05:17.428098+00:00",
+      "duration_ms": 21675.35730000054
+    }
+  ],
+  "what time is it": [
+    {
+      "task_id": "task_e9b286",
+      "prompt": "what time is it",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-27T17:03:16.262328+00:00",
+      "duration_ms": 23388.873400000193
+    },
+    {
+      "task_id": "task_73d60a",
+      "prompt": "what time is it",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-27T17:05:42.390970+00:00",
+      "duration_ms": 24941.784500000722
+    }
+  ],
+  "search how to use git": [
+    {
+      "task_id": "task_73afca",
+      "prompt": "search how to use Git",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-27T17:09:52.181646+00:00",
+      "duration_ms": 104721.68239999973
+    },
+    {
+      "task_id": "task_a5edb9",
+      "prompt": "search how to use Git",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-27T17:52:27.082839+00:00",
+      "duration_ms": 139758.1453999992
+    }
+  ],
+  "would you mind opening youtube": [
+    {
+      "task_id": "task_49d5d6",
+      "prompt": "would you mind opening youtube",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-27T17:10:39.010251+00:00",
+      "duration_ms": 46697.732099999484
+    },
+    {
+      "task_id": "task_205de5",
+      "prompt": "would you mind opening youtube",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-27T17:53:06.361237+00:00",
+      "duration_ms": 28819.337099999757
+    }
+  ],
+  "what can you do?": [
+    {
+      "task_id": "task_8f96aa",
+      "prompt": "what can you do?",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-27T17:12:08.442444+00:00",
+      "duration_ms": 88996.13419999968
+    },
+    {
+      "task_id": "task_1dc396",
+      "prompt": "what can you do?",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-27T17:54:19.923074+00:00",
+      "duration_ms": 50117.122599999675
+    }
+  ],
+  "hello sarthi": [
+    {
+      "task_id": "task_3794e6",
+      "prompt": "hello Sarthi",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-27T17:12:54.588174+00:00",
+      "duration_ms": 46116.42819999997
+    },
+    {
+      "task_id": "task_5b355c",
+      "prompt": "hello Sarthi",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-27T17:54:46.583163+00:00",
+      "duration_ms": 25493.145799999184
+    }
+  ],
+  "tell me about yourself": [
+    {
+      "task_id": "task_2ef019",
+      "prompt": "tell me about yourself",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-27T17:15:07.956880+00:00",
+      "duration_ms": 75286.9170999993
+    },
+    {
+      "task_id": "task_335d03",
+      "prompt": "tell me about yourself",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-27T17:55:56.219783+00:00",
+      "duration_ms": 43039.91450000103
+    }
+  ],
+  "what applications can you open?": [
+    {
+      "task_id": "task_c190d5",
+      "prompt": "what applications can you open?",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-27T17:16:12.800579+00:00",
+      "duration_ms": 64821.503699999994
+    }
+  ],
+  "asdfghjkl": [
+    {
+      "task_id": "task_09155f",
+      "prompt": "asdfghjkl",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-27T17:17:15.521666+00:00",
+      "duration_ms": 62694.859899999756
+    }
+  ],
+  "do something": [
+    {
+      "task_id": "task_80fe8f",
+      "prompt": "do something",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-27T17:18:24.674664+00:00",
+      "duration_ms": 69129.61290000021
     }
   ]
 }

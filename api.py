@@ -12,6 +12,7 @@ ARCHITECTURE:
 
 import os
 import sys
+from datetime import datetime
 
 # Under pythonw (start.bat's windowless background mode) there is no
 # console: sys.stdout/sys.stderr are None, which would crash uvicorn's
@@ -30,7 +31,14 @@ from pydantic import BaseModel
 
 from brain.engine import BrainEngine
 from brain.intent import Intent
-from brain.modes import CONVERSATION_MODE, detect_mode_command, get_mode, set_mode
+from brain.modes import (
+    CONVERSATION_MODE,
+    detect_mode_command,
+    get_mode,
+    get_test_mode,
+    set_mode,
+    set_test_mode,
+)
 from events import get_bus
 from hermes.routes import router as hermes_router
 from knowledge.manager import get_manager
@@ -566,6 +574,367 @@ def event_history():
         }
         for e in bus.history[-20:]
     ]
+
+
+def _save_metrics_chart(metrics: list[dict], summary: dict, path: Path) -> None:
+    """Render a simple metrics chart (Pillow) and save as PNG.
+
+    Draws a dark-themed chart with:
+      - Bar chart for passed / failed counts
+      - Line overlays for temperature (°C) and GPU utilisation (%)
+    """
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+    except ImportError:
+        return  # Pillow not installed — skip silently
+
+    W, H = 900, 360
+    PAD_LEFT, PAD_RIGHT, PAD_TOP, PAD_BOTTOM = 70, 70, 50, 50
+    BG = (14, 14, 14)
+    GRID = (40, 40, 40)
+    TEXT = (187, 201, 206)
+    CYAN = (0, 217, 255)
+    RED = (255, 107, 107)
+    ORANGE = (255, 183, 125)
+
+    img = Image.new("RGB", (W, H), BG)
+    draw = ImageDraw.Draw(img)
+
+    try:
+        font = ImageFont.truetype("consola.ttf", 11)
+        font_sm = ImageFont.truetype("consola.ttf", 9)
+        font_lg = ImageFont.truetype("consola.ttf", 13)
+    except OSError:
+        font = ImageFont.load_default()
+        font_sm = font
+        font_lg = font
+
+    plot_x = PAD_LEFT
+    plot_y = PAD_TOP
+    plot_w = W - PAD_LEFT - PAD_RIGHT
+    plot_h = H - PAD_TOP - PAD_BOTTOM
+
+    # Title
+    draw.text((W // 2, 16), "SYSTEM METRICS DURING TEST", fill=CYAN, font=font_lg, anchor="mt")
+
+    # Grid lines
+    for i in range(5):
+        y = plot_y + int(plot_h * i / 4)
+        draw.line([(plot_x, y), (plot_x + plot_w, y)], fill=GRID, width=1)
+
+    n = len(metrics)
+    if n < 2:
+        img.save(str(path))
+        return
+
+    x_step = plot_w / (n - 1)
+    dense = n > 15  # adaptive layout for many data points
+    dot_r = 2 if dense else 3
+
+    # ── Bars: passed / failed (start + end only when dense) ──
+    bar_w = max(3, int(min(x_step * 0.35, 12)))
+    max_count = max(summary.get("total", 1), 1)
+    bar_indices = [0, n - 1] if dense else range(n)
+    for i in bar_indices:
+        cx = plot_x + int(i * x_step)
+        bar_h = int((summary.get("passed", 0) / max_count) * plot_h * 0.6)
+        if bar_h > 0:
+            draw.rectangle(
+                [cx - bar_w, plot_y + plot_h - bar_h, cx, plot_y + plot_h],
+                fill=(0, 217, 255, 60), outline=CYAN,
+            )
+        bar_h_f = int((summary.get("failed", 0) / max_count) * plot_h * 0.6)
+        if bar_h_f > 0:
+            draw.rectangle(
+                [cx, plot_y + plot_h - bar_h_f, cx + bar_w, plot_y + plot_h],
+                fill=(255, 107, 107, 60), outline=RED,
+            )
+
+    # ── Line: temperature ──
+    temps = [m.get("temperature") for m in metrics]
+    valid_temps = [t for t in temps if t is not None]
+    if valid_temps:
+        max_temp = max(valid_temps) * 1.15 or 100
+        points = []
+        for i, t in enumerate(temps):
+            if t is None:
+                continue
+            x = plot_x + int(i * x_step)
+            y = plot_y + plot_h - int((t / max_temp) * plot_h)
+            points.append((x, y))
+        if len(points) > 1:
+            draw.line(points, fill=ORANGE, width=2)
+        for x, y in points:
+            draw.ellipse([x - dot_r, y - dot_r, x + dot_r, y + dot_r], fill=ORANGE)
+        draw.text((W - PAD_RIGHT + 8, plot_y), f"{max_temp:.0f}°C", fill=ORANGE, font=font_sm)
+        draw.text((W - PAD_RIGHT + 8, plot_y + plot_h - 10), "0°C", fill=ORANGE, font=font_sm)
+
+    # ── Line: GPU % ──
+    gpus = [m.get("gpu_percent", 0) for m in metrics]
+    points_gpu = []
+    for i, g in enumerate(gpus):
+        x = plot_x + int(i * x_step)
+        y = plot_y + plot_h - int((g / 100) * plot_h)
+        points_gpu.append((x, y))
+    if len(points_gpu) > 1:
+        draw.line(points_gpu, fill=CYAN, width=2)
+    for x, y in points_gpu:
+        draw.ellipse([x - dot_r, y - dot_r, x + dot_r, y + dot_r], fill=CYAN)
+
+    # ── Line: CPU % ──
+    cpus = [m.get("cpu_percent", 0) for m in metrics]
+    points_cpu = []
+    for i, c in enumerate(cpus):
+        x = plot_x + int(i * x_step)
+        y = plot_y + plot_h - int((c / 100) * plot_h)
+        points_cpu.append((x, y))
+    if len(points_cpu) > 1:
+        draw.line(points_cpu, fill=(174, 236, 255), width=1)
+    for x, y in points_cpu:
+        draw.ellipse([x - 1, y - 1, x + 1, y + 1], fill=(174, 236, 255))
+
+    # ── X-axis labels (skip when dense to avoid overlap) ──
+    label_step = max(1, n // 10) if dense else 1
+    for i, m in enumerate(metrics):
+        is_endpoint = m["index"] == 0 or m["index"] == summary.get("total", 0)
+        if not is_endpoint and (i % label_step != 0):
+            continue
+        x = plot_x + int(i * x_step)
+        label = "Start" if m["index"] == 0 else (
+            "End" if m["index"] == summary.get("total", 0) else f"#{m['index']}")
+        draw.text((x, plot_y + plot_h + 8), label, fill=TEXT, font=font_sm, anchor="mt")
+
+    # ── Left Y-axis labels ──
+    for i in range(5):
+        y = plot_y + plot_h - int(plot_h * i / 4)
+        val = int(max_count * i / 4)
+        draw.text((plot_x - 8, y), str(val), fill=TEXT, font=font_sm, anchor="rm")
+
+    # ── Right Y-axis: GPU/CPU % ──
+    for i in range(5):
+        y = plot_y + plot_h - int(plot_h * i / 4)
+        val = int(100 * i / 4)
+        draw.text((plot_x + plot_w + 8, y), f"{val}%", fill=CYAN, font=font_sm, anchor="lm")
+
+    # ── Legend ──
+    legend_y = H - 14
+    legend_items = [
+        (CYAN, "■ PASSED"),
+        (RED, "■ FAILED"),
+        (ORANGE, "● TEMP"),
+        (CYAN, "● GPU"),
+        ((174, 236, 255), "● CPU"),
+    ]
+    lx = W // 2 - 160
+    for color, label in legend_items:
+        draw.text((lx, legend_y), label, fill=color, font=font_sm)
+        lx += 80
+
+    img.save(str(path))
+
+
+def _csv(val) -> str:
+    """Escape a value for inclusion in a CSV cell."""
+    s = str(val if val is not None else "")
+    if "," in s or '"' in s or "\n" in s:
+        return '"' + s.replace('"', '""') + '"'
+    return s
+
+
+# Retention: delete run files older than this many days.  Set to 0 to keep forever.
+RESULTS_RETENTION_DAYS = 30
+
+
+def _cleanup_old_results(results_dir: Path) -> int:
+    """Delete run_*.json and run_*.csv older than RESULTS_RETENTION_DAYS.
+
+    Returns the number of files deleted.
+    """
+    if RESULTS_RETENTION_DAYS <= 0 or not results_dir.is_dir():
+        return 0
+
+    cutoff = datetime.now().timestamp() - (RESULTS_RETENTION_DAYS * 86400)
+    deleted = 0
+    for f in results_dir.iterdir():
+        if f.suffix in (".json", ".csv") and f.stem.startswith("run_"):
+            if f.stat().st_mtime < cutoff:
+                f.unlink()
+                deleted += 1
+    return deleted
+
+
+@app.get("/test/prompts")
+def get_test_prompts():
+    """Load the list of test prompts from test_prompts.json."""
+    import json
+    from pathlib import Path
+
+    path = Path(__file__).parent / "test_prompts.json"
+    if not path.exists():
+        return {"success": True, "prompts": []}
+    try:
+        prompts = json.loads(path.read_text(encoding="utf-8"))
+        return {"success": True, "prompts": prompts}
+    except (json.JSONDecodeError, OSError) as exc:
+        return {"success": False, "error": str(exc), "prompts": []}
+
+
+@app.post("/test/run")
+def run_test_prompts():
+    """Run every prompt in test_prompts.json through the brain engine.
+
+    Returns the actual response text and whether the expected substring
+    (if any) was found in the response.
+    """
+    import json
+    import time
+    from pathlib import Path
+
+    path = Path(__file__).parent / "test_prompts.json"
+    if not path.exists():
+        return {"success": False, "error": "test_prompts.json not found"}
+
+    try:
+        prompts = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        return {"success": False, "error": str(exc)}
+
+    if not prompts:
+        return {"success": True, "results": [], "summary": {"total": 0, "passed": 0, "failed": 0}}
+
+    def _sample_metrics() -> dict:
+        """Snapshot of temperature, GPU utilisation, and CPU utilisation."""
+        from reading import read_cpu, read_cpu_temperature, read_gpu
+
+        cpu = read_cpu()
+        temp = read_cpu_temperature()
+        gpu = read_gpu()
+        return {
+            "cpu_percent": cpu.get("percent", 0),
+            "temperature": temp.get("current") if temp else None,
+            "gpu_percent": gpu.get("utilization_percent", 0) if gpu else 0,
+        }
+
+    # Capture baseline system metrics before the run
+    metrics_timeline: list[dict] = []
+    metrics_timeline.append({"index": 0, **_sample_metrics()})
+
+    # Enable test mode so skills report what would happen without side-effects
+    was_test = get_test_mode()
+    set_test_mode(True)
+    try:
+        results = []
+        for idx, entry in enumerate(prompts):
+            prompt_text = entry.get("prompt", "")
+            expected = entry.get("expected", "")
+            start = time.time()
+            try:
+                response = engine.process(prompt_text)
+                elapsed_ms = round((time.time() - start) * 1000)
+                api = response.to_api_dict()
+                actual = api.get("text", "") or ""
+                if expected:
+                    passed = expected.lower() in actual.lower()
+                else:
+                    passed = response.success
+                results.append({
+                    "prompt": prompt_text,
+                    "expected": expected,
+                    "actual": actual,
+                    "success": response.success,
+                    "passed": passed,
+                    "action": api.get("action", ""),
+                    "target": api.get("target", ""),
+                    "elapsed_ms": elapsed_ms,
+                })
+            except Exception as exc:
+                elapsed_ms = round((time.time() - start) * 1000)
+                results.append({
+                    "prompt": prompt_text,
+                    "expected": expected,
+                    "actual": str(exc),
+                    "success": False,
+                    "passed": False,
+                    "action": "",
+                    "target": "",
+                    "elapsed_ms": elapsed_ms,
+                })
+            # Sample system metrics after every prompt for a smooth graph
+            metrics_timeline.append({"index": idx + 1, **_sample_metrics()})
+    finally:
+        set_test_mode(was_test)
+
+    # Final sample after test mode is restored
+    metrics_timeline.append({"index": len(prompts), **_sample_metrics()})
+
+    passed = sum(1 for r in results if r["passed"])
+    summary = {
+        "total": len(results),
+        "passed": passed,
+        "failed": len(results) - passed,
+    }
+
+    # Auto-save results to results/ directory (JSON + CSV)
+    results_dir = Path(__file__).parent / "results"
+    results_dir.mkdir(exist_ok=True)
+    _cleanup_old_results(results_dir)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # JSON
+    json_path = results_dir / f"run_{ts}.json"
+    json_path.write_text(
+        json.dumps({"summary": summary, "results": results}, indent=2),
+        encoding="utf-8",
+    )
+
+    # CSV
+    csv_lines = [
+        f"Run: {ts}",
+        f"Total: {summary['total']}, Passed: {summary['passed']}, Failed: {summary['failed']}",
+        "",
+        "#,prompt,expected,actual,passed,success,action,target,elapsed_ms",
+    ]
+    for i, r in enumerate(results, 1):
+        row = [str(i), _csv(r["prompt"]), _csv(r["expected"]), _csv(r["actual"]),
+               str(r["passed"]), str(r["success"]), _csv(r["action"]),
+               _csv(r["target"]), str(r["elapsed_ms"])]
+        csv_lines.append(",".join(row))
+    csv_path = results_dir / f"run_{ts}.csv"
+    csv_path.write_text("\n".join(csv_lines), encoding="utf-8")
+
+    # PNG chart
+    png_path = results_dir / f"run_{ts}.png"
+    _save_metrics_chart(metrics_timeline, summary, png_path)
+
+    return {
+        "success": True,
+        "results": results,
+        "summary": summary,
+        "metrics": metrics_timeline,
+        "saved_to": {
+            "json": str(json_path),
+            "csv": str(csv_path),
+            "png": str(png_path),
+        },
+    }
+
+
+@app.get("/test-mode")
+def get_test_mode_status():
+    """Return the current test mode state."""
+    return {"success": True, "test_mode": get_test_mode()}
+
+
+@app.post("/test-mode")
+def toggle_test_mode(request: ModeRequest):
+    """Toggle test mode on or off.
+
+    When test mode is active, skills report what *would* happen without
+    performing real side-effects (opening browsers, launching apps).
+    """
+    enabled = request.mode.lower() in ("on", "true", "1", "enable", "yes")
+    new_state = set_test_mode(enabled)
+    return {"success": True, "test_mode": new_state}
 
 
 if __name__ == "__main__":

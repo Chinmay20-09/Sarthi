@@ -1,0 +1,242 @@
+[
+  {
+    "prompt": "open chrome",
+    "expected": ""
+  },
+  {
+    "prompt": "open vscode",
+    "expected": ""
+  },
+  {
+    "prompt": "open calculator",
+    "expected": ""
+  },
+  {
+    "prompt": "open spotify",
+    "expected": ""
+  },
+  {
+    "prompt": "open github",
+    "expected": ""
+  },
+  {
+    "prompt": "open youtube",
+    "expected": ""
+  },
+  {
+    "prompt": "open brave",
+    "expected": ""
+  },
+  {
+    "prompt": "close chrome",
+    "expected": ""
+  },
+  {
+    "prompt": "close spotify",
+    "expected": ""
+  },
+  {
+    "prompt": "close vscode",
+    "expected": ""
+  },
+  {
+    "prompt": "close calculator",
+    "expected": ""
+  },
+  {
+    "prompt": "search artificial intelligence",
+    "expected": ""
+  },
+  {
+    "prompt": "search for Sarthi AI",
+    "expected": ""
+  },
+  {
+    "prompt": "search latest Python news",
+    "expected": ""
+  },
+  {
+    "prompt": "search how to use Git",
+    "expected": ""
+  },
+  {
+    "prompt": "play lo-fi music",
+    "expected": ""
+  },
+  {
+    "prompt": "play relaxing music",
+    "expected": ""
+  },
+  {
+    "prompt": "play Python tutorial",
+    "expected": ""
+  },
+  {
+    "prompt": "play AI news",
+    "expected": ""
+  },
+  {
+    "prompt": "please open chrome",
+    "expected": ""
+  },
+  {
+    "prompt": "could you open spotify",
+    "expected": ""
+  },
+  {
+    "prompt": "can you please open github",
+    "expected": ""
+  },
+  {
+    "prompt": "would you mind opening youtube",
+    "expected": ""
+  },
+  {
+    "prompt": "please search for artificial intelligence",
+    "expected": ""
+  },
+  {
+    "prompt": "could you play some relaxing music",
+    "expected": ""
+  },
+  {
+    "prompt": "hey Sarthi, open Chrome",
+    "expected": ""
+  },
+  {
+    "prompt": "Sarthi, can you please open YouTube for me",
+    "expected": ""
+  },
+  {
+    "prompt": "I want you to open Spotify",
+    "expected": ""
+  },
+  {
+    "prompt": "I'd like to search for AI agents",
+    "expected": ""
+  },
+  {
+    "prompt": "I need to find information about FastAPI",
+    "expected": ""
+  },
+  {
+    "prompt": "Can you start YouTube for me?",
+    "expected": ""
+  },
+  {
+    "prompt": "open git hub",
+    "expected": ""
+  },
+  {
+    "prompt": "open spotfy",
+    "expected": ""
+  },
+  {
+    "prompt": "open you tube",
+    "expected": ""
+  },
+  {
+    "prompt": "open githb",
+    "expected": ""
+  },
+  {
+    "prompt": "open youtub",
+    "expected": ""
+  },
+  {
+    "prompt": "open visual studio code",
+    "expected": ""
+  },
+  {
+    "prompt": "open vs code",
+    "expected": ""
+  },
+  {
+    "prompt": "open YouTube and play lo-fi music",
+    "expected": ""
+  },
+  {
+    "prompt": "open Chrome and search for Sarthi AI",
+    "expected": ""
+  },
+  {
+    "prompt": "open Spotify and play Arijit Singh",
+    "expected": ""
+  },
+  {
+    "prompt": "open GitHub and search for Sarthi",
+    "expected": ""
+  },
+  {
+    "prompt": "what can you do?",
+    "expected": ""
+  },
+  {
+    "prompt": "hello Sarthi",
+    "expected": ""
+  },
+  {
+    "prompt": "how are you?",
+    "expected": ""
+  },
+  {
+    "prompt": "tell me about yourself",
+    "expected": ""
+  },
+  {
+    "prompt": "what applications can you open?",
+    "expected": ""
+  },
+  {
+    "prompt": "can you open something for me?",
+    "expected": ""
+  },
+  {
+    "prompt": "open it",
+    "expected": ""
+  },
+  {
+    "prompt": "play something",
+    "expected": ""
+  },
+  {
+    "prompt": "search something",
+    "expected": ""
+  },
+  {
+    "prompt": "asdfghjkl",
+    "expected": ""
+  },
+  {
+    "prompt": "open",
+    "expected": ""
+  },
+  {
+    "prompt": "search",
+    "expected": ""
+  },
+  {
+    "prompt": "play",
+    "expected": ""
+  },
+  {
+    "prompt": "close",
+    "expected": ""
+  },
+  {
+    "prompt": "open xyzabc123",
+    "expected": ""
+  },
+  {
+    "prompt": "do something",
+    "expected": ""
+  },
+  {
+    "prompt": "please please please open chrome",
+    "expected": ""
+  },
+  {
+    "prompt": "can you maybe possibly please open chrome for me",
+    "expected": ""
+  }
+]

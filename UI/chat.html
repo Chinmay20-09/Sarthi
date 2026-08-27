@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
@@ -185,6 +186,11 @@
                 </button>
             </div>
             <div class="flex items-center gap-4 text-on-surface-variant">
+                <button id="run-tests"
+                    class="w-10 h-10 rounded-full border border-transparent flex items-center justify-center hover:bg-primary/10 hover:text-primary transition-colors"
+                    title="Run test prompts">
+                    <span class="material-symbols-outlined">play_arrow</span>
+                </button>
                 <button id="reset-chat"
                     class="w-10 h-10 rounded-full border border-transparent flex items-center justify-center hover:bg-error/10 hover:text-error transition-colors"
                     title="Reset chat">
@@ -887,6 +893,7 @@
         // ---------------------------------------------------------------------
         let pendingQueue = [];
         let queueIndex = 0;
+        let testMetricsChart = null;  // Chart.js instance for PNG export
 
         async function apiCategorize(name, status) {
             const response = await fetch(SarthiAPI + "/applications/categorize", {
@@ -1784,6 +1791,351 @@
             }
         }
 
+        // ---------------------------------------------------------------------
+        // Test runner — run prompts from test_prompts.json
+        // ---------------------------------------------------------------------
+        async function runTestPrompts() {
+            document.getElementById("chat-empty")?.remove();
+            const scroll = document.getElementById("chat-scroll");
+
+            // Show a loading card
+            const loadingCard = el("div", "glass-card rounded-xl p-5 w-full border border-primary/20 max-w-2xl mx-auto");
+            loadingCard.id = "test-runner-card";
+            loadingCard.innerHTML =
+                '<div class="flex items-center gap-3">' +
+                '  <span class="material-symbols-outlined text-primary animate-spin">hourglass_top</span>' +
+                '  <span class="text-on-surface font-body-lg">Running test prompts…</span>' +
+                '</div>';
+            scroll.appendChild(loadingCard);
+            scrollToBottom();
+
+            try {
+                const response = await fetch(SarthiAPI + "/test/run", { method: "POST" });
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                const data = await response.json();
+
+                loadingCard.remove();
+
+                if (!data.success) {
+                    addAssistantMessage({
+                        text: "Test runner error: " + (data.error || "unknown"),
+                        action: "", target: "", success: false,
+                    });
+                    return;
+                }
+
+                renderTestResults(data.results, data.summary, data.metrics);
+                exportResultsCSV(data.results, data.summary);
+            } catch (err) {
+                loadingCard.remove();
+                addAssistantMessage({
+                    text: "Could not reach the test runner — is the server running?",
+                    action: "", target: "", success: false,
+                });
+            }
+        }
+
+        // ---------------------------------------------------------------------
+        // Test results export helpers
+        // ---------------------------------------------------------------------
+        function downloadFile(filename, content, mime) {
+            const blob = new Blob([content], { type: mime });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function exportResultsJSON(results, summary) {
+            const data = { summary, results };
+            const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+            downloadFile("test-results-" + ts + ".json", JSON.stringify(data, null, 2), "application/json");
+        }
+
+        function exportResultsPNG() {
+            if (!testMetricsChart) return;
+            const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+            // Render at 2x for crisp export
+            const base64 = testMetricsChart.toBase64Image("image/png", 1);
+            downloadFile("test-metrics-" + ts + ".png", base64.split(",")[1], "image/png");
+        }
+
+        function exportResultsCSV(results, summary) {
+            const header = ["#", "prompt", "expected", "actual", "passed", "success", "action", "target", "elapsed_ms"];
+            const rows = results.map((r, i) => [
+                i + 1,
+                csvEscape(r.prompt),
+                csvEscape(r.expected),
+                csvEscape(r.actual),
+                r.passed,
+                r.success,
+                csvEscape(r.action),
+                csvEscape(r.target),
+                r.elapsed_ms,
+            ]);
+            const total = summary.total;
+            const passed = summary.passed;
+            const failed = summary.failed;
+            const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+            const lines = [
+                "Test Run: " + ts,
+                "Total: " + total + ", Passed: " + passed + ", Failed: " + failed,
+                "",
+                header.join(","),
+                ...rows.map((r) => r.join(",")),
+            ];
+            downloadFile("test-results-" + ts + ".csv", lines.join("\n"), "text/csv");
+        }
+
+        function csvEscape(val) {
+            const s = String(val == null ? "" : val);
+            if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+                return '"' + s.replace(/"/g, '""') + '"';
+            }
+            return s;
+        }
+
+        function renderTestResults(results, summary, metrics) {
+            const scroll = document.getElementById("chat-scroll");
+            const wrap = el("div", "flex flex-col gap-4 max-w-3xl mx-auto w-full");
+
+            // Summary header
+            const header = el("div", "glass-card rounded-xl p-5 w-full border border-primary/20");
+            const allPassed = summary.failed === 0;
+            const badgeColor = allPassed ? "bg-primary-container/10 text-primary-container border-primary-container/30" : "bg-error/10 text-error border-error/30";
+            header.innerHTML =
+                '<div class="flex items-center gap-3 mb-3 border-b border-white/10 pb-3">' +
+                '  <span class="material-symbols-outlined text-primary-container">science</span>' +
+                '  <span class="font-label-caps text-label-caps text-on-surface">TEST RESULTS</span>' +
+                '  <div class="ml-auto flex items-center gap-2">' +
+                '    <button data-export="json" class="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-on-surface-variant text-[10px] font-data-mono hover:bg-white/10 hover:text-primary transition-all" title="Export as JSON">' +
+                '      <span class="material-symbols-outlined text-[12px]">download</span>JSON' +
+                '    </button>' +
+                '    <button data-export="csv" class="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-on-surface-variant text-[10px] font-data-mono hover:bg-white/10 hover:text-primary transition-all" title="Export as CSV">' +
+                '      <span class="material-symbols-outlined text-[12px]">download</span>CSV' +
+                '    </button>' +
+                '    <button data-export="png" class="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-on-surface-variant text-[10px] font-data-mono hover:bg-white/10 hover:text-primary transition-all" title="Export graph as PNG">' +
+                '      <span class="material-symbols-outlined text-[12px]">download</span>PNG' +
+                '    </button>' +
+                '    <span class="px-2 py-0.5 rounded-full text-[10px] font-data-mono border ' + badgeColor + '">' +
+                (allPassed ? "ALL PASSED" : summary.failed + " FAILED") + '</span>' +
+                '  </div>' +
+                '</div>' +
+                '<div class="flex gap-6">' +
+                '  <div class="text-center"><span class="text-on-surface-variant text-[10px] font-label-caps block mb-1">TOTAL</span><p class="text-xl font-bold text-primary">' + summary.total + '</p></div>' +
+                '  <div class="text-center"><span class="text-on-surface-variant text-[10px] font-label-caps block mb-1">PASSED</span><p class="text-xl font-bold text-primary-container">' + summary.passed + '</p></div>' +
+                '  <div class="text-center"><span class="text-on-surface-variant text-[10px] font-label-caps block mb-1">FAILED</span><p class="text-xl font-bold text-error">' + summary.failed + '</p></div>' +
+                '</div>';
+
+            // Wire export buttons
+            header.querySelector('[data-export="json"]').addEventListener("click", () => exportResultsJSON(results, summary));
+            header.querySelector('[data-export="csv"]').addEventListener("click", () => exportResultsCSV(results, summary));
+            header.querySelector('[data-export="png"]').addEventListener("click", () => exportResultsPNG());
+
+            wrap.appendChild(header);
+
+            // Individual results
+            results.forEach((r, i) => {
+                const passed = r.passed;
+                const borderColor = passed ? "border-primary/20" : "border-error/30";
+                const icon = passed ? "check_circle" : "cancel";
+                const iconColor = passed ? "text-primary-container" : "text-error";
+
+                const card = el("div", "glass-card rounded-xl p-4 w-full border " + borderColor);
+                card.innerHTML =
+                    '<div class="flex items-center justify-between mb-2">' +
+                    '  <div class="flex items-center gap-2">' +
+                    '    <span class="material-symbols-outlined text-sm ' + iconColor + '">' + icon + '</span>' +
+                    '    <span class="font-data-mono text-data-mono text-on-surface-variant text-[10px]">#' + (i + 1) + '</span>' +
+                    '    <span class="text-on-surface font-body-sm font-medium">' + esc(r.prompt) + '</span>' +
+                    '  </div>' +
+                    '  <span class="font-data-mono text-data-mono text-on-surface-variant text-[10px]">' + r.elapsed_ms + 'ms</span>' +
+                    '</div>' +
+                    (r.action ? '<div class="flex gap-4 mb-2">' +
+                    '  <span class="text-[10px] text-on-surface-variant">ACTION: <span class="text-primary">' + esc(r.action) + '</span></span>' +
+                    (r.target ? '  <span class="text-[10px] text-on-surface-variant">TARGET: <span class="text-primary">' + esc(r.target) + '</span></span>' : '') +
+                    '</div>' : '') +
+                    (r.expected ? '<div class="text-[10px] text-on-surface-variant mb-1">EXPECTED: <span class="text-tertiary">' + esc(r.expected) + '</span></div>' : '') +
+                    '<div class="text-xs text-on-surface-variant bg-surface-container/50 rounded-lg px-3 py-2 mt-1 max-h-24 overflow-y-auto">' +
+                    esc(r.actual || "(no response)") +
+                    '</div>';
+                wrap.appendChild(card);
+            });
+
+            scroll.appendChild(wrap);
+            scrollToBottom();
+
+            // Append the metrics graph after the results table
+            renderTestGraph(summary, metrics);
+        }
+
+        // ---------------------------------------------------------------------
+        // Test results graph — Chart.js multi-axis chart showing total
+        // (pass/fail bars), temperature (line), and GPU utilisation (line)
+        // sampled during the test run.
+        // ---------------------------------------------------------------------
+        function renderTestGraph(summary, metrics) {
+            if (!metrics || metrics.length < 2) return; // need at least start + end
+
+            const scroll = document.getElementById("chat-scroll");
+            const wrap = el("div", "flex flex-col gap-4 max-w-3xl mx-auto w-full");
+
+            const card = el("div", "glass-card rounded-xl p-5 w-full border border-primary/20");
+            card.innerHTML =
+                '<div class="flex items-center gap-3 mb-4 border-b border-white/10 pb-3">' +
+                '  <span class="material-symbols-outlined text-primary-container">monitoring</span>' +
+                '  <span class="font-label-caps text-label-caps text-on-surface">SYSTEM METRICS DURING TEST</span>' +
+                '</div>' +
+                '<div class="relative" style="height:260px">' +
+                '  <canvas id="test-metrics-chart"></canvas>' +
+                '</div>' +
+                '<div class="flex gap-6 mt-3 justify-center">' +
+                '  <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-primary-container"></span><span class="text-[10px] text-on-surface-variant font-data-mono">PASSED</span></div>' +
+                '  <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-error"></span><span class="text-[10px] text-on-surface-variant font-data-mono">FAILED</span></div>' +
+                '  <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-tertiary"></span><span class="text-[10px] text-on-surface-variant font-data-mono">TEMP °C</span></div>' +
+                '  <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-primary"></span><span class="text-[10px] text-on-surface-variant font-data-mono">GPU %</span></div>' +
+                '</div>';
+            wrap.appendChild(card);
+            scroll.appendChild(wrap);
+            scrollToBottom();
+
+            // Build chart data
+            const labels = metrics.map((m) => m.index === 0 ? "Start" : m.index === summary.total ? "End" : "#" + m.index);
+            const tempData = metrics.map((m) => m.temperature);
+            const gpuData = metrics.map((m) => m.gpu_percent);
+            const cpuData = metrics.map((m) => m.cpu_percent);
+
+            // Create a thin bar for passed / failed stacked on the left axis
+            const passedPct = summary.total ? (summary.passed / summary.total) * 100 : 0;
+            const failedPct = summary.total ? (summary.failed / summary.total) * 100 : 0;
+
+            const canvas = card.querySelector("#test-metrics-chart");
+            const ctx = canvas.getContext("2d");
+
+            testMetricsChart = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: "Passed",
+                            data: metrics.map(() => summary.passed),
+                            backgroundColor: "rgba(0, 217, 255, 0.25)",
+                            borderColor: "rgba(0, 217, 255, 0.8)",
+                            borderWidth: 1,
+                            yAxisID: "y",
+                            order: 2,
+                        },
+                        {
+                            label: "Failed",
+                            data: metrics.map(() => summary.failed),
+                            backgroundColor: "rgba(255, 107, 107, 0.25)",
+                            borderColor: "rgba(255, 107, 107, 0.8)",
+                            borderWidth: 1,
+                            yAxisID: "y",
+                            order: 2,
+                        },
+                        {
+                            label: "Temperature (°C)",
+                            data: tempData,
+                            borderColor: "rgba(255, 183, 125, 1)",
+                            backgroundColor: "rgba(255, 183, 125, 0.15)",
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            pointBackgroundColor: "rgba(255, 183, 125, 1)",
+                            tension: 0.3,
+                            fill: true,
+                            type: "line",
+                            yAxisID: "yTemp",
+                            order: 1,
+                            spanGaps: true,
+                        },
+                        {
+                            label: "GPU %",
+                            data: gpuData,
+                            borderColor: "rgba(0, 217, 255, 1)",
+                            backgroundColor: "rgba(0, 217, 255, 0.1)",
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            pointBackgroundColor: "rgba(0, 217, 255, 1)",
+                            tension: 0.3,
+                            fill: true,
+                            type: "line",
+                            yAxisID: "yPct",
+                            order: 0,
+                            spanGaps: true,
+                        },
+                        {
+                            label: "CPU %",
+                            data: cpuData,
+                            borderColor: "rgba(174, 236, 255, 0.6)",
+                            backgroundColor: "rgba(174, 236, 255, 0.05)",
+                            borderWidth: 1.5,
+                            borderDash: [5, 3],
+                            pointRadius: 2,
+                            pointBackgroundColor: "rgba(174, 236, 255, 0.6)",
+                            tension: 0.3,
+                            fill: false,
+                            type: "line",
+                            yAxisID: "yPct",
+                            order: 1,
+                            spanGaps: true,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: "index", intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: "rgba(20,20,20,0.95)",
+                            titleColor: "#e5e2e1",
+                            bodyColor: "#bbc9ce",
+                            borderColor: "rgba(255,255,255,0.1)",
+                            borderWidth: 1,
+                            padding: 10,
+                            titleFont: { family: "JetBrains Mono", size: 11 },
+                            bodyFont: { family: "JetBrains Mono", size: 10 },
+                        },
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: "rgba(255,255,255,0.05)" },
+                            ticks: { color: "rgba(187,201,206,0.7)", font: { family: "JetBrains Mono", size: 9 } },
+                        },
+                        y: {
+                            position: "left",
+                            title: { display: true, text: "Tests", color: "rgba(187,201,206,0.6)", font: { family: "JetBrains Mono", size: 10 } },
+                            grid: { color: "rgba(255,255,255,0.04)" },
+                            ticks: { color: "rgba(187,201,206,0.7)", font: { family: "JetBrains Mono", size: 9 }, stepSize: 1 },
+                            beginAtZero: true,
+                        },
+                        yTemp: {
+                            position: "right",
+                            title: { display: true, text: "Temp °C", color: "rgba(255,183,125,0.7)", font: { family: "JetBrains Mono", size: 10 } },
+                            grid: { drawOnChartArea: false },
+                            ticks: { color: "rgba(255,183,125,0.8)", font: { family: "JetBrains Mono", size: 9 } },
+                            beginAtZero: true,
+                        },
+                        yPct: {
+                            position: "right",
+                            title: { display: true, text: "Utilisation %", color: "rgba(0,217,255,0.7)", font: { family: "JetBrains Mono", size: 10 } },
+                            grid: { drawOnChartArea: false },
+                            ticks: { color: "rgba(0,217,255,0.8)", font: { family: "JetBrains Mono", size: 9 } },
+                            min: 0,
+                            max: 100,
+                        },
+                    },
+                },
+            });
+        }
+
         function initializePage() {
             const input = document.getElementById("chat-input");
             const send = document.getElementById("chat-send");
@@ -1791,6 +2143,7 @@
             const headerMic = document.getElementById("header-mic");
             const resetBtn = document.getElementById("reset-chat");
             const modeBadge = document.getElementById("mode-badge");
+            const runTestsBtn = document.getElementById("run-tests");
 
             const fire = () => {
                 const value = input.value;
@@ -1803,6 +2156,7 @@
             headerMic.addEventListener("click", listenCommand);
             mic.addEventListener("click", listenCommand);
             resetBtn.addEventListener("click", armResetButton);
+            runTestsBtn.addEventListener("click", runTestPrompts);
             modeBadge.addEventListener("click", () => sendCommand("/exit"));
             input.addEventListener("keydown", (e) => {
                 if (e.key === "Enter") fire();

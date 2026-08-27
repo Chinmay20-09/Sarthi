@@ -40,6 +40,22 @@ EXIT_PHRASES = (
 
 _mode = DEFAULT_MODE
 
+# Test mode: when True, skills report what *would* happen without performing
+# real side-effects (opening browsers, launching apps, etc.).
+_test_mode = False
+
+
+def get_test_mode() -> bool:
+    """Whether test (dry-run) mode is active."""
+    return _test_mode
+
+
+def set_test_mode(enabled: bool) -> bool:
+    """Enable or disable test mode.  Returns the new state."""
+    global _test_mode
+    _test_mode = bool(enabled)
+    return _test_mode
+
 
 def get_mode() -> str:
     """Current chat mode: DEFAULT_MODE or CONVERSATION_MODE."""
