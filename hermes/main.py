@@ -1,10 +1,10 @@
 from .config.loader import ConfigLoader
 from .models import Task
 from .orchestrator import HermesOrchestrator
-from .providers.manager import ProviderManager
-from .sandbox import TaskSandbox
-from .providers.openrouter_provider import OpenRouterProvider
 from .providers.local_provider import LocalHermesProvider
+from .providers.manager import ProviderManager
+from .providers.openrouter_provider import OpenRouterProvider
+from .sandbox import TaskSandbox
 
 
 def main() -> None:
@@ -29,7 +29,7 @@ def main() -> None:
         test_prompt = "Reply with exactly: LOCAL_OLLAMA_PROVIDER_OK"
     else:
         # Default mode: OpenRouter primary with local fallback
-        print(f"Selected provider: openrouter")
+        print("Selected provider: openrouter")
         print("Initializing OpenRouter...")
         manager.initialize(OpenRouterProvider(config))
         print("Initializing Local Hermes as fallback...")

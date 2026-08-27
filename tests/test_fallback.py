@@ -3,7 +3,7 @@
 from hermes.config.settings import HermesConfig
 from hermes.models import Task
 from hermes.orchestrator import HermesOrchestrator
-from hermes.providers.base import ProviderResponse, AIProvider
+from hermes.providers.base import AIProvider, ProviderResponse
 from hermes.providers.manager import ProviderManager
 
 
@@ -106,7 +106,7 @@ def test_cloud_failure_local_success():
     assert response.success is True, "Should succeed via fallback"
     assert response.provider == "Ollama", f"Should use Ollama, got {response.provider}"
     assert local.last_task_received is not None, "Fallback should be called"
-    
+
     # Verify task preservation
     assert local.last_task_received.id == "test_002", "Task ID should be preserved"
     assert local.last_task_received.prompt == "test prompt", "Prompt should be preserved"
@@ -133,7 +133,9 @@ def test_both_providers_fail():
     response = orchestrator.process(task)
 
     assert response.success is False, "Should fail when both fail"
-    assert response.provider == "Ollama", f"Last attempted provider should be Ollama, got {response.provider}"
+    assert response.provider == "Ollama", (
+        f"Last attempted provider should be Ollama, got {response.provider}"
+    )
     print("✅ PASS: Both providers failed gracefully")
 
 
@@ -165,7 +167,7 @@ def test_task_preservation():
     response = orchestrator.process(original_task)
 
     assert response.success is True, "Should succeed via fallback"
-    
+
     # Verify all task fields are preserved
     received_task = local.last_task_received
     assert received_task.id == original_task.id, "ID not preserved"
@@ -181,7 +183,6 @@ def test_no_fallback_in_local_only_mode():
     config = HermesConfig(model="test-model")
     manager = ProviderManager()
 
-    cloud = MockOpenRouterProvider(config, should_fail=False)
     local = MockLocalProvider(config, should_fail=False)
 
     manager.initialize(local)  # Initialize with local only

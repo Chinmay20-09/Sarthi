@@ -17,12 +17,12 @@ from hermes.config.loader import ConfigLoader
 from hermes.conversation import DEFAULT_SESSION, get_conversation_store
 from hermes.models import Task
 from hermes.orchestrator import HermesOrchestrator
-from knowledge.memory import build_memory_prompt
 from hermes.providers.base import ProviderResponse
 from hermes.providers.local_provider import LocalHermesProvider
 from hermes.providers.manager import ProviderManager
 from hermes.providers.openrouter_provider import OpenRouterProvider
 from hermes.sandbox import TaskSandbox
+from knowledge.memory import build_memory_prompt
 
 _orchestrator: HermesOrchestrator | None = None
 _sandbox: TaskSandbox | None = None

@@ -307,9 +307,7 @@ class TestCategories:
 
     def test_categorize_moves_app(self, manager):
         """categorize_application should move an app between categories."""
-        manager.merge_scan_results(
-            [{"name": "Chrome", "path": "/usr/bin/chrome", "aliases": []}]
-        )
+        manager.merge_scan_results([{"name": "Chrome", "path": "/usr/bin/chrome", "aliases": []}])
         app = manager.categorize_application("Chrome", "favourite")
         assert app is not None
         assert app["app_status"] == "favourite"
@@ -327,16 +325,12 @@ class TestCategories:
 
     def test_categorize_invalid_status(self, manager):
         """Categorizing with an invalid status returns None."""
-        manager.merge_scan_results(
-            [{"name": "Chrome", "path": "/usr/bin/chrome", "aliases": []}]
-        )
+        manager.merge_scan_results([{"name": "Chrome", "path": "/usr/bin/chrome", "aliases": []}])
         assert manager.categorize_application("Chrome", "bogus") is None
 
     def test_merge_keeps_existing_categorization(self, manager):
         """Rescanning must not reset a user's favourite/ignored choice."""
-        manager.merge_scan_results(
-            [{"name": "Chrome", "path": "/usr/bin/chrome", "aliases": []}]
-        )
+        manager.merge_scan_results([{"name": "Chrome", "path": "/usr/bin/chrome", "aliases": []}])
         manager.categorize_application("Chrome", "ignored")
         # Rescan reports the same app again — it must stay ignored
         result = manager.merge_scan_results(
@@ -387,7 +381,9 @@ class TestFavouritesEndpoint:
             {"name": "VS Code", "category": "application", "app_status": "favourite"},
         ]
 
-        with patch("api.knowledge.get_applications_by_status", return_value=fake_favourites) as mock:
+        with patch(
+            "api.knowledge.get_applications_by_status", return_value=fake_favourites
+        ) as mock:
             response = client.get("/applications/favourites")
 
         assert response.status_code == 200

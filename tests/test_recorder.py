@@ -7,7 +7,6 @@ return synthetic audio, so the tests are fast and work without hardware.
 import wave
 
 import numpy as np
-import pytest
 
 import speech.recorder as recorder
 

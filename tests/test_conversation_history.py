@@ -6,22 +6,17 @@ current prompt, and both hermes.service.chat and POST /hermes/chat record
 each exchange.
 """
 
-import json
-
-import httpx
-import pytest
 from fastapi.testclient import TestClient
 
 from database.manager import DatabaseManager
 from hermes.config.settings import HermesConfig
-from hermes.conversation import ConversationStore, DEFAULT_SESSION, get_conversation_store
+from hermes.conversation import DEFAULT_SESSION, ConversationStore, get_conversation_store
 from hermes.models import Task
 from hermes.orchestrator import HermesOrchestrator
 from hermes.providers.base import AIProvider, ProviderResponse
 from hermes.providers.local_provider import LocalHermesProvider
 from hermes.providers.manager import ProviderManager
 from hermes.tool_registry import ToolRegistry
-
 
 # ----------------------------------------------------------------------
 # ConversationStore
@@ -104,9 +99,7 @@ def test_store_persists_turns_across_instances(tmp_path):
 
 def test_store_persistent_cap_trims_oldest(tmp_path):
     """The per-session cap applies to persisted turns too."""
-    store = ConversationStore(
-        db=DatabaseManager(tmp_path / "conversations.db"), max_messages=4
-    )
+    store = ConversationStore(db=DatabaseManager(tmp_path / "conversations.db"), max_messages=4)
     for i in range(6):
         store.add_turn("sess_c", "user", f"msg {i}")
 
@@ -154,9 +147,12 @@ def test_get_conversation_store_singleton_is_persistent(monkeypatch, tmp_path):
     assert store._db is db
     # And it actually writes through to the db.
     store.add_turn("sess_s", "user", "persisted?")
-    assert DatabaseManager(tmp_path / "conversations.db").fetch_one(
-        "SELECT content FROM conversation_messages WHERE session_id = ?", ("sess_s",)
-    )["content"] == "persisted?"
+    assert (
+        DatabaseManager(tmp_path / "conversations.db").fetch_one(
+            "SELECT content FROM conversation_messages WHERE session_id = ?", ("sess_s",)
+        )["content"]
+        == "persisted?"
+    )
 
 
 # ----------------------------------------------------------------------
@@ -172,7 +168,14 @@ def test_local_provider_injects_history_between_system_and_prompt(monkeypatch):
 
     def fake_post(url, **kwargs):
         captured["json"] = kwargs["json"]
-        return type("R", (), {"raise_for_status": lambda self: None, "json": lambda self: {"message": {"content": "ok"}}})()
+        return type(
+            "R",
+            (),
+            {
+                "raise_for_status": lambda self: None,
+                "json": lambda self: {"message": {"content": "ok"}},
+            },
+        )()
 
     monkeypatch.setattr(provider._client, "post", fake_post)
 
@@ -204,7 +207,14 @@ def test_local_provider_skips_malformed_history_turns(monkeypatch):
 
     def fake_post(url, **kwargs):
         captured["json"] = kwargs["json"]
-        return type("R", (), {"raise_for_status": lambda self: None, "json": lambda self: {"message": {"content": "ok"}}})()
+        return type(
+            "R",
+            (),
+            {
+                "raise_for_status": lambda self: None,
+                "json": lambda self: {"message": {"content": "ok"}},
+            },
+        )()
 
     monkeypatch.setattr(provider._client, "post", fake_post)
 
@@ -301,15 +311,17 @@ def test_hermes_chat_echoes_and_uses_session_id():
     from unittest.mock import MagicMock, patch
 
     from api import app
-    from hermes.providers.base import ProviderResponse as PR
+    from hermes.providers.base import ProviderResponse
 
     client = TestClient(app)
     store = ConversationStore()
-    mock_response = PR(success=True, provider="Fake", model="m", text="Hello!")
+    mock_response = ProviderResponse(success=True, provider="Fake", model="m", text="Hello!")
 
-    with patch("hermes.routes._orchestrator", None), \
-         patch("hermes.routes._get_orchestrator") as mock_get, \
-         patch("hermes.routes.get_conversation_store", return_value=store):
+    with (
+        patch("hermes.routes._orchestrator", None),
+        patch("hermes.routes._get_orchestrator") as mock_get,
+        patch("hermes.routes.get_conversation_store", return_value=store),
+    ):
         mock_orch = MagicMock()
         mock_orch.process.return_value = mock_response
         mock_get.return_value = mock_orch
@@ -333,15 +345,17 @@ def test_hermes_chat_default_session_when_omitted():
     from unittest.mock import MagicMock, patch
 
     from api import app
-    from hermes.providers.base import ProviderResponse as PR
+    from hermes.providers.base import ProviderResponse
 
     client = TestClient(app)
     store = ConversationStore()
-    mock_response = PR(success=True, provider="Fake", model="m", text="Hello!")
+    mock_response = ProviderResponse(success=True, provider="Fake", model="m", text="Hello!")
 
-    with patch("hermes.routes._orchestrator", None), \
-         patch("hermes.routes._get_orchestrator") as mock_get, \
-         patch("hermes.routes.get_conversation_store", return_value=store):
+    with (
+        patch("hermes.routes._orchestrator", None),
+        patch("hermes.routes._get_orchestrator") as mock_get,
+        patch("hermes.routes.get_conversation_store", return_value=store),
+    ):
         mock_orch = MagicMock()
         mock_orch.process.return_value = mock_response
         mock_get.return_value = mock_orch
@@ -366,7 +380,9 @@ def test_tool_planner_preserves_history_in_decision_task():
     def fake_generate(task):
         captured["history"] = task.history
         return ProviderResponse(
-            success=True, provider="Fake", model="m",
+            success=True,
+            provider="Fake",
+            model="m",
             text='{"tool_call": {"tool": "x", "arguments": {}}}',
         )
 

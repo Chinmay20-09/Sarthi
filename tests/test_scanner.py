@@ -8,8 +8,8 @@ the filesystem or scan real directories.
 from pathlib import Path
 
 from skills.scanner.application_scanner import (
-    Application,
     GAME_DIRECTORIES,
+    Application,
     merge_results,
     should_ignore,
 )

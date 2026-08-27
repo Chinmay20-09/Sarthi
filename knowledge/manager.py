@@ -105,10 +105,7 @@ class KnowledgeManager:
 
         categories = data.get("categories")
         if isinstance(categories, dict):
-            return {
-                status: list(categories.get(status) or [])
-                for status in self.CATEGORY_STATUSES
-            }
+            return {status: list(categories.get(status) or []) for status in self.CATEGORY_STATUSES}
 
         entities = data.get("entities", [])
         if not isinstance(entities, list):
@@ -123,8 +120,7 @@ class KnowledgeManager:
             "version": 2,
             "last_scan": datetime.now().isoformat(),
             "categories": {
-                status: list(categories.get(status, []))
-                for status in self.CATEGORY_STATUSES
+                status: list(categories.get(status, [])) for status in self.CATEGORY_STATUSES
             },
         }
 

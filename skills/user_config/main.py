@@ -109,9 +109,7 @@ class UserConfigSkill(BaseSkill):
             The saved username, or None if not configured yet
         """
         self._ensure_table()
-        row = self.db.fetch_one(
-            "SELECT value FROM settings WHERE key = ?", (GITHUB_USERNAME_KEY,)
-        )
+        row = self.db.fetch_one("SELECT value FROM settings WHERE key = ?", (GITHUB_USERNAME_KEY,))
         return row["value"] if row else None
 
     # ------------------------------------------------------------------
@@ -194,13 +192,13 @@ class UserConfigSkill(BaseSkill):
         # Strip known prefixes ("github username", "github", "username")
         for prefix in ("github username", "github user name", "github", "username", "user name"):
             if text.startswith(prefix):
-                text = text[len(prefix):].lstrip()
+                text = text[len(prefix) :].lstrip()
                 break
 
         # Strip any leading connectors that survived interpretation
         for connector in ("to ", "as ", "is ", "=", ":"):
             if text.startswith(connector):
-                text = text[len(connector):].strip()
+                text = text[len(connector) :].strip()
                 break
 
         username = text.strip()

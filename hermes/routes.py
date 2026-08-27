@@ -32,6 +32,7 @@ def _get_orchestrator() -> HermesOrchestrator:
 
 class HermesChatRequest(BaseModel):
     """Request model for Hermes chat."""
+
     message: str = Field(..., min_length=1, max_length=10000, description="User message")
     # Optional conversation session id. When omitted, a shared default
     # session is used so the conversation still remembers earlier turns.
@@ -42,6 +43,7 @@ class HermesChatRequest(BaseModel):
 
 class HermesChatResponse(BaseModel):
     """Response model for Hermes chat."""
+
     success: bool
     provider: str
     model: str
@@ -56,6 +58,7 @@ class HermesChatResponse(BaseModel):
 
 class HermesToolInfo(BaseModel):
     """A registered tool Hermes may request."""
+
     name: str
     description: str
     parameters: dict = Field(default_factory=dict)
@@ -63,6 +66,7 @@ class HermesToolInfo(BaseModel):
 
 class HermesToolsResponse(BaseModel):
     """Response model for listing Hermes tools."""
+
     success: bool
     tools: list[HermesToolInfo] = Field(default_factory=list)
     error: str | None = None
@@ -70,6 +74,7 @@ class HermesToolsResponse(BaseModel):
 
 class HermesSandboxRecord(BaseModel):
     """A compact record for one executed task (as stored in the query index)."""
+
     task_id: str
     prompt: str
     provider: str
@@ -82,12 +87,14 @@ class HermesSandboxRecord(BaseModel):
 
 class HermesSandboxQuery(BaseModel):
     """One indexed query and the task records that handled it."""
+
     query: str
     records: list[HermesSandboxRecord] = Field(default_factory=list)
 
 
 class HermesSandboxResponse(BaseModel):
     """Response model for browsing the sandbox by query."""
+
     success: bool
     queries: list[HermesSandboxQuery] = Field(default_factory=list)
     error: str | None = None
@@ -95,6 +102,7 @@ class HermesSandboxResponse(BaseModel):
 
 class HermesSandboxTaskResponse(BaseModel):
     """Response model for one sandbox task's full artifacts."""
+
     success: bool
     task_id: str = ""
     prompt: str = ""
@@ -232,7 +240,9 @@ def hermes_chat(request: HermesChatRequest) -> HermesChatResponse:
             store.add_turn(session_id, "assistant", provider_response.text)
 
         # Debug logging
-        print(f"[DEBUG] Provider response: success={provider_response.success}, provider={provider_response.provider}, error={provider_response.error}")
+        print(
+            f"[DEBUG] Provider response: success={provider_response.success}, provider={provider_response.provider}, error={provider_response.error}"
+        )
 
         # Build response
         return HermesChatResponse(

@@ -67,7 +67,7 @@ def _render_tools(tools: list[dict[str, Any]]) -> str:
     for tool in tools:
         properties = (tool.get("parameters") or {}).get("properties", {}) or {}
         args = ", ".join(f'"{name}": "<{name}>"' for name in properties)
-        lines.append(f'- {tool["name"]}: {tool["description"]} Arguments: {{{args}}}')
+        lines.append(f"- {tool['name']}: {tool['description']} Arguments: {{{args}}}")
     return "\n".join(lines) if lines else "- (no tools registered)"
 
 
@@ -80,7 +80,10 @@ def _result_summary(result: ToolResult) -> str:
 
 def build_decision_instructions(user_message: str, tools: list[dict[str, Any]]) -> str:
     """System instructions asking the model to decide text vs tool call."""
-    return _DECISION_HEADER.replace("{TOOLS}", _render_tools(tools)) + f"\nUser request: {user_message}"
+    return (
+        _DECISION_HEADER.replace("{TOOLS}", _render_tools(tools))
+        + f"\nUser request: {user_message}"
+    )
 
 
 def build_followup_instructions(user_message: str, tool: str, result: ToolResult) -> str:
@@ -220,7 +223,14 @@ class ToolPlanner:
             task, build_decision_instructions(task.prompt, self._tool_registry.list_tools())
         )
         response = self._generate(decision_task)
-        self._record(step="decision", provider=response.provider, model=response.model, success=response.success, text=response.text, error=response.error)
+        self._record(
+            step="decision",
+            provider=response.provider,
+            model=response.model,
+            success=response.success,
+            text=response.text,
+            error=response.error,
+        )
         if not response.success:
             return response
 
@@ -237,7 +247,13 @@ class ToolPlanner:
             self._record(step="tool_call", tool=tool, arguments=arguments)
 
             result = self._tool_registry.execute(tool, arguments)
-            self._record(step="tool_result", tool=tool, success=result.success, result=result.result, error=result.error)
+            self._record(
+                step="tool_result",
+                tool=tool,
+                success=result.success,
+                result=result.result,
+                error=result.error,
+            )
             if result.unknown:
                 # Hermes requested a tool that is not registered.
                 return ProviderResponse(
@@ -253,7 +269,14 @@ class ToolPlanner:
                 task, build_followup_instructions(task.prompt, tool, result)
             )
             response = self._generate(followup_task)
-            self._record(step="response", provider=response.provider, model=response.model, success=response.success, text=response.text, error=response.error)
+            self._record(
+                step="response",
+                provider=response.provider,
+                model=response.model,
+                success=response.success,
+                text=response.text,
+                error=response.error,
+            )
             if not response.success:
                 return response
 

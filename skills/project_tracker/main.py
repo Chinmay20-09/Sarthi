@@ -139,9 +139,10 @@ class GitHubProjectSkill(BaseSkill):
         # Language Processor fallback instead of getting a GitHub status dump.
         owns = (
             action in ("check", "status", "show", "pending", "sync")
-            or (action in ("what", "how") and (
-                "project" in target or "github" in target or "repo" in target
-            ))
+            or (
+                action in ("what", "how")
+                and ("project" in target or "github" in target or "repo" in target)
+            )
             or "project" in target
             or "github" in target
         )
@@ -305,7 +306,9 @@ class GitHubProjectSkill(BaseSkill):
 
         return PROJECT_SUMMARY + "\n\n" + format_project_summary(summaries)
 
-    def _project_cards(self, repositories: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    def _project_cards(
+        self, repositories: list[dict[str, Any]] | None = None
+    ) -> list[dict[str, Any]]:
         """
         Build structured project card data for the chat UI.
 

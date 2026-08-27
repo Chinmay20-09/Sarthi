@@ -111,10 +111,7 @@ class GitHubTool(BaseTool):
             return ToolResult(
                 success=False,
                 tool=self.name,
-                error=(
-                    "Unknown GitHub operation. Use one of: "
-                    + ", ".join(sorted(_OPERATIONS))
-                ),
+                error=("Unknown GitHub operation. Use one of: " + ", ".join(sorted(_OPERATIONS))),
                 invalid=True,
             )
 
@@ -309,8 +306,7 @@ class GitHubTool(BaseTool):
                 data={"repositories": []},
             )
         result = f"{len(repos)} repositories found: " + "; ".join(
-            f"{repo.get('full_name')} ({repo.get('stars', 0)} stars)"
-            for repo in repos
+            f"{repo.get('full_name')} ({repo.get('stars', 0)} stars)" for repo in repos
         )
         return ToolResult(
             success=True,

@@ -16,7 +16,11 @@ def resolver():
     """A resolver with a mix of real entities and PATH-scan junk names."""
     return EntityResolver(
         entities=[
-            {"name": "Google Chrome", "aliases": ["chrome", "google chrome"], "category": "applications"},
+            {
+                "name": "Google Chrome",
+                "aliases": ["chrome", "google chrome"],
+                "category": "applications",
+            },
             {"name": "Spotify", "aliases": ["spotify"], "category": "applications"},
             {"name": "GitHub", "aliases": ["github", "git hub"], "category": "websites"},
             {"name": "YouTube", "aliases": ["youtube", "you tube"], "category": "websites"},

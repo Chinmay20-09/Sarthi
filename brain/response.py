@@ -42,10 +42,7 @@ class BrainResponse:
         if not self.success and self.error:
             message = self.error
         # A skill can provide its own friendly message via result["message"]
-        elif (
-            isinstance(self.action_result, dict)
-            and self.action_result.get("message")
-        ):
+        elif isinstance(self.action_result, dict) and self.action_result.get("message"):
             message = str(self.action_result["message"])
         elif self.status and self.status not in ("completed", "executed"):
             message = self.status

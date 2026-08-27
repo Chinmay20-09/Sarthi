@@ -418,9 +418,7 @@ class BrainExecutor:
 
         # Rewrite the index with only failed entries
         sandbox._root.mkdir(parents=True, exist_ok=True)
-        sandbox._index_path.write_text(
-            json.dumps(index, indent=2), encoding="utf-8"
-        )
+        sandbox._index_path.write_text(json.dumps(index, indent=2), encoding="utf-8")
 
         if failed_records:
             message = (

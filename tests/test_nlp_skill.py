@@ -281,9 +281,7 @@ def test_project_context_question_stays_with_project_tracker(monkeypatch):
     from skills.project_tracker.main import GitHubProjectSkill
 
     # Deterministic: no GitHub lookup, no local-DB dependency.
-    monkeypatch.setattr(
-        GitHubProjectSkill, "_ensure_github", lambda self: "test-user"
-    )
+    monkeypatch.setattr(GitHubProjectSkill, "_ensure_github", lambda self: "test-user")
     monkeypatch.setattr(
         GitHubProjectSkill, "project_status", lambda self, repositories=None: "2 projects tracked."
     )

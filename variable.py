@@ -11,7 +11,7 @@ The wake word launcher (wakeword.py) reads its settings from here.
 # Say any of these phrases out loud to boot Sarthi (runs start.bat)
 # and open the website. Matching is case-insensitive, so lowercase is
 # fine. Add extra variations if Whisper sometimes mishears your voice.
-WAKE_WORDS = ["Open","I am here"]
+WAKE_WORDS = ["Open", "I am here"]
 
 # ════════════════════════════════════════════════════════════════════
 # LAUNCH SETTINGS

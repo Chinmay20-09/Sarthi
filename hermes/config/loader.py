@@ -40,10 +40,14 @@ class ConfigLoader:
             sandbox_path=os.getenv("HERMES_SANDBOX_PATH", HermesConfig.sandbox_path),
             openrouter_api_key=os.getenv("OPENROUTER_API_KEY", HermesConfig.openrouter_api_key),
             openrouter_url=os.getenv("OPENROUTER_URL", HermesConfig.openrouter_url),
-            openrouter_http_referer=os.getenv("OPENROUTER_HTTP_REFERER", HermesConfig.openrouter_http_referer),
+            openrouter_http_referer=os.getenv(
+                "OPENROUTER_HTTP_REFERER", HermesConfig.openrouter_http_referer
+            ),
             openrouter_x_title=os.getenv("OPENROUTER_X_TITLE", HermesConfig.openrouter_x_title),
             local_hermes_url=os.getenv("LOCAL_HERMES_URL", HermesConfig.local_hermes_url),
-            local_hermes_api_key=os.getenv("LOCAL_HERMES_API_KEY", HermesConfig.local_hermes_api_key),
+            local_hermes_api_key=os.getenv(
+                "LOCAL_HERMES_API_KEY", HermesConfig.local_hermes_api_key
+            ),
             local_model=os.getenv("LOCAL_HERMES_MODEL", HermesConfig.local_model),
             local_timeout=float(os.getenv("LOCAL_HERMES_TIMEOUT", HermesConfig.local_timeout)),
         )

@@ -1,9 +1,6 @@
 """Tests for utils/telemetry.py — TelemetryCollector, HardwareThresholds, classify_failure."""
 
-import pytest
-
 from utils.telemetry import HardwareThresholds, TelemetryCollector, classify_failure
-
 
 # ---------------------------------------------------------------------------
 # TelemetryCollector
@@ -64,9 +61,7 @@ class TestTelemetryCollector:
         tc = TelemetryCollector()
         baseline = {"gpu_temperature_c": 45.0, "gpu_vram_used_gb": 1.0}
         post = {"gpu_temperature_c": 47.0, "gpu_vram_used_gb": 1.2}
-        record = tc.build_test_record(
-            baseline, post, peak_gpu_temp=55.0, peak_gpu_vram=2.0
-        )
+        record = tc.build_test_record(baseline, post, peak_gpu_temp=55.0, peak_gpu_vram=2.0)
         assert record["gpu_temperature_c"] == 55.0
         assert record["gpu_vram_used_gb"] == 2.0
 
@@ -97,6 +92,7 @@ class TestTelemetryCollector:
         tc = TelemetryCollector()
         tc.start_periodic_sampling(interval_seconds=0.1)
         import time
+
         time.sleep(0.3)
         tc.stop_periodic_sampling()
         samples = tc.get_periodic_samples()
@@ -189,7 +185,13 @@ class TestHardwareThresholds:
 
 class TestClassifyFailure:
     def test_pass(self):
-        result = {"passed": True, "success": True, "actual": "Done.", "action": "open", "target": "chrome"}
+        result = {
+            "passed": True,
+            "success": True,
+            "actual": "Done.",
+            "action": "open",
+            "target": "chrome",
+        }
         assert classify_failure(result) == "pass"
 
     def test_executor_unsupported_action(self):

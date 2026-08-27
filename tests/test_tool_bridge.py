@@ -256,8 +256,8 @@ def test_tool_call_with_doubled_braces_is_parsed():
     """Models that double curly braces ({{ }}) still produce a tool call."""
     # Regression: hermes3:8b mimicked a double-brace example and emitted this.
     broken = (
-        '{{"tool_call": {{"tool": "open_website", "arguments": ' +
-        '{{"url": "https://www.youtube.com/results?search_query=india%27s+got+latent"}}}}}}'
+        '{{"tool_call": {{"tool": "open_website", "arguments": '
+        + '{{"url": "https://www.youtube.com/results?search_query=india%27s+got+latent"}}}}}}'
     )
     parsed = parse_tool_call(broken)
     assert parsed == {
@@ -311,9 +311,13 @@ def test_tool_loop_result_flows_back_to_hermes():
 
 def test_tool_failure_produces_graceful_response():
     """A failed tool leads to a graceful Hermes response, not an exception."""
-    spy_result = ToolResult(success=False, tool="open_app", error="Application 'Chrome' could not be found.")
+    spy_result = ToolResult(
+        success=False, tool="open_app", error="Application 'Chrome' could not be found."
+    )
     planner, fake, spy = make_planner(
-        [TOOL_CALL_JSON, "I couldn't find Chrome on this system."], name="open_app", result=spy_result
+        [TOOL_CALL_JSON, "I couldn't find Chrome on this system."],
+        name="open_app",
+        result=spy_result,
     )
 
     response = planner.run(Task(prompt="Open Chrome"))
@@ -446,6 +450,7 @@ def test_hermes_tools_endpoint_lists_registered_tools():
 
 def _fake_github_skill(client):
     """A GitHubProjectSkill stand-in that resolves a username and exposes a client."""
+
     class FakeSkill:
         def __init__(self):
             self.github = client
@@ -539,7 +544,9 @@ def test_github_not_configured_is_graceful(monkeypatch):
         def _ensure_github(self):
             return ""
 
-    monkeypatch.setattr("hermes.tools.github.GitHubTool._get_skill", lambda self: UnconfiguredSkill())
+    monkeypatch.setattr(
+        "hermes.tools.github.GitHubTool._get_skill", lambda self: UnconfiguredSkill()
+    )
 
     result = registry.execute("github", {"operation": "repositories"})
 
@@ -551,11 +558,25 @@ def test_github_repositories_delegates_to_existing_skill(monkeypatch):
     """The github tool reuses GitHubProjectSkill's client, not a new integration."""
     client = FakeGitHubClient(
         get_repositories=[
-            {"name": "sarthi", "description": "AI assistant", "language": "Python", "private": False, "html_url": "https://github.com/octocat/sarthi"},
-            {"name": "notes", "description": None, "language": None, "private": True, "html_url": "https://github.com/octocat/notes"},
+            {
+                "name": "sarthi",
+                "description": "AI assistant",
+                "language": "Python",
+                "private": False,
+                "html_url": "https://github.com/octocat/sarthi",
+            },
+            {
+                "name": "notes",
+                "description": None,
+                "language": None,
+                "private": True,
+                "html_url": "https://github.com/octocat/notes",
+            },
         ]
     )
-    monkeypatch.setattr("hermes.tools.github.GitHubTool._get_skill", lambda self: _fake_github_skill(client))
+    monkeypatch.setattr(
+        "hermes.tools.github.GitHubTool._get_skill", lambda self: _fake_github_skill(client)
+    )
     registry = ToolRegistry()
     registry.register(GitHubTool())
 
@@ -574,10 +595,17 @@ def test_github_issues_passes_repository(monkeypatch):
     """Repo-scoped operations forward the repository name to the client."""
     client = FakeGitHubClient(
         get_issues=[
-            {"number": 4, "title": "Fix the sidebar", "html_url": "https://github.com/octocat/sarthi/issues/4", "state": "open"},
+            {
+                "number": 4,
+                "title": "Fix the sidebar",
+                "html_url": "https://github.com/octocat/sarthi/issues/4",
+                "state": "open",
+            },
         ]
     )
-    monkeypatch.setattr("hermes.tools.github.GitHubTool._get_skill", lambda self: _fake_github_skill(client))
+    monkeypatch.setattr(
+        "hermes.tools.github.GitHubTool._get_skill", lambda self: _fake_github_skill(client)
+    )
     registry = ToolRegistry()
     registry.register(GitHubTool())
 
@@ -593,11 +621,23 @@ def test_github_search_delegates_with_query(monkeypatch):
     """search forwards the query and reports star counts."""
     client = FakeGitHubClient(
         search_repositories=[
-            {"full_name": "torvalds/linux", "stars": 190000, "html_url": "https://github.com/torvalds/linux", "private": False},
-            {"full_name": "microsoft/vscode", "stars": 160000, "html_url": "https://github.com/microsoft/vscode", "private": False},
+            {
+                "full_name": "torvalds/linux",
+                "stars": 190000,
+                "html_url": "https://github.com/torvalds/linux",
+                "private": False,
+            },
+            {
+                "full_name": "microsoft/vscode",
+                "stars": 160000,
+                "html_url": "https://github.com/microsoft/vscode",
+                "private": False,
+            },
         ]
     )
-    monkeypatch.setattr("hermes.tools.github.GitHubTool._get_skill", lambda self: _fake_github_skill(client))
+    monkeypatch.setattr(
+        "hermes.tools.github.GitHubTool._get_skill", lambda self: _fake_github_skill(client)
+    )
     registry = ToolRegistry()
     registry.register(GitHubTool())
 
@@ -615,7 +655,9 @@ def test_github_branches_delegates(monkeypatch):
     client = FakeGitHubClient(
         get_branches=[{"name": "main"}, {"name": "dev"}, {"name": "feature/x"}]
     )
-    monkeypatch.setattr("hermes.tools.github.GitHubTool._get_skill", lambda self: _fake_github_skill(client))
+    monkeypatch.setattr(
+        "hermes.tools.github.GitHubTool._get_skill", lambda self: _fake_github_skill(client)
+    )
     registry = ToolRegistry()
     registry.register(GitHubTool())
 
@@ -631,11 +673,21 @@ def test_github_releases_delegates(monkeypatch):
     """releases forwards the repository and lists tags with dates."""
     client = FakeGitHubClient(
         get_releases=[
-            {"tag_name": "v2.0.0", "published_at": "2026-01-15T00:00:00Z", "html_url": "https://github.com/octocat/sarthi/releases/tag/v2.0.0"},
-            {"tag_name": "v1.5.0", "published_at": "2025-11-02T00:00:00Z", "html_url": "https://github.com/octocat/sarthi/releases/tag/v1.5.0"},
+            {
+                "tag_name": "v2.0.0",
+                "published_at": "2026-01-15T00:00:00Z",
+                "html_url": "https://github.com/octocat/sarthi/releases/tag/v2.0.0",
+            },
+            {
+                "tag_name": "v1.5.0",
+                "published_at": "2025-11-02T00:00:00Z",
+                "html_url": "https://github.com/octocat/sarthi/releases/tag/v1.5.0",
+            },
         ]
     )
-    monkeypatch.setattr("hermes.tools.github.GitHubTool._get_skill", lambda self: _fake_github_skill(client))
+    monkeypatch.setattr(
+        "hermes.tools.github.GitHubTool._get_skill", lambda self: _fake_github_skill(client)
+    )
     registry = ToolRegistry()
     registry.register(GitHubTool())
 
@@ -650,11 +702,15 @@ def test_github_releases_delegates(monkeypatch):
 
 def test_github_404_maps_to_friendly_error(monkeypatch):
     """A missing repository surfaces as a safe, helpful message."""
+
     class MissingRepoClient:
         def get_repository_summary(self, repository):
             raise _HttpError(404)
 
-    monkeypatch.setattr("hermes.tools.github.GitHubTool._get_skill", lambda self: _fake_github_skill(MissingRepoClient()))
+    monkeypatch.setattr(
+        "hermes.tools.github.GitHubTool._get_skill",
+        lambda self: _fake_github_skill(MissingRepoClient()),
+    )
     registry = ToolRegistry()
     registry.register(GitHubTool())
 

@@ -36,7 +36,9 @@ class NaturalLanguageProcessorSkill(BaseSkill):
     """Holds a normal conversation; the last-resort fallback for Sarthi."""
 
     name = "Natural Language Processor"
-    description = "Holds a normal conversation like a plain AI. Fallback when no tool can handle the request."
+    description = (
+        "Holds a normal conversation like a plain AI. Fallback when no tool can handle the request."
+    )
     version = "1.0.0"
     # Tried last by the Brain's executor — real tools/skills go first.
     fallback = True

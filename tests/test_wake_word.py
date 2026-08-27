@@ -288,9 +288,7 @@ class TestDormancy:
         monkeypatch.setattr(wakeword.subprocess, "Popen", lambda *a, **k: None)
         monkeypatch.setattr(wakeword, "_launched_at", 0.0)
         entered = {"value": False}
-        monkeypatch.setattr(
-            wakeword, "_enter_dormancy", lambda: entered.__setitem__("value", True)
-        )
+        monkeypatch.setattr(wakeword, "_enter_dormancy", lambda: entered.__setitem__("value", True))
 
         assert wakeword.launch_sarthi("hey sarthi") is True
         assert entered["value"] is True
@@ -299,14 +297,10 @@ class TestDormancy:
         import wakeword
 
         calls = []
-        monkeypatch.setattr(
-            wakeword.subprocess, "Popen", lambda *a, **k: calls.append(a)
-        )
+        monkeypatch.setattr(wakeword.subprocess, "Popen", lambda *a, **k: calls.append(a))
         monkeypatch.setattr(wakeword, "_launched_at", time.monotonic())
         entered = {"value": False}
-        monkeypatch.setattr(
-            wakeword, "_enter_dormancy", lambda: entered.__setitem__("value", True)
-        )
+        monkeypatch.setattr(wakeword, "_enter_dormancy", lambda: entered.__setitem__("value", True))
 
         assert wakeword.launch_sarthi("hey sarthi") is False
         assert not calls
@@ -350,9 +344,7 @@ class TestDormancy:
         listener = WakeWordListener(["hey sarthi"])
         monkeypatch.setattr(wakeword, "_listener", listener)
         started = []
-        monkeypatch.setattr(
-            wakeword.threading.Thread, "start", lambda self: started.append(self)
-        )
+        monkeypatch.setattr(wakeword.threading.Thread, "start", lambda self: started.append(self))
 
         wakeword._enter_dormancy()
         assert listener.dormant is True
@@ -382,9 +374,7 @@ class TestDormancy:
         listener.pause("already dormant")
         monkeypatch.setattr(wakeword, "_listener", listener)
         started = []
-        monkeypatch.setattr(
-            wakeword.threading.Thread, "start", lambda self: started.append(self)
-        )
+        monkeypatch.setattr(wakeword.threading.Thread, "start", lambda self: started.append(self))
 
         wakeword._enter_dormancy()
         assert listener.dormant is True
@@ -406,9 +396,7 @@ class TestDormancy:
 
         listener = WakeWordListener(["hey sarthi"])
         state = {"resumed": False}
-        monkeypatch.setattr(
-            listener, "resume", lambda: state.__setitem__("resumed", True)
-        )
+        monkeypatch.setattr(listener, "resume", lambda: state.__setitem__("resumed", True))
 
         wakeword._watch_until_sarthi_exits(listener)
         assert state["resumed"] is True
@@ -426,9 +414,7 @@ class TestDormancy:
 
         listener = WakeWordListener(["hey sarthi"])
         state = {"resumed": False}
-        monkeypatch.setattr(
-            listener, "resume", lambda: state.__setitem__("resumed", True)
-        )
+        monkeypatch.setattr(listener, "resume", lambda: state.__setitem__("resumed", True))
 
         wakeword._watch_until_sarthi_exits(listener)
         assert state["resumed"] is True
@@ -458,13 +444,9 @@ class TestDormancyOnRestart:
         monkeypatch.setitem(sys.modules, "sounddevice", FakeSD())
         monkeypatch.setattr(wakeword, "get_model", lambda model=None: None)
         monkeypatch.setattr(wakeword, "_sarthi_is_up", lambda: sarthi_up)
-        monkeypatch.setattr(
-            wakeword, "_run_with_tray", lambda listener, log_file=None: 3
-        )
+        monkeypatch.setattr(wakeword, "_run_with_tray", lambda listener, log_file=None: 3)
         entered = {"value": False}
-        monkeypatch.setattr(
-            wakeword, "_enter_dormancy", lambda: entered.__setitem__("value", True)
-        )
+        monkeypatch.setattr(wakeword, "_enter_dormancy", lambda: entered.__setitem__("value", True))
 
         args = SimpleNamespace(once=False, tray=True, log_file=None)
         wakeword._listen(args)
@@ -530,8 +512,9 @@ class TestSupervise:
     """wakeword.py --supervise — windowless watchdog (no console needed)."""
 
     def test_exits_without_restart_on_deliberate_exit(self, monkeypatch):
-        import wakeword
         from types import SimpleNamespace
+
+        import wakeword
 
         calls = []
 
@@ -554,8 +537,9 @@ class TestSupervise:
         assert "--log-file" in calls[0]
 
     def test_exits_without_restart_on_lock_conflict(self, monkeypatch):
-        import wakeword
         from types import SimpleNamespace
+
+        import wakeword
 
         calls = []
 
@@ -575,8 +559,9 @@ class TestSupervise:
         assert len(calls) == 1
 
     def test_restarts_after_unexpected_crash(self, monkeypatch):
-        import wakeword
         from types import SimpleNamespace
+
+        import wakeword
 
         codes = iter([1, 3])
         calls = []
@@ -686,9 +671,7 @@ class TestSingleInstanceLock:
             def CloseHandle(self, handle):
                 pass
 
-        monkeypatch.setattr(
-            wakeword.ctypes, "windll", type("W", (), {"kernel32": FakeKernel()})()
-        )
+        monkeypatch.setattr(wakeword.ctypes, "windll", type("W", (), {"kernel32": FakeKernel()})())
         assert wakeword._process_is_python(1234) is True
 
     def test_process_is_python_rejects_other_exes(self, monkeypatch):
@@ -708,9 +691,7 @@ class TestSingleInstanceLock:
             def CloseHandle(self, handle):
                 pass
 
-        monkeypatch.setattr(
-            wakeword.ctypes, "windll", type("W", (), {"kernel32": FakeKernel()})()
-        )
+        monkeypatch.setattr(wakeword.ctypes, "windll", type("W", (), {"kernel32": FakeKernel()})())
         assert wakeword._process_is_python(1234) is False
 
     def test_process_is_python_skipped_off_windows(self, monkeypatch):
@@ -719,9 +700,7 @@ class TestSingleInstanceLock:
         monkeypatch.setattr(wakeword.sys, "platform", "linux")
         assert wakeword._process_is_python(999) is True
 
-    def test_lock_ignores_stale_pid_reused_by_other_program(
-        self, tmp_path, monkeypatch
-    ):
+    def test_lock_ignores_stale_pid_reused_by_other_program(self, tmp_path, monkeypatch):
         """Regression: a stale pid whose PID was reused must not block."""
         import wakeword
 

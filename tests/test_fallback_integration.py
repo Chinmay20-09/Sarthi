@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from hermes.config.settings import HermesConfig
 from hermes.models import Task
 from hermes.orchestrator import HermesOrchestrator
-from hermes.providers.base import ProviderResponse, AIProvider
+from hermes.providers.base import AIProvider, ProviderResponse
 from hermes.providers.manager import ProviderManager
 from hermes.sandbox import TaskSandbox
 
@@ -55,7 +55,7 @@ class SuccessfulLocalProvider(AIProvider):
 def test_fallback_integration():
     """Integration test: Cloud fails -> Local succeeds."""
     print("\n=== INTEGRATION TEST: Cloud Failure to Local Fallback ===\n")
-    
+
     config = HermesConfig(
         model="hermes3:8b",
         sandbox_path="sandbox_test",
@@ -90,7 +90,7 @@ def test_fallback_integration():
     response = orchestrator.process(task)
     duration_ms = (time.perf_counter() - start) * 1000
 
-    print(f"\nResponse received.")
+    print("\nResponse received.")
     print(f"Provider: {response.provider}")
     print(f"Model: {response.model}")
     print(f"Success: {response.success}")
@@ -122,8 +122,8 @@ def test_fallback_integration():
     assert "Ollama" in metadata_json, "Ollama not in metadata"
     assert "success" in metadata_json, "Status not in metadata"
 
-    print(f"[PASS] Sandbox verification passed")
-    print(f"[PASS] All assertions passed")
+    print("[PASS] Sandbox verification passed")
+    print("[PASS] All assertions passed")
     print("\n=== INTEGRATION TEST PASSED ===\n")
 
 

@@ -90,9 +90,23 @@ def test_save_writes_artifacts_and_trace(tmp_path):
     sandbox = TaskSandbox(tmp_path)
     task = Task(id="task_xyz", prompt="What branches does sarthi have?")
     trace = [
-        {"step": "decision", "provider": "Fake", "success": True, "text": '{"tool_call": {"tool": "github", "arguments": {"operation": "branches", "repository": "sarthi"}}}'},
-        {"step": "tool_call", "tool": "github", "arguments": {"operation": "branches", "repository": "sarthi"}},
-        {"step": "tool_result", "tool": "github", "success": True, "result": "3 branches in sarthi: main, dev, feature/x"},
+        {
+            "step": "decision",
+            "provider": "Fake",
+            "success": True,
+            "text": '{"tool_call": {"tool": "github", "arguments": {"operation": "branches", "repository": "sarthi"}}}',
+        },
+        {
+            "step": "tool_call",
+            "tool": "github",
+            "arguments": {"operation": "branches", "repository": "sarthi"},
+        },
+        {
+            "step": "tool_result",
+            "tool": "github",
+            "success": True,
+            "result": "3 branches in sarthi: main, dev, feature/x",
+        },
         {"step": "response", "provider": "Fake", "success": True, "text": "sarthi has 3 branches."},
     ]
 
@@ -178,11 +192,12 @@ def _sandbox_with_tasks(tmp_path):
         {"step": "response", "provider": "Fake", "success": True, "text": "Hello there."},
     ]
     sandbox.save(
-        Task(id="task_older", prompt="hello hermes"), _response(text="Hello there."), 15.0, trace=trace
+        Task(id="task_older", prompt="hello hermes"),
+        _response(text="Hello there."),
+        15.0,
+        trace=trace,
     )
-    sandbox.save(
-        Task(id="task_newer", prompt="Show my repos"), _response(tool_used="github"), 42.5
-    )
+    sandbox.save(Task(id="task_newer", prompt="Show my repos"), _response(tool_used="github"), 42.5)
     return sandbox
 
 

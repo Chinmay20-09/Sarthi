@@ -66,8 +66,7 @@ class ConversationStore:
                 return list(self._sessions.get(session_id, []))
 
         rows = self._db.fetch_all(
-            "SELECT role, content FROM conversation_messages "
-            "WHERE session_id = ? ORDER BY id ASC",
+            "SELECT role, content FROM conversation_messages WHERE session_id = ? ORDER BY id ASC",
             (session_id,),
         )
         return [{"role": row["role"], "content": row["content"]} for row in rows]

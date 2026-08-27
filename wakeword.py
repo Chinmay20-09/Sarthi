@@ -152,9 +152,7 @@ def _watch_until_sarthi_exits(listener: WakeWordListener) -> None:
             break
         time.sleep(poll)
     else:
-        logger.warning(
-            "Sarthi never came up within %ss — resuming listener.", start_timeout
-        )
+        logger.warning("Sarthi never came up within %ss — resuming listener.", start_timeout)
         _clear_cooldown()
         listener.resume()
         return
@@ -245,7 +243,6 @@ def _process_is_alive(pid: int) -> bool:
         return False
     except OSError:
         return True  # e.g. PermissionError — the process exists
-
 
 
 def _process_is_python(pid: int) -> bool:
@@ -416,9 +413,7 @@ def _build_tray_icon(listener: WakeWordListener, log_file: str | None = None) ->
         icon.stop()
 
     menu = pystray.Menu(
-        pystray.MenuItem(
-            "Listening for: " + ", ".join(listener.wake_words), None, enabled=False
-        ),
+        pystray.MenuItem("Listening for: " + ", ".join(listener.wake_words), None, enabled=False),
         pystray.MenuItem("Launch Sarthi", lambda _i, _it: launch_sarthi(), default=True),
         pystray.MenuItem(
             "Stop Sarthi",
@@ -443,9 +438,7 @@ def _run_with_tray(listener: WakeWordListener, log_file: str | None = None) -> i
     try:
         import pystray  # noqa: F401 - availability check only
     except ImportError:
-        logger.error(
-            "Tray icon unavailable (install pystray + pillow) — running without tray."
-        )
+        logger.error("Tray icon unavailable (install pystray + pillow) — running without tray.")
         print("⚠️  Tray unavailable (pip install pystray pillow) — running without tray.")
         try:
             listener.listen_forever()
@@ -514,9 +507,7 @@ def _supervise(args: argparse.Namespace) -> int:
             cmd = [sys.executable, str(script), "--tray", "--log-file", log_file]
             logger.info("Supervisor spawning listener: %s", " ".join(cmd))
             try:
-                proc = subprocess.Popen(
-                    cmd, cwd=str(ROOT), creationflags=_NO_WINDOW
-                )
+                proc = subprocess.Popen(cmd, cwd=str(ROOT), creationflags=_NO_WINDOW)
             except OSError as e:
                 logger.error("Supervisor could not spawn listener: %s", e)
                 time.sleep(5.0)
@@ -528,9 +519,7 @@ def _supervise(args: argparse.Namespace) -> int:
                     code,
                 )
                 return code
-            logger.warning(
-                "Listener exited unexpectedly (code %s) — restarting in 5s.", code
-            )
+            logger.warning("Listener exited unexpectedly (code %s) — restarting in 5s.", code)
             time.sleep(5.0)
     except KeyboardInterrupt:
         logger.info("Supervisor stopped by user (Ctrl+C).")

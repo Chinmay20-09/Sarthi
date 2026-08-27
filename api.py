@@ -13,6 +13,7 @@ ARCHITECTURE:
 import os
 import sys
 from datetime import datetime
+from pathlib import Path
 
 # Under pythonw (start.bat's windowless background mode) there is no
 # console: sys.stdout/sys.stderr are None, which would crash uvicorn's
@@ -622,7 +623,6 @@ def _save_metrics_chart(
     ORANGE = (255, 183, 125)
     PURPLE = (174, 130, 255)
     YELLOW = (255, 220, 80)
-    WHITE = (220, 230, 240)
 
     img = Image.new("RGB", (TOTAL_W, TOTAL_H), BG)
     draw = ImageDraw.Draw(img)
@@ -679,9 +679,24 @@ def _save_metrics_chart(
     gv_total = gpu_vram.get("total")
     gu_avg = gpu_util.get("avg")
     gu_peak = gpu_util.get("peak")
-    draw.text((cx2, sy_gpu), f"Temp: {_fmt(gt_cur)} / max {_fmt(gt_max)} / avg {_fmt(gt_avg)} °C", fill=ORANGE, font=font_sm)
-    draw.text((cx2, sy_gpu + 12), f"VRAM: {_fmt(gv_cur)} / peak {_fmt(gv_peak)} / total {_fmt(gv_total)} GB", fill=PURPLE, font=font_sm)
-    draw.text((cx2, sy_gpu + 24), f"Util: avg {_fmt(gu_avg)} / peak {_fmt(gu_peak)} %", fill=CYAN, font=font_sm)
+    draw.text(
+        (cx2, sy_gpu),
+        f"Temp: {_fmt(gt_cur)} / max {_fmt(gt_max)} / avg {_fmt(gt_avg)} °C",
+        fill=ORANGE,
+        font=font_sm,
+    )
+    draw.text(
+        (cx2, sy_gpu + 12),
+        f"VRAM: {_fmt(gv_cur)} / peak {_fmt(gv_peak)} / total {_fmt(gv_total)} GB",
+        fill=PURPLE,
+        font=font_sm,
+    )
+    draw.text(
+        (cx2, sy_gpu + 24),
+        f"Util: avg {_fmt(gu_avg)} / peak {_fmt(gu_peak)} %",
+        fill=CYAN,
+        font=font_sm,
+    )
     # Warnings
     wy = sy_gpu + 40
     for wtype, wdata in warnings.items():
@@ -699,12 +714,22 @@ def _save_metrics_chart(
     cpu_util = hw_summary.get("cpu_utilization", {})
     cu_avg = cpu_util.get("avg")
     cu_peak = cpu_util.get("peak")
-    draw.text((cx3, sy_cpu), f"Util: avg {_fmt(cu_avg)} / peak {_fmt(cu_peak)} %", fill=PURPLE, font=font_sm)
+    draw.text(
+        (cx3, sy_cpu),
+        f"Util: avg {_fmt(cu_avg)} / peak {_fmt(cu_peak)} %",
+        fill=PURPLE,
+        font=font_sm,
+    )
     cpu_temp = hw_summary.get("cpu_temperature", {})
     ct_cur = cpu_temp.get("current")
     ct_max = cpu_temp.get("max")
     if ct_cur is not None:
-        draw.text((cx3, sy_cpu + 12), f"Temp: {_fmt(ct_cur)} / max {_fmt(ct_max)} °C", fill=ORANGE, font=font_sm)
+        draw.text(
+            (cx3, sy_cpu + 12),
+            f"Temp: {_fmt(ct_cur)} / max {_fmt(ct_max)} °C",
+            fill=ORANGE,
+            font=font_sm,
+        )
     else:
         draw.text((cx3, sy_cpu + 12), "CPU temp: unavailable", fill=TEXT_DIM, font=font_sm)
 
@@ -738,7 +763,13 @@ def _save_metrics_chart(
         plot_h = ph - 34
 
         if len(results) < 2:
-            draw.text((px + pw // 2, py + ph // 2), "Insufficient data", fill=TEXT_DIM, font=font_sm, anchor="mm")
+            draw.text(
+                (px + pw // 2, py + ph // 2),
+                "Insufficient data",
+                fill=TEXT_DIM,
+                font=font_sm,
+                anchor="mm",
+            )
             continue
 
         # Grid lines
@@ -758,12 +789,14 @@ def _save_metrics_chart(
                 if r.get("passed"):
                     draw.rectangle(
                         [cx - bar_w, plot_y + plot_h - 8, cx, plot_y + plot_h],
-                        fill=GREEN, outline=GREEN,
+                        fill=GREEN,
+                        outline=GREEN,
                     )
                 else:
                     draw.rectangle(
                         [cx - bar_w, plot_y + plot_h - 8, cx, plot_y + plot_h],
-                        fill=RED, outline=RED,
+                        fill=RED,
+                        outline=RED,
                     )
             # Failure type color coding below the bars
             failure_colors = {
@@ -786,8 +819,13 @@ def _save_metrics_chart(
             # Legend for panel A
             leg_x = plot_x + 2
             leg_y = plot_y + 2
-            for label, c in [("Passed", GREEN), ("Failed", RED), ("App not found", ORANGE),
-                             ("Unsupported action", RED), ("Entity resolution", PURPLE)]:
+            for label, c in [
+                ("Passed", GREEN),
+                ("Failed", RED),
+                ("App not found", ORANGE),
+                ("Unsupported action", RED),
+                ("Entity resolution", PURPLE),
+            ]:
                 draw.rectangle([leg_x, leg_y, leg_x + 6, leg_y + 6], fill=c)
                 draw.text((leg_x + 8, leg_y - 1), label, fill=TEXT_DIM, font=font_sm)
                 leg_x += len(label) * 5 + 20
@@ -816,11 +854,21 @@ def _save_metrics_chart(
                     draw.line(points, fill=ORANGE, width=2)
                 for x, y in points:
                     draw.ellipse([x - dot_r, y - dot_r, x + dot_r, y + dot_r], fill=ORANGE)
-                draw.text((plot_x - 6, plot_y + 2), f"{max_t:.0f}", fill=ORANGE, font=font_sm, anchor="rm")
-                draw.text((plot_x - 6, plot_y + plot_h - 6), "0", fill=ORANGE, font=font_sm, anchor="rm")
+                draw.text(
+                    (plot_x - 6, plot_y + 2), f"{max_t:.0f}", fill=ORANGE, font=font_sm, anchor="rm"
+                )
+                draw.text(
+                    (plot_x - 6, plot_y + plot_h - 6), "0", fill=ORANGE, font=font_sm, anchor="rm"
+                )
                 draw.text((plot_x + plot_w + 4, plot_y + 2), "°C", fill=ORANGE, font=font_sm)
             else:
-                draw.text((px + pw // 2, py + ph // 2), "GPU temp unavailable", fill=TEXT_DIM, font=font_sm, anchor="mm")
+                draw.text(
+                    (px + pw // 2, py + ph // 2),
+                    "GPU temp unavailable",
+                    fill=TEXT_DIM,
+                    font=font_sm,
+                    anchor="mm",
+                )
 
         elif pid == "C":
             # ── Panel C: GPU VRAM ──
@@ -835,7 +883,12 @@ def _save_metrics_chart(
                 if vram_total and vram_total > 0:
                     ty = plot_y + plot_h - int((vram_total / max_v) * plot_h)
                     draw.line([(plot_x, ty), (plot_x + plot_w, ty)], fill=TEXT_DIM, width=1)
-                    draw.text((plot_x + plot_w + 4, ty - 5), f"{vram_total:.1f} GB", fill=TEXT_DIM, font=font_sm)
+                    draw.text(
+                        (plot_x + plot_w + 4, ty - 5),
+                        f"{vram_total:.1f} GB",
+                        fill=TEXT_DIM,
+                        font=font_sm,
+                    )
                 points = []
                 for i, v in enumerate(vrams):
                     if v is None:
@@ -847,11 +900,21 @@ def _save_metrics_chart(
                     draw.line(points, fill=PURPLE, width=2)
                 for x, y in points:
                     draw.ellipse([x - dot_r, y - dot_r, x + dot_r, y + dot_r], fill=PURPLE)
-                draw.text((plot_x - 6, plot_y + 2), f"{max_v:.1f}", fill=PURPLE, font=font_sm, anchor="rm")
-                draw.text((plot_x - 6, plot_y + plot_h - 6), "0", fill=PURPLE, font=font_sm, anchor="rm")
+                draw.text(
+                    (plot_x - 6, plot_y + 2), f"{max_v:.1f}", fill=PURPLE, font=font_sm, anchor="rm"
+                )
+                draw.text(
+                    (plot_x - 6, plot_y + plot_h - 6), "0", fill=PURPLE, font=font_sm, anchor="rm"
+                )
                 draw.text((plot_x + plot_w + 4, plot_y + 2), "GB", fill=PURPLE, font=font_sm)
             else:
-                draw.text((px + pw // 2, py + ph // 2), "GPU VRAM unavailable", fill=TEXT_DIM, font=font_sm, anchor="mm")
+                draw.text(
+                    (px + pw // 2, py + ph // 2),
+                    "GPU VRAM unavailable",
+                    fill=TEXT_DIM,
+                    font=font_sm,
+                    anchor="mm",
+                )
 
         elif pid == "D":
             # ── Panel D: GPU & CPU Utilization ──
@@ -890,11 +953,19 @@ def _save_metrics_chart(
         label_step = max(1, len(results) // 8)
         for i in range(0, len(results), label_step):
             x = plot_x + int(i * x_step)
-            draw.text((x, plot_y + plot_h + 3), f"#{i + 1}", fill=TEXT_DIM, font=font_sm, anchor="mt")
+            draw.text(
+                (x, plot_y + plot_h + 3), f"#{i + 1}", fill=TEXT_DIM, font=font_sm, anchor="mt"
+            )
         # Always show last
         if len(results) > 1:
             x = plot_x + int((len(results) - 1) * x_step)
-            draw.text((x, plot_y + plot_h + 3), f"#{len(results)}", fill=TEXT_DIM, font=font_sm, anchor="mt")
+            draw.text(
+                (x, plot_y + plot_h + 3),
+                f"#{len(results)}",
+                fill=TEXT_DIM,
+                font=font_sm,
+                anchor="mt",
+            )
 
     img.save(str(path))
 
@@ -1108,13 +1179,17 @@ def run_test_prompts():
     # JSON
     json_path = results_dir / f"run_{ts}.json"
     json_path.write_text(
-        json.dumps({
-            "summary": summary,
-            "results": results,
-            "hardware": hw_history,
-            "hw_summary": hw_summary,
-            "warnings": warnings,
-        }, indent=2, default=str),
+        json.dumps(
+            {
+                "summary": summary,
+                "results": results,
+                "hardware": hw_history,
+                "hw_summary": hw_summary,
+                "warnings": warnings,
+            },
+            indent=2,
+            default=str,
+        ),
         encoding="utf-8",
     )
 

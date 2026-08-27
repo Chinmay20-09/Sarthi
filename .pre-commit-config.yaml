@@ -19,3 +19,34 @@ repos:
         pass_filenames: false
         always_run: true
         stages: [pre-commit]
+
+      - id: ruff-lint
+        name: ruff lint
+        description: >-
+          Runs ruff linter on staged Python files. Catches unused imports,
+          syntax errors, and style violations.
+        entry: python -m ruff check
+        language: system
+        types: [python]
+        stages: [pre-commit]
+
+      - id: ruff-format
+        name: ruff format check
+        description: >-
+          Checks that Python files are formatted with ruff.
+          Does NOT auto-fix — fails the commit so you can review.
+        entry: python -m ruff format --check
+        language: system
+        types: [python]
+        stages: [pre-commit]
+
+      - id: smoke-test
+        name: Sarthi smoke test
+        description: >-
+          Quick sanity check: verifies the basic brain pipeline still works
+          (entity resolution, app open, filler removal, error handling).
+        entry: python main-test.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]

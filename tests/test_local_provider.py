@@ -26,7 +26,9 @@ def _make_response_success() -> FakeOllamaResponse:
 
 def _make_response_404() -> httpx.Response:
     request = httpx.Request("POST", "http://localhost:11434/api/chat")
-    return httpx.Response(404, request=request, json={"error": "model 'x' not found, try pulling it first"})
+    return httpx.Response(
+        404, request=request, json={"error": "model 'x' not found, try pulling it first"}
+    )
 
 
 def test_uses_local_model_not_openrouter_model(monkeypatch):

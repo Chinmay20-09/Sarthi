@@ -67,7 +67,11 @@ class OpenAppTool(BaseTool):
 
         status = result.get("status")
         if status == "needs_decision":
-            app_name = ((result.get("result") or {}).get("visual") or {}).get("data", {}).get("name", target)
+            app_name = (
+                ((result.get("result") or {}).get("visual") or {})
+                .get("data", {})
+                .get("name", target)
+            )
             return ToolResult(
                 success=False,
                 tool=self.name,

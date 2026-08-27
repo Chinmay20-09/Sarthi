@@ -1,12 +1,12 @@
 """Tests for Hermes chat API endpoint."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
 from api import app
 from hermes.providers.base import ProviderResponse
-
 
 client = TestClient(app)
 
@@ -71,7 +71,7 @@ class TestHermesChatEndpoint:
                     "/hermes/chat",
                     json={"message": "   "},
                 )
-                
+
                 # The message passes Pydantic validation (min_length=1 is "   ")
                 # but our code strips it and returns error
                 assert response.status_code == 200
@@ -178,7 +178,7 @@ class TestHermesChatEndpoint:
 
                 assert response.status_code == 200
                 data = response.json()
-                
+
                 # Verify all expected fields exist
                 assert "success" in data
                 assert "provider" in data

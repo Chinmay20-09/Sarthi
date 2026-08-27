@@ -41,9 +41,9 @@ def log_failed(failed_records: list[dict]) -> None:
     if not failed_records:
         return
     with open(LOG_PATH, "a", encoding="utf-8") as f:
-        f.write(f"\n{'='*60}\n")
+        f.write(f"\n{'=' * 60}\n")
         f.write(f"Cleanup run: {datetime.now().isoformat()}\n")
-        f.write(f"{'='*60}\n")
+        f.write(f"{'=' * 60}\n")
         for rec in failed_records:
             f.write(f"\n  Task ID : {rec.get('task_id', '?')}\n")
             f.write(f"  Prompt  : {rec.get('prompt', '?')}\n")
@@ -53,7 +53,7 @@ def log_failed(failed_records: list[dict]) -> None:
             f.write(f"  Time    : {rec.get('timestamp', '?')}\n")
             f.write(f"  Duration: {rec.get('duration_ms', 0):.0f}ms\n")
             f.write(f"  Tool    : {rec.get('tool_used') or 'none'}\n")
-            f.write(f"  {'-'*40}\n")
+            f.write(f"  {'-' * 40}\n")
         f.write(f"\nTotal failed: {len(failed_records)}\n")
 
 
@@ -99,12 +99,12 @@ def clean(dry_run: bool = True, write_log: bool = False) -> None:
     for query in queries_to_remove:
         del index[query]
 
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"  Successful tasks deleted : {deleted_count}")
     print(f"  Failed tasks kept        : {kept_count}")
     print(f"  Queries fully cleaned    : {len(queries_to_remove)}")
     print(f"  Queries with failures    : {len(index)}")
-    print(f"{'='*50}")
+    print(f"{'=' * 50}")
 
     if dry_run:
         print("\n  This was a DRY RUN. No files were modified.")

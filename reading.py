@@ -16,10 +16,10 @@ import subprocess
 
 import psutil
 
-
 # ---------------------------------------------------------------------------
 # CPU
 # ---------------------------------------------------------------------------
+
 
 def read_cpu() -> dict:
     """Return CPU percent, core count, and frequency."""
@@ -36,6 +36,7 @@ def read_cpu() -> dict:
 # ---------------------------------------------------------------------------
 # CPU Temperature
 # ---------------------------------------------------------------------------
+
 
 def read_cpu_temperature() -> dict | None:
     """Read CPU temperature from hardware sensors.
@@ -60,9 +61,7 @@ def read_cpu_temperature() -> dict | None:
                 return {
                     "current": round(max(readings), 1),
                     "high": round(max((s.high or 0) for s in temps[name] if s.high), 1) or None,
-                    "critical": round(
-                        max((s.critical or 0) for s in temps[name] if s.critical), 1
-                    )
+                    "critical": round(max((s.critical or 0) for s in temps[name] if s.critical), 1)
                     or None,
                     "sensor": name,
                 }
@@ -89,6 +88,7 @@ def read_cpu_temperature() -> dict | None:
 # RAM
 # ---------------------------------------------------------------------------
 
+
 def read_ram() -> dict:
     """Return RAM percent, total, used, and available in GB."""
     mem = psutil.virtual_memory()
@@ -104,20 +104,23 @@ def read_ram() -> dict:
 # Disk / SSD
 # ---------------------------------------------------------------------------
 
+
 def read_disks() -> list[dict]:
     """Return usage for every mounted physical partition."""
     parts = []
     for part in psutil.disk_partitions(all=False):
         try:
             usage = psutil.disk_usage(part.mountpoint)
-            parts.append({
-                "device": part.device,
-                "mountpoint": part.mountpoint,
-                "total_gb": round(usage.total / (1024**3), 1),
-                "used_gb": round(usage.used / (1024**3), 1),
-                "free_gb": round(usage.free / (1024**3), 1),
-                "percent": usage.percent,
-            })
+            parts.append(
+                {
+                    "device": part.device,
+                    "mountpoint": part.mountpoint,
+                    "total_gb": round(usage.total / (1024**3), 1),
+                    "used_gb": round(usage.used / (1024**3), 1),
+                    "free_gb": round(usage.free / (1024**3), 1),
+                    "percent": usage.percent,
+                }
+            )
         except PermissionError:
             continue
     return parts
@@ -126,6 +129,7 @@ def read_disks() -> list[dict]:
 # ---------------------------------------------------------------------------
 # GPU — detection cascade
 # ---------------------------------------------------------------------------
+
 
 def _try_nvidia() -> dict | None:
     """Query NVIDIA GPUs via nvidia-smi."""
@@ -254,14 +258,12 @@ def _try_sysfs_amd() -> dict | None:
                             break
 
             try:
-                lspci_r = subprocess.run(
-                    ["lspci"], capture_output=True, text=True, timeout=2
-                )
+                lspci_r = subprocess.run(["lspci"], capture_output=True, text=True, timeout=2)
                 if lspci_r.returncode == 0:
-                    for l in lspci_r.stdout.splitlines():
-                        if "VGA" in l and ("AMD" in l or "Radeon" in l):
-                            if ":" in l:
-                                name = l.split(":", 1)[1].strip()
+                    for line in lspci_r.stdout.splitlines():
+                        if "VGA" in line and ("AMD" in line or "Radeon" in line):
+                            if ":" in line:
+                                name = line.split(":", 1)[1].strip()
                             break
             except (FileNotFoundError, subprocess.TimeoutExpired):
                 pass
@@ -338,6 +340,7 @@ def read_gpu() -> dict | None:
 # ---------------------------------------------------------------------------
 # Aggregate
 # ---------------------------------------------------------------------------
+
 
 def get_system_metrics() -> dict:
     """Collect all hardware readings into a single dict.

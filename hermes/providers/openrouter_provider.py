@@ -1,4 +1,4 @@
-﻿import httpx
+import httpx
 
 from hermes.config.settings import HermesConfig
 from hermes.models import Task
@@ -21,7 +21,9 @@ class OpenRouterProvider(AIProvider):
     def generate(self, task: Task) -> ProviderResponse:
         """Send one chat completion request. Never raises upward."""
         # support backward-compatible api_key field or the explicit openrouter_api_key
-        api_key = getattr(self._config, "openrouter_api_key", None) or getattr(self._config, "api_key", None)
+        api_key = getattr(self._config, "openrouter_api_key", None) or getattr(
+            self._config, "api_key", None
+        )
         if not api_key:
             return ProviderResponse(
                 success=False,
@@ -85,7 +87,9 @@ class OpenRouterProvider(AIProvider):
             )
 
     def _post(self, task: Task) -> httpx.Response:
-        api_key = getattr(self._config, "openrouter_api_key", None) or getattr(self._config, "api_key", None)
+        api_key = getattr(self._config, "openrouter_api_key", None) or getattr(
+            self._config, "api_key", None
+        )
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",

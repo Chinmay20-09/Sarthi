@@ -99,7 +99,11 @@ class ScannerSkill(BaseSkill):
                 "status": (
                     f"Scan complete — discovered {len(applications)} applications "
                     f"and {games} game(s)."
-                    + (f" {len(new_unattended)} new app(s) awaiting categorization." if new_unattended else "")
+                    + (
+                        f" {len(new_unattended)} new app(s) awaiting categorization."
+                        if new_unattended
+                        else ""
+                    )
                 ),
                 "result": {
                     "applications_found": len(applications),
@@ -110,7 +114,8 @@ class ScannerSkill(BaseSkill):
                             "applications": len(applications) - games,
                             "games": games,
                             "new_unattended": [
-                                {"name": a.get("name"), "path": a.get("path")} for a in new_unattended
+                                {"name": a.get("name"), "path": a.get("path")}
+                                for a in new_unattended
                             ],
                             "last_scan": self.knowledge.last_scan,
                         },

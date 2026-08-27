@@ -86,9 +86,7 @@ class TaskSandbox:
         for query, records in self._load_index().items():
             groups.append({"query": query, "records": records})
         groups.sort(
-            key=lambda g: max(
-                (r.get("timestamp") or "" for r in g["records"]), default=""
-            ),
+            key=lambda g: max((r.get("timestamp") or "" for r in g["records"]), default=""),
             reverse=True,
         )
         return groups
@@ -159,9 +157,7 @@ class TaskSandbox:
         (task_dir / "response.md").write_text(response.text or response.error, encoding="utf-8")
 
         if trace:
-            (task_dir / "trace.json").write_text(
-                json.dumps(trace, indent=2), encoding="utf-8"
-            )
+            (task_dir / "trace.json").write_text(json.dumps(trace, indent=2), encoding="utf-8")
 
         metadata = {
             "task_id": task.id,
@@ -173,9 +169,7 @@ class TaskSandbox:
             "timestamp": datetime.now(UTC).isoformat(),
             "duration_ms": duration_ms,
         }
-        (task_dir / "metadata.json").write_text(
-            json.dumps(metadata, indent=2), encoding="utf-8"
-        )
+        (task_dir / "metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 
         # Append to the query index so this task is findable by query.
         index = self._load_index()

@@ -21,7 +21,9 @@ def test_exe_launched_with_list_form_popen(monkeypatch):
         captured["shell"] = kwargs.get("shell")
 
     monkeypatch.setattr("skills.app_launcher.main.subprocess.Popen", fake_popen)
-    monkeypatch.setattr("skills.app_launcher.main.os.startfile", lambda p: captured.setdefault("startfile", p))
+    monkeypatch.setattr(
+        "skills.app_launcher.main.os.startfile", lambda p: captured.setdefault("startfile", p)
+    )
 
     AppLauncherSkill._launch_path(r"C:\Program Files\Chrome\chrome.exe")
 
@@ -37,7 +39,10 @@ def test_lnk_launched_with_startfile(monkeypatch):
     def fake_startfile(path):
         captured["startfile"] = path
 
-    monkeypatch.setattr("skills.app_launcher.main.subprocess.Popen", lambda *a, **k: captured.setdefault("popen", True))
+    monkeypatch.setattr(
+        "skills.app_launcher.main.subprocess.Popen",
+        lambda *a, **k: captured.setdefault("popen", True),
+    )
     monkeypatch.setattr("skills.app_launcher.main.os.startfile", fake_startfile)
 
     AppLauncherSkill._launch_path(r"C:\ProgramData\Microsoft\Windows\Start Menu\Chrome.lnk")
@@ -54,7 +59,9 @@ def test_launch_case_insensitive_for_exe(monkeypatch):
         captured["args"] = args
 
     monkeypatch.setattr("skills.app_launcher.main.subprocess.Popen", fake_popen)
-    monkeypatch.setattr("skills.app_launcher.main.os.startfile", lambda p: captured.setdefault("startfile", p))
+    monkeypatch.setattr(
+        "skills.app_launcher.main.os.startfile", lambda p: captured.setdefault("startfile", p)
+    )
 
     AppLauncherSkill._launch_path("C:\\Tools\\MYAPP.EXE")
 

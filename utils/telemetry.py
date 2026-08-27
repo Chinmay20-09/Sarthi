@@ -15,7 +15,6 @@ Usage:
 """
 
 import threading
-import time
 from datetime import datetime
 
 
@@ -195,6 +194,7 @@ class TelemetryCollector:
     def _safe_read_cpu(self) -> dict:
         try:
             from reading import read_cpu
+
             return read_cpu()
         except Exception:
             return {"percent": None}
@@ -202,6 +202,7 @@ class TelemetryCollector:
     def _safe_read_ram(self) -> dict:
         try:
             from reading import read_ram
+
             ram = read_ram()
             return {"used_gb": ram.get("used_gb"), "total_gb": ram.get("total_gb")}
         except Exception:
@@ -210,6 +211,7 @@ class TelemetryCollector:
     def _safe_read_cpu_temp(self) -> float | None:
         try:
             from reading import read_cpu_temperature
+
             data = read_cpu_temperature()
             if data and data.get("current"):
                 return data["current"]
@@ -221,6 +223,7 @@ class TelemetryCollector:
         """Read GPU data, extracting temperature and VRAM separately from utilization."""
         try:
             from reading import read_gpu
+
             gpu = read_gpu()
             if gpu is None:
                 return {}
@@ -254,6 +257,7 @@ class TelemetryCollector:
         """Try to get GPU temperature from nvidia-smi."""
         try:
             import subprocess
+
             r = subprocess.run(
                 [
                     "nvidia-smi",
@@ -274,6 +278,7 @@ class TelemetryCollector:
         """Try to get GPU power draw from nvidia-smi."""
         try:
             import subprocess
+
             r = subprocess.run(
                 [
                     "nvidia-smi",
@@ -316,6 +321,7 @@ class TelemetryCollector:
 # Configurable hardware thresholds
 # ------------------------------------------------------------------
 
+
 class HardwareThresholds:
     """Configurable thresholds for hardware safety warnings.
 
@@ -356,9 +362,11 @@ class HardwareThresholds:
                     consecutive = 0
             if max_consecutive >= self.sustained_count:
                 warnings["gpu_temp_sustained"] = {
-                    "level": "critical" if self.gpu_temp_critical_c and max(
-                        (r.get("gpu_temperature_c") or 0) for r in history
-                    ) >= self.gpu_temp_critical_c else "warning",
+                    "level": "critical"
+                    if self.gpu_temp_critical_c
+                    and max((r.get("gpu_temperature_c") or 0) for r in history)
+                    >= self.gpu_temp_critical_c
+                    else "warning",
                     "consecutive_count": max_consecutive,
                     "threshold_c": self.gpu_temp_warning_c,
                     "peak_c": max((r.get("gpu_temperature_c") or 0) for r in history),
@@ -399,9 +407,7 @@ class HardwareThresholds:
                     "level": "warning",
                     "consecutive_count": max_consecutive,
                     "threshold_percent": self.cpu_util_warning_percent,
-                    "peak_percent": max(
-                        (r.get("cpu_utilization_percent") or 0) for r in history
-                    ),
+                    "peak_percent": max((r.get("cpu_utilization_percent") or 0) for r in history),
                 }
 
         return warnings
@@ -410,6 +416,7 @@ class HardwareThresholds:
 # ------------------------------------------------------------------
 # Failure classification
 # ------------------------------------------------------------------
+
 
 def classify_failure(result: dict) -> str:
     """Classify the failure type of a test result.
@@ -430,7 +437,7 @@ def classify_failure(result: dict) -> str:
 
     actual = (result.get("actual") or "").lower()
     action = (result.get("action") or "").lower()
-    target = (result.get("target") or "")
+    target = result.get("target") or ""
     success = result.get("success", False)
 
     # No target specified
@@ -446,7 +453,16 @@ def classify_failure(result: dict) -> str:
     # also produce "Application not found" messages with bad targets.
     filler_in_target = any(
         word in target.lower()
-        for word in ("hey", "sarthi", "i want", "i need", "i'd like", "i would like", "mind", "start")
+        for word in (
+            "hey",
+            "sarthi",
+            "i want",
+            "i need",
+            "i'd like",
+            "i would like",
+            "mind",
+            "start",
+        )
     )
     if filler_in_target and action != "unknown":
         return "entity_resolution"
