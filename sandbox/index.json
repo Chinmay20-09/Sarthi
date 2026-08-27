@@ -387,6 +387,16 @@
       "tool_used": null,
       "timestamp": "2026-08-27T17:16:12.800579+00:00",
       "duration_ms": 64821.503699999994
+    },
+    {
+      "task_id": "task_606027",
+      "prompt": "what applications can you open?",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-27T17:56:47.788994+00:00",
+      "duration_ms": 50473.626400000285
     }
   ],
   "asdfghjkl": [
@@ -399,6 +409,16 @@
       "tool_used": null,
       "timestamp": "2026-08-27T17:17:15.521666+00:00",
       "duration_ms": 62694.859899999756
+    },
+    {
+      "task_id": "task_87757d",
+      "prompt": "asdfghjkl",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-27T17:57:30.314166+00:00",
+      "duration_ms": 37804.94879999969
     }
   ],
   "do something": [
@@ -411,6 +431,16 @@
       "tool_used": null,
       "timestamp": "2026-08-27T17:18:24.674664+00:00",
       "duration_ms": 69129.61290000021
+    },
+    {
+      "task_id": "task_a0efb1",
+      "prompt": "do something",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-27T17:58:14.862012+00:00",
+      "duration_ms": 38204.9218000011
     }
   ]
 }

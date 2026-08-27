@@ -1,242 +1,302 @@
 [
   {
     "prompt": "open chrome",
-    "expected": ""
+    "expected": "",
+    "category": "deterministic"
   },
   {
     "prompt": "open vscode",
-    "expected": ""
+    "expected": "",
+    "category": "deterministic"
   },
   {
     "prompt": "open calculator",
-    "expected": ""
+    "expected": "",
+    "category": "deterministic"
   },
   {
     "prompt": "open spotify",
-    "expected": ""
+    "expected": "",
+    "category": "deterministic"
   },
   {
     "prompt": "open github",
-    "expected": ""
+    "expected": "",
+    "category": "deterministic"
   },
   {
     "prompt": "open youtube",
-    "expected": ""
+    "expected": "",
+    "category": "deterministic"
   },
   {
     "prompt": "open brave",
-    "expected": ""
+    "expected": "",
+    "category": "deterministic"
   },
   {
     "prompt": "close chrome",
-    "expected": ""
+    "expected": "",
+    "category": "deterministic"
   },
   {
     "prompt": "close spotify",
-    "expected": ""
+    "expected": "",
+    "category": "deterministic"
   },
   {
     "prompt": "close vscode",
-    "expected": ""
+    "expected": "",
+    "category": "deterministic"
   },
   {
     "prompt": "close calculator",
-    "expected": ""
+    "expected": "",
+    "category": "deterministic"
   },
   {
     "prompt": "search artificial intelligence",
-    "expected": ""
+    "expected": "",
+    "category": "deterministic"
   },
   {
     "prompt": "search for Sarthi AI",
-    "expected": ""
+    "expected": "",
+    "category": "deterministic"
   },
   {
     "prompt": "search latest Python news",
-    "expected": ""
+    "expected": "",
+    "category": "deterministic"
   },
   {
     "prompt": "search how to use Git",
-    "expected": ""
+    "expected": "",
+    "category": "deterministic"
   },
   {
     "prompt": "play lo-fi music",
-    "expected": ""
+    "expected": "",
+    "category": "deterministic"
   },
   {
     "prompt": "play relaxing music",
-    "expected": ""
+    "expected": "",
+    "category": "deterministic"
   },
   {
     "prompt": "play Python tutorial",
-    "expected": ""
+    "expected": "",
+    "category": "deterministic"
   },
   {
     "prompt": "play AI news",
-    "expected": ""
+    "expected": "",
+    "category": "deterministic"
   },
   {
     "prompt": "please open chrome",
-    "expected": ""
+    "expected": "",
+    "category": "filler_removal"
   },
   {
     "prompt": "could you open spotify",
-    "expected": ""
+    "expected": "",
+    "category": "filler_removal"
   },
   {
     "prompt": "can you please open github",
-    "expected": ""
+    "expected": "",
+    "category": "filler_removal"
   },
   {
     "prompt": "would you mind opening youtube",
-    "expected": ""
+    "expected": "",
+    "category": "filler_removal"
   },
   {
     "prompt": "please search for artificial intelligence",
-    "expected": ""
+    "expected": "",
+    "category": "filler_removal"
   },
   {
     "prompt": "could you play some relaxing music",
-    "expected": ""
+    "expected": "",
+    "category": "filler_removal"
   },
   {
     "prompt": "hey Sarthi, open Chrome",
-    "expected": ""
+    "expected": "",
+    "category": "nlp"
   },
   {
     "prompt": "Sarthi, can you please open YouTube for me",
-    "expected": ""
+    "expected": "",
+    "category": "nlp"
   },
   {
     "prompt": "I want you to open Spotify",
-    "expected": ""
+    "expected": "",
+    "category": "nlp"
   },
   {
     "prompt": "I'd like to search for AI agents",
-    "expected": ""
+    "expected": "",
+    "category": "nlp"
   },
   {
     "prompt": "I need to find information about FastAPI",
-    "expected": ""
+    "expected": "",
+    "category": "nlp"
   },
   {
     "prompt": "Can you start YouTube for me?",
-    "expected": ""
+    "expected": "",
+    "category": "nlp"
   },
   {
     "prompt": "open git hub",
-    "expected": ""
+    "expected": "",
+    "category": "entity_resolution"
   },
   {
     "prompt": "open spotfy",
-    "expected": ""
+    "expected": "",
+    "category": "entity_resolution"
   },
   {
     "prompt": "open you tube",
-    "expected": ""
+    "expected": "",
+    "category": "entity_resolution"
   },
   {
     "prompt": "open githb",
-    "expected": ""
+    "expected": "",
+    "category": "entity_resolution"
   },
   {
     "prompt": "open youtub",
-    "expected": ""
+    "expected": "",
+    "category": "entity_resolution"
   },
   {
     "prompt": "open visual studio code",
-    "expected": ""
+    "expected": "",
+    "category": "entity_resolution"
   },
   {
     "prompt": "open vs code",
-    "expected": ""
+    "expected": "",
+    "category": "entity_resolution"
   },
   {
     "prompt": "open YouTube and play lo-fi music",
-    "expected": ""
+    "expected": "",
+    "category": "multi_intent"
   },
   {
     "prompt": "open Chrome and search for Sarthi AI",
-    "expected": ""
+    "expected": "",
+    "category": "multi_intent"
   },
   {
     "prompt": "open Spotify and play Arijit Singh",
-    "expected": ""
+    "expected": "",
+    "category": "multi_intent"
   },
   {
     "prompt": "open GitHub and search for Sarthi",
-    "expected": ""
+    "expected": "",
+    "category": "multi_intent"
   },
   {
     "prompt": "what can you do?",
-    "expected": ""
+    "expected": "",
+    "category": "conversational"
   },
   {
     "prompt": "hello Sarthi",
-    "expected": ""
+    "expected": "",
+    "category": "conversational"
   },
   {
     "prompt": "how are you?",
-    "expected": ""
+    "expected": "",
+    "category": "conversational"
   },
   {
     "prompt": "tell me about yourself",
-    "expected": ""
+    "expected": "",
+    "category": "conversational"
   },
   {
     "prompt": "what applications can you open?",
-    "expected": ""
+    "expected": "",
+    "category": "conversational"
   },
   {
     "prompt": "can you open something for me?",
-    "expected": ""
+    "expected": "",
+    "category": "filler_removal"
   },
   {
     "prompt": "open it",
-    "expected": ""
+    "expected": "",
+    "category": "negative"
   },
   {
     "prompt": "play something",
-    "expected": ""
+    "expected": "",
+    "category": "negative"
   },
   {
     "prompt": "search something",
-    "expected": ""
+    "expected": "",
+    "category": "negative"
   },
   {
     "prompt": "asdfghjkl",
-    "expected": ""
+    "expected": "",
+    "category": "negative"
   },
   {
     "prompt": "open",
-    "expected": ""
+    "expected": "",
+    "category": "negative"
   },
   {
     "prompt": "search",
-    "expected": ""
+    "expected": "",
+    "category": "negative"
   },
   {
     "prompt": "play",
-    "expected": ""
+    "expected": "",
+    "category": "negative"
   },
   {
     "prompt": "close",
-    "expected": ""
+    "expected": "",
+    "category": "negative"
   },
   {
     "prompt": "open xyzabc123",
-    "expected": ""
+    "expected": "",
+    "category": "negative"
   },
   {
     "prompt": "do something",
-    "expected": ""
+    "expected": "",
+    "category": "negative"
   },
   {
     "prompt": "please please please open chrome",
-    "expected": ""
+    "expected": "",
+    "category": "filler_removal"
   },
   {
     "prompt": "can you maybe possibly please open chrome for me",
-    "expected": ""
+    "expected": "",
+    "category": "filler_removal"
   }
 ]

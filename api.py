@@ -576,161 +576,336 @@ def event_history():
     ]
 
 
-def _save_metrics_chart(metrics: list[dict], summary: dict, path: Path) -> None:
-    """Render a simple metrics chart (Pillow) and save as PNG.
+def _save_metrics_chart(
+    results: list[dict],
+    summary: dict,
+    hw_history: list[dict],
+    hw_summary: dict,
+    warnings: dict,
+    path: Path,
+) -> None:
+    """Render a multi-panel dashboard (Pillow) and save as PNG.
 
-    Draws a dark-themed chart with:
-      - Bar chart for passed / failed counts
-      - Line overlays for temperature (°C) and GPU utilisation (%)
+    Panels:
+      A — Test Results (passed/failed per test)
+      B — GPU Temperature (°C)
+      C — GPU VRAM (GB)
+      D — GPU & CPU Utilization (%)
+      Summary — compact dashboard at top
     """
     try:
         from PIL import Image, ImageDraw, ImageFont
     except ImportError:
         return  # Pillow not installed — skip silently
 
-    W, H = 900, 360
-    PAD_LEFT, PAD_RIGHT, PAD_TOP, PAD_BOTTOM = 70, 70, 50, 50
+    # ── Layout ──
+    PANEL_H = 140
+    SUMMARY_H = 120
+    GAP = 6
+    MARGIN = 20
+    COL_W = 440
+    ROW0_W = 900  # summary spans full width
+    TOTAL_W = ROW0_W
+    n_panels = 4
+    PANELS_PER_ROW = 2
+    n_rows = (n_panels + PANELS_PER_ROW - 1) // PANELS_PER_ROW
+    TOTAL_H = SUMMARY_H + GAP + n_rows * (PANEL_H + GAP) + MARGIN
+
     BG = (14, 14, 14)
-    GRID = (40, 40, 40)
+    PANEL_BG = (20, 22, 26)
+    GRID = (35, 38, 42)
     TEXT = (187, 201, 206)
+    TEXT_DIM = (100, 110, 120)
     CYAN = (0, 217, 255)
     RED = (255, 107, 107)
+    GREEN = (80, 220, 130)
     ORANGE = (255, 183, 125)
+    PURPLE = (174, 130, 255)
+    YELLOW = (255, 220, 80)
+    WHITE = (220, 230, 240)
 
-    img = Image.new("RGB", (W, H), BG)
+    img = Image.new("RGB", (TOTAL_W, TOTAL_H), BG)
     draw = ImageDraw.Draw(img)
 
     try:
         font = ImageFont.truetype("consola.ttf", 11)
         font_sm = ImageFont.truetype("consola.ttf", 9)
-        font_lg = ImageFont.truetype("consola.ttf", 13)
+        font_lg = ImageFont.truetype("consola.ttf", 14)
+        font_title = ImageFont.truetype("consola.ttf", 12)
     except OSError:
         font = ImageFont.load_default()
         font_sm = font
         font_lg = font
+        font_title = font
 
-    plot_x = PAD_LEFT
-    plot_y = PAD_TOP
-    plot_w = W - PAD_LEFT - PAD_RIGHT
-    plot_h = H - PAD_TOP - PAD_BOTTOM
+    # ── Summary dashboard ──
+    sy = 8
+    draw.text((TOTAL_W // 2, sy), "SARTHI TEST DASHBOARD", fill=CYAN, font=font_lg, anchor="mt")
+    sy += 20
 
-    # Title
-    draw.text((W // 2, 16), "SYSTEM METRICS DURING TEST", fill=CYAN, font=font_lg, anchor="mt")
+    # Three columns: Test Suite | GPU | CPU
+    col_w = TOTAL_W // 3
+    cx1 = MARGIN + 10
+    cx2 = MARGIN + col_w + 10
+    cx3 = MARGIN + 2 * col_w + 10
 
-    # Grid lines
-    for i in range(5):
-        y = plot_y + int(plot_h * i / 4)
-        draw.line([(plot_x, y), (plot_x + plot_w, y)], fill=GRID, width=1)
+    # Test Suite column
+    draw.text((cx1, sy), "TEST SUITE", fill=TEXT, font=font_title)
+    sy_ts = sy + 16
+    total = summary.get("total", 0)
+    passed = summary.get("passed", 0)
+    failed = summary.get("failed", 0)
+    pass_rate = (passed / total * 100) if total > 0 else 0
+    avg_lat = summary.get("avg_latency_ms", 0)
+    max_lat = summary.get("max_latency_ms", 0)
+    draw.text((cx1, sy_ts), f"Total: {total}", fill=TEXT, font=font_sm)
+    draw.text((cx1, sy_ts + 12), f"Passed: {passed}", fill=GREEN, font=font_sm)
+    draw.text((cx1, sy_ts + 24), f"Failed: {failed}", fill=RED, font=font_sm)
+    draw.text((cx1, sy_ts + 36), f"Pass rate: {pass_rate:.1f}%", fill=CYAN, font=font_sm)
+    draw.text((cx1, sy_ts + 48), f"Avg latency: {avg_lat:.0f}ms", fill=TEXT, font=font_sm)
+    draw.text((cx1, sy_ts + 60), f"Max latency: {max_lat:.0f}ms", fill=ORANGE, font=font_sm)
 
-    n = len(metrics)
-    if n < 2:
-        img.save(str(path))
-        return
+    # GPU column
+    draw.text((cx2, sy), "GPU", fill=TEXT, font=font_title)
+    sy_gpu = sy + 16
+    gpu_temp = hw_summary.get("gpu_temperature", {})
+    gpu_vram = hw_summary.get("gpu_vram", {})
+    gpu_util = hw_summary.get("gpu_utilization", {})
+    gt_cur = gpu_temp.get("current")
+    gt_max = gpu_temp.get("max")
+    gt_avg = gpu_temp.get("avg")
+    gv_cur = gpu_vram.get("current")
+    gv_peak = gpu_vram.get("peak")
+    gv_total = gpu_vram.get("total")
+    gu_avg = gpu_util.get("avg")
+    gu_peak = gpu_util.get("peak")
+    draw.text((cx2, sy_gpu), f"Temp: {_fmt(gt_cur)} / max {_fmt(gt_max)} / avg {_fmt(gt_avg)} °C", fill=ORANGE, font=font_sm)
+    draw.text((cx2, sy_gpu + 12), f"VRAM: {_fmt(gv_cur)} / peak {_fmt(gv_peak)} / total {_fmt(gv_total)} GB", fill=PURPLE, font=font_sm)
+    draw.text((cx2, sy_gpu + 24), f"Util: avg {_fmt(gu_avg)} / peak {_fmt(gu_peak)} %", fill=CYAN, font=font_sm)
+    # Warnings
+    wy = sy_gpu + 40
+    for wtype, wdata in warnings.items():
+        level = wdata.get("level", "warning")
+        color = RED if level == "critical" else YELLOW
+        msg = f"⚠ {wtype}: {level.upper()}"
+        draw.text((cx2, wy), msg, fill=color, font=font_sm)
+        wy += 12
+    if not warnings:
+        draw.text((cx2, wy), "No sustained warnings", fill=GREEN, font=font_sm)
 
-    x_step = plot_w / (n - 1)
-    dense = n > 15  # adaptive layout for many data points
-    dot_r = 2 if dense else 3
+    # CPU column
+    draw.text((cx3, sy), "CPU", fill=TEXT, font=font_title)
+    sy_cpu = sy + 16
+    cpu_util = hw_summary.get("cpu_utilization", {})
+    cu_avg = cpu_util.get("avg")
+    cu_peak = cpu_util.get("peak")
+    draw.text((cx3, sy_cpu), f"Util: avg {_fmt(cu_avg)} / peak {_fmt(cu_peak)} %", fill=PURPLE, font=font_sm)
+    cpu_temp = hw_summary.get("cpu_temperature", {})
+    ct_cur = cpu_temp.get("current")
+    ct_max = cpu_temp.get("max")
+    if ct_cur is not None:
+        draw.text((cx3, sy_cpu + 12), f"Temp: {_fmt(ct_cur)} / max {_fmt(ct_max)} °C", fill=ORANGE, font=font_sm)
+    else:
+        draw.text((cx3, sy_cpu + 12), "CPU temp: unavailable", fill=TEXT_DIM, font=font_sm)
 
-    # ── Bars: passed / failed (start + end only when dense) ──
-    bar_w = max(3, int(min(x_step * 0.35, 12)))
-    max_count = max(summary.get("total", 1), 1)
-    bar_indices = [0, n - 1] if dense else range(n)
-    for i in bar_indices:
-        cx = plot_x + int(i * x_step)
-        bar_h = int((summary.get("passed", 0) / max_count) * plot_h * 0.6)
-        if bar_h > 0:
-            draw.rectangle(
-                [cx - bar_w, plot_y + plot_h - bar_h, cx, plot_y + plot_h],
-                fill=(0, 217, 255, 60), outline=CYAN,
-            )
-        bar_h_f = int((summary.get("failed", 0) / max_count) * plot_h * 0.6)
-        if bar_h_f > 0:
-            draw.rectangle(
-                [cx, plot_y + plot_h - bar_h_f, cx + bar_w, plot_y + plot_h],
-                fill=(255, 107, 107, 60), outline=RED,
-            )
-
-    # ── Line: temperature ──
-    temps = [m.get("temperature") for m in metrics]
-    valid_temps = [t for t in temps if t is not None]
-    if valid_temps:
-        max_temp = max(valid_temps) * 1.15 or 100
-        points = []
-        for i, t in enumerate(temps):
-            if t is None:
-                continue
-            x = plot_x + int(i * x_step)
-            y = plot_y + plot_h - int((t / max_temp) * plot_h)
-            points.append((x, y))
-        if len(points) > 1:
-            draw.line(points, fill=ORANGE, width=2)
-        for x, y in points:
-            draw.ellipse([x - dot_r, y - dot_r, x + dot_r, y + dot_r], fill=ORANGE)
-        draw.text((W - PAD_RIGHT + 8, plot_y), f"{max_temp:.0f}°C", fill=ORANGE, font=font_sm)
-        draw.text((W - PAD_RIGHT + 8, plot_y + plot_h - 10), "0°C", fill=ORANGE, font=font_sm)
-
-    # ── Line: GPU % ──
-    gpus = [m.get("gpu_percent", 0) for m in metrics]
-    points_gpu = []
-    for i, g in enumerate(gpus):
-        x = plot_x + int(i * x_step)
-        y = plot_y + plot_h - int((g / 100) * plot_h)
-        points_gpu.append((x, y))
-    if len(points_gpu) > 1:
-        draw.line(points_gpu, fill=CYAN, width=2)
-    for x, y in points_gpu:
-        draw.ellipse([x - dot_r, y - dot_r, x + dot_r, y + dot_r], fill=CYAN)
-
-    # ── Line: CPU % ──
-    cpus = [m.get("cpu_percent", 0) for m in metrics]
-    points_cpu = []
-    for i, c in enumerate(cpus):
-        x = plot_x + int(i * x_step)
-        y = plot_y + plot_h - int((c / 100) * plot_h)
-        points_cpu.append((x, y))
-    if len(points_cpu) > 1:
-        draw.line(points_cpu, fill=(174, 236, 255), width=1)
-    for x, y in points_cpu:
-        draw.ellipse([x - 1, y - 1, x + 1, y + 1], fill=(174, 236, 255))
-
-    # ── X-axis labels (skip when dense to avoid overlap) ──
-    label_step = max(1, n // 10) if dense else 1
-    for i, m in enumerate(metrics):
-        is_endpoint = m["index"] == 0 or m["index"] == summary.get("total", 0)
-        if not is_endpoint and (i % label_step != 0):
-            continue
-        x = plot_x + int(i * x_step)
-        label = "Start" if m["index"] == 0 else (
-            "End" if m["index"] == summary.get("total", 0) else f"#{m['index']}")
-        draw.text((x, plot_y + plot_h + 8), label, fill=TEXT, font=font_sm, anchor="mt")
-
-    # ── Left Y-axis labels ──
-    for i in range(5):
-        y = plot_y + plot_h - int(plot_h * i / 4)
-        val = int(max_count * i / 4)
-        draw.text((plot_x - 8, y), str(val), fill=TEXT, font=font_sm, anchor="rm")
-
-    # ── Right Y-axis: GPU/CPU % ──
-    for i in range(5):
-        y = plot_y + plot_h - int(plot_h * i / 4)
-        val = int(100 * i / 4)
-        draw.text((plot_x + plot_w + 8, y), f"{val}%", fill=CYAN, font=font_sm, anchor="lm")
-
-    # ── Legend ──
-    legend_y = H - 14
-    legend_items = [
-        (CYAN, "■ PASSED"),
-        (RED, "■ FAILED"),
-        (ORANGE, "● TEMP"),
-        (CYAN, "● GPU"),
-        ((174, 236, 255), "● CPU"),
+    # ── Panel positions ──
+    panel_defs = [
+        ("A", "TEST RESULTS", CYAN),
+        ("B", "GPU TEMPERATURE", ORANGE),
+        ("C", "GPU VRAM", PURPLE),
+        ("D", "GPU & CPU UTILIZATION", CYAN),
     ]
-    lx = W // 2 - 160
-    for color, label in legend_items:
-        draw.text((lx, legend_y), label, fill=color, font=font_sm)
-        lx += 80
+    panel_y_start = SUMMARY_H + GAP
+
+    for pi, (pid, title, color) in enumerate(panel_defs):
+        row = pi // PANELS_PER_ROW
+        col = pi % PANELS_PER_ROW
+        px = MARGIN + col * (COL_W + GAP)
+        py = panel_y_start + row * (PANEL_H + GAP)
+        pw = COL_W
+        ph = PANEL_H
+
+        # Panel background
+        draw.rounded_rectangle([px, py, px + pw, py + ph], radius=4, fill=PANEL_BG)
+        # Title bar
+        draw.rectangle([px, py, px + pw, py + 18], fill=(28, 32, 38))
+        draw.text((px + 6, py + 3), f"{pid} — {title}", fill=color, font=font_title)
+
+        # Plot area
+        plot_x = px + 50
+        plot_y = py + 22
+        plot_w = pw - 70
+        plot_h = ph - 34
+
+        if len(results) < 2:
+            draw.text((px + pw // 2, py + ph // 2), "Insufficient data", fill=TEXT_DIM, font=font_sm, anchor="mm")
+            continue
+
+        # Grid lines
+        for gi in range(5):
+            gy = plot_y + int(plot_h * gi / 4)
+            draw.line([(plot_x, gy), (plot_x + plot_w, gy)], fill=GRID, width=1)
+
+        x_step = plot_w / (len(results) - 1)
+        dense = len(results) > 20
+        dot_r = 2 if dense else 3
+
+        if pid == "A":
+            # ── Panel A: Test Results (passed/failed per test) ──
+            for i, r in enumerate(results):
+                cx = plot_x + int(i * x_step)
+                bar_w = max(2, int(min(x_step * 0.35, 10)))
+                if r.get("passed"):
+                    draw.rectangle(
+                        [cx - bar_w, plot_y + plot_h - 8, cx, plot_y + plot_h],
+                        fill=GREEN, outline=GREEN,
+                    )
+                else:
+                    draw.rectangle(
+                        [cx - bar_w, plot_y + plot_h - 8, cx, plot_y + plot_h],
+                        fill=RED, outline=RED,
+                    )
+            # Failure type color coding below the bars
+            failure_colors = {
+                "pass": GREEN,
+                "executor_unsupported_action": RED,
+                "app_not_found": ORANGE,
+                "entity_resolution": PURPLE,
+                "no_target": YELLOW,
+                "conversational_nlp": TEXT_DIM,
+                "execution_error": RED,
+            }
+            for i, r in enumerate(results):
+                cx = plot_x + int(i * x_step)
+                ft = r.get("failure_type", "pass")
+                fc = failure_colors.get(ft, TEXT_DIM)
+                draw.rectangle(
+                    [cx - bar_w, plot_y + plot_h - 16, cx, plot_y + plot_h - 9],
+                    fill=fc,
+                )
+            # Legend for panel A
+            leg_x = plot_x + 2
+            leg_y = plot_y + 2
+            for label, c in [("Passed", GREEN), ("Failed", RED), ("App not found", ORANGE),
+                             ("Unsupported action", RED), ("Entity resolution", PURPLE)]:
+                draw.rectangle([leg_x, leg_y, leg_x + 6, leg_y + 6], fill=c)
+                draw.text((leg_x + 8, leg_y - 1), label, fill=TEXT_DIM, font=font_sm)
+                leg_x += len(label) * 5 + 20
+                if leg_x > plot_x + plot_w - 50:
+                    leg_x = plot_x + 2
+                    leg_y += 10
+
+            # Y-axis: 0 / total
+            draw.text((plot_x - 6, plot_y + plot_h - 6), "0", fill=TEXT, font=font_sm, anchor="rm")
+            draw.text((plot_x - 6, plot_y + 2), str(total), fill=TEXT, font=font_sm, anchor="rm")
+
+        elif pid == "B":
+            # ── Panel B: GPU Temperature ──
+            temps = [r.get("gpu_temperature_c") for r in hw_history]
+            valid_temps = [t for t in temps if t is not None]
+            if valid_temps:
+                max_t = max(valid_temps) * 1.2 or 100
+                points = []
+                for i, t in enumerate(temps):
+                    if t is None:
+                        continue
+                    x = plot_x + int(i * x_step)
+                    y = plot_y + plot_h - int((t / max_t) * plot_h)
+                    points.append((x, y))
+                if len(points) > 1:
+                    draw.line(points, fill=ORANGE, width=2)
+                for x, y in points:
+                    draw.ellipse([x - dot_r, y - dot_r, x + dot_r, y + dot_r], fill=ORANGE)
+                draw.text((plot_x - 6, plot_y + 2), f"{max_t:.0f}", fill=ORANGE, font=font_sm, anchor="rm")
+                draw.text((plot_x - 6, plot_y + plot_h - 6), "0", fill=ORANGE, font=font_sm, anchor="rm")
+                draw.text((plot_x + plot_w + 4, plot_y + 2), "°C", fill=ORANGE, font=font_sm)
+            else:
+                draw.text((px + pw // 2, py + ph // 2), "GPU temp unavailable", fill=TEXT_DIM, font=font_sm, anchor="mm")
+
+        elif pid == "C":
+            # ── Panel C: GPU VRAM ──
+            vrams = [r.get("gpu_vram_used_gb") for r in hw_history]
+            valid_vrams = [v for v in vrams if v is not None]
+            vram_total = hw_summary.get("gpu_vram", {}).get("total")
+            if valid_vrams:
+                max_v = max(valid_vrams) * 1.2 or 1.0
+                if vram_total and vram_total > max_v:
+                    max_v = vram_total * 1.1
+                # VRAM total reference line
+                if vram_total and vram_total > 0:
+                    ty = plot_y + plot_h - int((vram_total / max_v) * plot_h)
+                    draw.line([(plot_x, ty), (plot_x + plot_w, ty)], fill=TEXT_DIM, width=1)
+                    draw.text((plot_x + plot_w + 4, ty - 5), f"{vram_total:.1f} GB", fill=TEXT_DIM, font=font_sm)
+                points = []
+                for i, v in enumerate(vrams):
+                    if v is None:
+                        continue
+                    x = plot_x + int(i * x_step)
+                    y = plot_y + plot_h - int((v / max_v) * plot_h)
+                    points.append((x, y))
+                if len(points) > 1:
+                    draw.line(points, fill=PURPLE, width=2)
+                for x, y in points:
+                    draw.ellipse([x - dot_r, y - dot_r, x + dot_r, y + dot_r], fill=PURPLE)
+                draw.text((plot_x - 6, plot_y + 2), f"{max_v:.1f}", fill=PURPLE, font=font_sm, anchor="rm")
+                draw.text((plot_x - 6, plot_y + plot_h - 6), "0", fill=PURPLE, font=font_sm, anchor="rm")
+                draw.text((plot_x + plot_w + 4, plot_y + 2), "GB", fill=PURPLE, font=font_sm)
+            else:
+                draw.text((px + pw // 2, py + ph // 2), "GPU VRAM unavailable", fill=TEXT_DIM, font=font_sm, anchor="mm")
+
+        elif pid == "D":
+            # ── Panel D: GPU & CPU Utilization ──
+            gpu_utils = [r.get("gpu_utilization_percent") or 0 for r in hw_history]
+            cpu_utils = [r.get("cpu_utilization_percent") or 0 for r in hw_history]
+            # GPU line
+            points_gpu = []
+            for i, g in enumerate(gpu_utils):
+                x = plot_x + int(i * x_step)
+                y = plot_y + plot_h - int((g / 100) * plot_h)
+                points_gpu.append((x, y))
+            if len(points_gpu) > 1:
+                draw.line(points_gpu, fill=CYAN, width=2)
+            for x, y in points_gpu:
+                draw.ellipse([x - dot_r, y - dot_r, x + dot_r, y + dot_r], fill=CYAN)
+            # CPU line
+            points_cpu = []
+            for i, c in enumerate(cpu_utils):
+                x = plot_x + int(i * x_step)
+                y = plot_y + plot_h - int((c / 100) * plot_h)
+                points_cpu.append((x, y))
+            if len(points_cpu) > 1:
+                draw.line(points_cpu, fill=PURPLE, width=1)
+            for x, y in points_cpu:
+                draw.ellipse([x - 1, y - 1, x + 1, y + 1], fill=PURPLE)
+            # Y-axis
+            draw.text((plot_x - 6, plot_y + plot_h - 6), "0%", fill=TEXT, font=font_sm, anchor="rm")
+            draw.text((plot_x - 6, plot_y + 2), "100%", fill=TEXT, font=font_sm, anchor="rm")
+            # Legend
+            draw.rectangle([plot_x + 2, plot_y + 2, plot_x + 8, plot_y + 8], fill=CYAN)
+            draw.text((plot_x + 10, plot_y + 1), "GPU", fill=CYAN, font=font_sm)
+            draw.rectangle([plot_x + 52, plot_y + 2, plot_x + 58, plot_y + 8], fill=PURPLE)
+            draw.text((plot_x + 60, plot_y + 1), "CPU", fill=PURPLE, font=font_sm)
+
+        # X-axis labels (every Nth test)
+        label_step = max(1, len(results) // 8)
+        for i in range(0, len(results), label_step):
+            x = plot_x + int(i * x_step)
+            draw.text((x, plot_y + plot_h + 3), f"#{i + 1}", fill=TEXT_DIM, font=font_sm, anchor="mt")
+        # Always show last
+        if len(results) > 1:
+            x = plot_x + int((len(results) - 1) * x_step)
+            draw.text((x, plot_y + plot_h + 3), f"#{len(results)}", fill=TEXT_DIM, font=font_sm, anchor="mt")
 
     img.save(str(path))
+
+
+def _fmt(val) -> str:
+    """Format a numeric value for dashboard display, or return 'N/A'."""
+    if val is None:
+        return "N/A"
+    if isinstance(val, float):
+        return f"{val:.1f}"
+    return str(val)
 
 
 def _csv(val) -> str:
@@ -783,12 +958,14 @@ def get_test_prompts():
 def run_test_prompts():
     """Run every prompt in test_prompts.json through the brain engine.
 
-    Returns the actual response text and whether the expected substring
-    (if any) was found in the response.
+    Captures per-test hardware telemetry, classifies failure types,
+    and generates a multi-panel dashboard.
     """
     import json
     import time
     from pathlib import Path
+
+    from utils.telemetry import HardwareThresholds, TelemetryCollector, classify_failure
 
     path = Path(__file__).parent / "test_prompts.json"
     if not path.exists():
@@ -802,31 +979,30 @@ def run_test_prompts():
     if not prompts:
         return {"success": True, "results": [], "summary": {"total": 0, "passed": 0, "failed": 0}}
 
-    def _sample_metrics() -> dict:
-        """Snapshot of temperature, GPU utilisation, and CPU utilisation."""
-        from reading import read_cpu, read_cpu_temperature, read_gpu
-
-        cpu = read_cpu()
-        temp = read_cpu_temperature()
-        gpu = read_gpu()
-        return {
-            "cpu_percent": cpu.get("percent", 0),
-            "temperature": temp.get("current") if temp else None,
-            "gpu_percent": gpu.get("utilization_percent", 0) if gpu else 0,
-        }
-
-    # Capture baseline system metrics before the run
-    metrics_timeline: list[dict] = []
-    metrics_timeline.append({"index": 0, **_sample_metrics()})
+    tc = TelemetryCollector()
+    hw_history: list[dict] = []
+    hw_summary: dict = {}
+    warnings: dict = {}
+    vram_total_suite: float | None = None
 
     # Enable test mode so skills report what would happen without side-effects
     was_test = get_test_mode()
     set_test_mode(True)
+
+    # Start periodic background sampling (lightweight, 2s interval)
+    tc.start_periodic_sampling(interval_seconds=2.0)
+
     try:
         results = []
         for idx, entry in enumerate(prompts):
             prompt_text = entry.get("prompt", "")
             expected = entry.get("expected", "")
+            category = entry.get("category", "")
+
+            # 1) Capture baseline hardware snapshot
+            baseline = tc.snapshot()
+
+            # 2) Execute the test
             start = time.time()
             try:
                 response = engine.process(prompt_text)
@@ -837,7 +1013,7 @@ def run_test_prompts():
                     passed = expected.lower() in actual.lower()
                 else:
                     passed = response.success
-                results.append({
+                result_record = {
                     "prompt": prompt_text,
                     "expected": expected,
                     "actual": actual,
@@ -846,10 +1022,11 @@ def run_test_prompts():
                     "action": api.get("action", ""),
                     "target": api.get("target", ""),
                     "elapsed_ms": elapsed_ms,
-                })
+                    "category": category,
+                }
             except Exception as exc:
                 elapsed_ms = round((time.time() - start) * 1000)
-                results.append({
+                result_record = {
                     "prompt": prompt_text,
                     "expected": expected,
                     "actual": str(exc),
@@ -858,21 +1035,69 @@ def run_test_prompts():
                     "action": "",
                     "target": "",
                     "elapsed_ms": elapsed_ms,
-                })
-            # Sample system metrics after every prompt for a smooth graph
-            metrics_timeline.append({"index": idx + 1, **_sample_metrics()})
+                    "category": category,
+                }
+
+            # 3) Capture post-test hardware snapshot
+            post = tc.snapshot()
+
+            # 4) Build per-test hardware record
+            hw_record = tc.build_test_record(baseline, post)
+            hw_history.append(hw_record)
+            result_record["failure_type"] = classify_failure(result_record)
+
+            # Track VRAM total across suite
+            if hw_record.get("gpu_vram_total_gb") is not None and vram_total_suite is None:
+                vram_total_suite = hw_record["gpu_vram_total_gb"]
+
+            results.append(result_record)
     finally:
+        tc.stop_periodic_sampling()
         set_test_mode(was_test)
 
-    # Final sample after test mode is restored
-    metrics_timeline.append({"index": len(prompts), **_sample_metrics()})
+    # Compute suite-level hardware summary
+    hw_summary = tc.suite_summary()
+    if vram_total_suite is not None:
+        hw_summary.setdefault("gpu_vram", {})["total"] = vram_total_suite
 
-    passed = sum(1 for r in results if r["passed"])
+    # Check for sustained hardware warnings
+    thresholds = HardwareThresholds()
+    # No hardcoded thresholds — display values without alarming if none configured
+    warnings = thresholds.check(hw_history)
+
+    # Test summary with latency stats
+    latencies = [r["elapsed_ms"] for r in results]
+    passed_count = sum(1 for r in results if r["passed"])
     summary = {
         "total": len(results),
-        "passed": passed,
-        "failed": len(results) - passed,
+        "passed": passed_count,
+        "failed": len(results) - passed_count,
+        "pass_rate": round(passed_count / max(len(results), 1) * 100, 1),
+        "avg_latency_ms": round(sum(latencies) / max(len(latencies), 1), 1),
+        "max_latency_ms": max(latencies) if latencies else 0,
     }
+
+    # Category breakdown
+    categories: dict[str, dict] = {}
+    for r in results:
+        cat = r.get("category", "")
+        if not cat:
+            continue
+        if cat not in categories:
+            categories[cat] = {"total": 0, "passed": 0, "failed": 0}
+        categories[cat]["total"] += 1
+        if r.get("passed"):
+            categories[cat]["passed"] += 1
+        else:
+            categories[cat]["failed"] += 1
+    summary["categories"] = categories
+
+    # Failure type breakdown
+    failure_types: dict[str, int] = {}
+    for r in results:
+        ft = r.get("failure_type", "unknown")
+        failure_types[ft] = failure_types.get(ft, 0) + 1
+    summary["failure_types"] = failure_types
 
     # Auto-save results to results/ directory (JSON + CSV)
     results_dir = Path(__file__).parent / "results"
@@ -883,34 +1108,70 @@ def run_test_prompts():
     # JSON
     json_path = results_dir / f"run_{ts}.json"
     json_path.write_text(
-        json.dumps({"summary": summary, "results": results}, indent=2),
+        json.dumps({
+            "summary": summary,
+            "results": results,
+            "hardware": hw_history,
+            "hw_summary": hw_summary,
+            "warnings": warnings,
+        }, indent=2, default=str),
         encoding="utf-8",
     )
 
-    # CSV
+    # CSV with hardware columns
+    csv_header = (
+        "test_index,timestamp,prompt,expected,actual,passed,success,"
+        "action,target,elapsed_ms,category,failure_type,"
+        "gpu_temperature_c,gpu_vram_used_gb,gpu_vram_total_gb,"
+        "gpu_utilization_percent,cpu_utilization_percent,"
+        "gpu_power_watts,cpu_temperature_c,ram_used_gb,ram_total_gb"
+    )
     csv_lines = [
         f"Run: {ts}",
         f"Total: {summary['total']}, Passed: {summary['passed']}, Failed: {summary['failed']}",
+        f"Pass rate: {summary['pass_rate']}%, Avg latency: {summary['avg_latency_ms']}ms, Max latency: {summary['max_latency_ms']}ms",
         "",
-        "#,prompt,expected,actual,passed,success,action,target,elapsed_ms",
+        csv_header,
     ]
-    for i, r in enumerate(results, 1):
-        row = [str(i), _csv(r["prompt"]), _csv(r["expected"]), _csv(r["actual"]),
-               str(r["passed"]), str(r["success"]), _csv(r["action"]),
-               _csv(r["target"]), str(r["elapsed_ms"])]
+    for i, (r, hw) in enumerate(zip(results, hw_history), 1):
+        row = [
+            str(i),
+            hw.get("timestamp", ""),
+            _csv(r["prompt"]),
+            _csv(r["expected"]),
+            _csv(r["actual"]),
+            str(r["passed"]),
+            str(r["success"]),
+            _csv(r["action"]),
+            _csv(r["target"]),
+            str(r["elapsed_ms"]),
+            _csv(r.get("category", "")),
+            _csv(r.get("failure_type", "")),
+            str(hw.get("gpu_temperature_c", "")),
+            str(hw.get("gpu_vram_used_gb", "")),
+            str(hw.get("gpu_vram_total_gb", "")),
+            str(hw.get("gpu_utilization_percent", "")),
+            str(hw.get("cpu_utilization_percent", "")),
+            str(hw.get("gpu_power_watts", "")),
+            str(hw.get("cpu_temperature_c", "")),
+            str(hw.get("ram_used_gb", "")),
+            str(hw.get("ram_total_gb", "")),
+        ]
         csv_lines.append(",".join(row))
     csv_path = results_dir / f"run_{ts}.csv"
     csv_path.write_text("\n".join(csv_lines), encoding="utf-8")
 
-    # PNG chart
+    # PNG multi-panel dashboard
     png_path = results_dir / f"run_{ts}.png"
-    _save_metrics_chart(metrics_timeline, summary, png_path)
+    _save_metrics_chart(results, summary, hw_history, hw_summary, warnings, png_path)
 
     return {
         "success": True,
         "results": results,
         "summary": summary,
-        "metrics": metrics_timeline,
+        "hardware": hw_history,
+        "hw_summary": hw_summary,
+        "warnings": warnings,
         "saved_to": {
             "json": str(json_path),
             "csv": str(csv_path),
