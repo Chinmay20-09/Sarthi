@@ -546,6 +546,14 @@ def disable_skill(skill_id: str):
     return {"success": success, "skill_id": skill_id}
 
 
+@app.get("/system/metrics")
+def system_metrics():
+    """Return live CPU, RAM, SSD (disk), and GPU utilization."""
+    from reading import get_system_metrics
+
+    return get_system_metrics()
+
+
 @app.get("/events/history")
 def event_history():
     """Get recent event history (for debugging)."""

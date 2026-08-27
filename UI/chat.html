@@ -303,6 +303,61 @@
                     </div>
                 </div>
             </div>
+            <!-- System Utilization -->
+            <div>
+                <div class="text-on-surface-variant text-xs mb-2">SYSTEM UTILIZATION</div>
+                <div id="system-metrics" class="flex flex-col gap-3">
+                    <!-- CPU -->
+                    <div class="bg-surface-container/30 rounded-lg p-3 border border-white/5">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-data-mono text-data-mono text-on-surface-variant text-[10px]">CPU</span>
+                            <span id="cpu-percent" class="font-data-mono text-data-mono text-primary font-bold text-xs">—%</span>
+                        </div>
+                        <div class="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
+                            <div id="cpu-bar" class="h-full bg-primary rounded-full transition-all duration-500 shadow-[0_0_6px_rgba(0,217,255,0.5)]" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between mt-1.5">
+                            <span id="cpu-cores" class="text-[9px] text-on-surface-variant">— cores</span>
+                            <span id="cpu-freq" class="text-[9px] text-on-surface-variant">— MHz</span>
+                        </div>
+                        <div class="flex justify-between mt-1">
+                            <span id="cpu-temp" class="text-[9px] text-on-surface-variant">—</span>
+                            <span id="cpu-temp-label" class="text-[9px] text-on-surface-variant"></span>
+                        </div>
+                    </div>
+                    <!-- RAM -->
+                    <div class="bg-surface-container/30 rounded-lg p-3 border border-white/5">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-data-mono text-data-mono text-on-surface-variant text-[10px]">RAM</span>
+                            <span id="ram-percent" class="font-data-mono text-data-mono text-primary-fixed font-bold text-xs">—%</span>
+                        </div>
+                        <div class="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
+                            <div id="ram-bar" class="h-full bg-primary-fixed rounded-full transition-all duration-500 shadow-[0_0_6px_rgba(174,236,255,0.5)]" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between mt-1.5">
+                            <span id="ram-used" class="text-[9px] text-on-surface-variant">— / — GB</span>
+                            <span id="ram-avail" class="text-[9px] text-on-surface-variant">— GB free</span>
+                        </div>
+                    </div>
+                    <!-- GPU -->
+                    <div class="bg-surface-container/30 rounded-lg p-3 border border-white/5">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-data-mono text-data-mono text-on-surface-variant text-[10px]">GPU</span>
+                            <span id="gpu-percent" class="font-data-mono text-data-mono text-tertiary font-bold text-xs">—%</span>
+                        </div>
+                        <div class="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
+                            <div id="gpu-bar" class="h-full bg-tertiary rounded-full transition-all duration-500 shadow-[0_0_6px_rgba(255,221,196,0.5)]" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between mt-1.5">
+                            <span id="gpu-name" class="text-[9px] text-on-surface-variant truncate max-w-[140px]">—</span>
+                            <span id="gpu-mem" class="text-[9px] text-on-surface-variant">— MB</span>
+                        </div>
+                    </div>
+                    <!-- SSD / Disks -->
+                    <div id="disk-list" class="flex flex-col gap-2"></div>
+                </div>
+            </div>
+
             <!-- Hermes Tools -->
             <div>
                 <div class="text-on-surface-variant text-xs mb-2">HERMES TOOLS</div>
@@ -1631,6 +1686,104 @@
         // ---------------------------------------------------------------------
         // Wiring
         // ---------------------------------------------------------------------
+        // ---------------------------------------------------------------------
+        // System Utilization — live metrics
+        // ---------------------------------------------------------------------
+        let _metricsInFlight = false;
+        async function loadSystemMetrics() {
+            if (_metricsInFlight) return; // skip if previous request still pending
+            _metricsInFlight = true;
+            try {
+                const response = await fetch(SarthiAPI + "/system/metrics");
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                const data = await response.json();
+                if (!data.success) return;
+
+                // CPU
+                const cpuPct = data.cpu.percent || 0;
+                document.getElementById("cpu-percent").textContent = cpuPct.toFixed(1) + "%";
+                document.getElementById("cpu-bar").style.width = cpuPct + "%";
+                document.getElementById("cpu-cores").textContent = (data.cpu.count || "?") + " cores";
+                document.getElementById("cpu-freq").textContent =
+                    data.cpu.freq_mhz ? data.cpu.freq_mhz.toFixed(0) + " MHz" : "";
+                // CPU temperature
+                const tempEl = document.getElementById("cpu-temp");
+                const tempLabel = document.getElementById("cpu-temp-label");
+                if (data.cpu.temperature && data.cpu.temperature.current) {
+                    const c = data.cpu.temperature.current;
+                    tempEl.textContent = c.toFixed(1) + "\u00B0C";
+                    // Color-code: green < 60, yellow < 80, red >= 80
+                    if (c >= 80) tempEl.className = "text-[9px] text-error font-bold";
+                    else if (c >= 60) tempEl.className = "text-[9px] text-tertiary font-medium";
+                    else tempEl.className = "text-[9px] text-primary-container font-medium";
+                    const sensorName = data.cpu.temperature.sensor || "";
+                    if (data.cpu.temperature.critical) {
+                        tempLabel.textContent = "crit " + data.cpu.temperature.critical + "\u00B0C";
+                    } else if (sensorName) {
+                        tempLabel.textContent = sensorName;
+                    }
+                } else {
+                    tempEl.textContent = "N/A";
+                    tempEl.className = "text-[9px] text-on-surface-variant";
+                    tempLabel.textContent = "";
+                }
+
+                // RAM
+                const ramPct = data.ram.percent || 0;
+                document.getElementById("ram-percent").textContent = ramPct.toFixed(1) + "%";
+                document.getElementById("ram-bar").style.width = ramPct + "%";
+                document.getElementById("ram-used").textContent =
+                    (data.ram.used_gb || 0).toFixed(1) + " / " + (data.ram.total_gb || 0).toFixed(1) + " GB";
+                document.getElementById("ram-avail").textContent =
+                    (data.ram.available_gb || 0).toFixed(1) + " GB free";
+
+                // GPU
+                if (data.gpu) {
+                    const gpuPct = data.gpu.utilization_percent || 0;
+                    document.getElementById("gpu-percent").textContent = gpuPct + "%";
+                    document.getElementById("gpu-bar").style.width = gpuPct + "%";
+                    document.getElementById("gpu-name").textContent = data.gpu.name || "GPU";
+                    document.getElementById("gpu-mem").textContent =
+                        data.gpu.mem_used_mb + " / " + data.gpu.mem_total_mb + " MB";
+                } else {
+                    document.getElementById("gpu-percent").textContent = "N/A";
+                    document.getElementById("gpu-bar").style.width = "0%";
+                    document.getElementById("gpu-name").textContent = "No GPU detected";
+                    document.getElementById("gpu-mem").textContent = "";
+                }
+
+                // Disks (SSD / HDD)
+                const diskList = document.getElementById("disk-list");
+                diskList.innerHTML = "";
+                (data.disks || []).forEach((disk) => {
+                    const pct = disk.percent || 0;
+                    const item = document.createElement("div");
+                    item.className = "bg-surface-container/30 rounded-lg p-3 border border-white/5";
+                    item.innerHTML =
+                        '<div class="flex items-center justify-between mb-2">' +
+                        '  <span class="font-data-mono text-data-mono text-on-surface-variant text-[10px]">' +
+                        esc(disk.device || "DISK") + '</span>' +
+                        '  <span class="font-data-mono text-data-mono text-primary-fixed-dim font-bold text-xs">' +
+                        pct.toFixed(1) + '%</span>' +
+                        '</div>' +
+                        '<div class="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">' +
+                        '  <div class="h-full bg-secondary rounded-full transition-all duration-500" style="width: ' + pct + '%"></div>' +
+                        '</div>' +
+                        '<div class="flex justify-between mt-1.5">' +
+                        '  <span class="text-[9px] text-on-surface-variant">' +
+                        (disk.used_gb || 0).toFixed(1) + ' / ' + (disk.total_gb || 0).toFixed(1) + ' GB</span>' +
+                        '  <span class="text-[9px] text-on-surface-variant">' +
+                        (disk.free_gb || 0).toFixed(1) + ' GB free</span>' +
+                        '</div>';
+                    diskList.appendChild(item);
+                });
+            } catch (err) {
+                console.warn("System metrics error:", err);
+            } finally {
+                _metricsInFlight = false;
+            }
+        }
+
         function initializePage() {
             const input = document.getElementById("chat-input");
             const send = document.getElementById("chat-send");
@@ -1666,6 +1819,25 @@
             loadSandbox();
             loadMemory();
             loadChatHistory();
+
+            // System utilization — adaptive polling:
+            //   • Task running  → 1.5s interval (live readings)
+            //   • Idle          → 10s interval (light on backend)
+            loadSystemMetrics();
+            const FAST_POLL_MS = 1500;
+            const SLOW_POLL_MS = 10000;
+            let currentPollRate = SLOW_POLL_MS;
+            let metricsTimer = null;
+
+            function scheduleNextMetrics(delay) {
+                if (metricsTimer) clearTimeout(metricsTimer);
+                metricsTimer = setTimeout(async () => {
+                    await loadSystemMetrics();
+                    const nextDelay = processing ? FAST_POLL_MS : SLOW_POLL_MS;
+                    scheduleNextMetrics(nextDelay);
+                }, delay);
+            }
+            scheduleNextMetrics(SLOW_POLL_MS);
         }
     </script>
 </body>

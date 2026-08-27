@@ -366,66 +366,71 @@ class BrainExecutor:
 
     @staticmethod
     def _handle_clean(intent: Intent) -> dict[str, Any] | None:
-        """Handle 'clean' — auto-delete successful commands, prompt for failed ones.
+        """Handle '/clear' — clean successful sandbox tasks, keep failed ones.
 
-        Successful commands are silently removed from history.
-        Failed commands are returned with visual data so the UI can
-        present each one with a keep/delete decision.
+        Successful task directories and index entries are removed.
+        Failed tasks are kept for review.
+        The database (command_history, memory, chat) is never touched.
         """
-        from database.manager import get_database
-        from database.models import CREATE_COMMAND_HISTORY
+        import json
+        import shutil
 
-        db = get_database()
-        db.create_table(CREATE_COMMAND_HISTORY)
+        from hermes.config.loader import ConfigLoader
+        from hermes.sandbox import TaskSandbox
 
-        # Fetch all history entries
-        all_cmds = db.fetch_all(
-            "SELECT id, command, action, target, success, timestamp "
-            "FROM command_history ORDER BY id DESC"
-        )
+        sandbox = TaskSandbox(ConfigLoader().load().sandbox_path)
+        index = sandbox._load_index()
 
-        if not all_cmds:
+        if not index:
             return {
                 "success": True,
                 "status": "executed",
                 "result": {
-                    "message": "No command history to clean.",
+                    "message": "Sandbox is already clean — no tasks found.",
                     "deleted_count": 0,
                     "failed_count": 0,
                 },
             }
 
-        successful = [c for c in all_cmds if c.get("success")]
-        failed = [c for c in all_cmds if not c.get("success")]
-
-        # Auto-delete all successful commands
         deleted_count = 0
-        for cmd in successful:
-            db.execute("DELETE FROM command_history WHERE id = ?", (cmd["id"],))
-            deleted_count += 1
+        failed_records: list[dict] = []
+        queries_to_remove: list[str] = []
 
-        # Build visual data for the failed commands so the UI can
-        # render an interactive card with keep/delete buttons.
-        failed_items = []
-        for cmd in failed:
-            failed_items.append({
-                "id": cmd["id"],
-                "command": cmd.get("command", ""),
-                "action": cmd.get("action", ""),
-                "target": cmd.get("target", ""),
-                "timestamp": cmd.get("timestamp", ""),
-            })
+        for query, records in index.items():
+            still_has_failed = False
+            for rec in records:
+                task_id = rec.get("task_id", "")
+                if rec.get("status") == "success":
+                    # Delete the successful task directory
+                    task_dir = sandbox._tasks_dir / task_id
+                    if task_dir.is_dir():
+                        shutil.rmtree(task_dir)
+                    deleted_count += 1
+                else:
+                    failed_records.append(rec)
+                    still_has_failed = True
+            if not still_has_failed:
+                queries_to_remove.append(query)
 
-        if failed_items:
+        # Prune queries that had no remaining failures
+        for query in queries_to_remove:
+            del index[query]
+
+        # Rewrite the index with only failed entries
+        sandbox._root.mkdir(parents=True, exist_ok=True)
+        sandbox._index_path.write_text(
+            json.dumps(index, indent=2), encoding="utf-8"
+        )
+
+        if failed_records:
             message = (
-                f"Cleaned {deleted_count} successful command(s). "
-                f"{len(failed_items)} failed command(s) found — "
-                f"review below and choose to keep or delete each one."
+                f"Cleared {deleted_count} successful sandbox task(s). "
+                f"{len(failed_records)} failed task(s) kept for review."
             )
         else:
             message = (
-                f"All done! Cleaned {deleted_count} successful command(s). "
-                f"No failed commands to review."
+                f"All done! Cleared {deleted_count} successful sandbox task(s). "
+                f"Sandbox is now empty."
             )
 
         return {
@@ -434,13 +439,6 @@ class BrainExecutor:
             "result": {
                 "message": message,
                 "deleted_count": deleted_count,
-                "failed_count": len(failed_items),
-                "visual": {
-                    "type": "clean_tasks",
-                    "data": {
-                        "deleted_count": deleted_count,
-                        "failed": failed_items,
-                    },
-                },
+                "failed_count": len(failed_records),
             },
         }

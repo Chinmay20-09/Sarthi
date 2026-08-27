@@ -251,6 +251,12 @@
             </div>
         </header>
 
+        <!-- API Error Banner -->
+        <div id="api-error-banner" class="hidden mx-margin-desktop mt-2 px-4 py-2.5 rounded-lg bg-error/10 border border-error/30 text-error text-sm font-data-mono flex items-center gap-2 relative z-20">
+            <span class="material-symbols-outlined text-sm">cloud_off</span>
+            <span>Could not connect to Sarthi API — data may be stale.</span>
+        </div>
+
         <!-- Dynamic Background Animation -->
         <div class="absolute inset-0 z-0 pointer-events-none opacity-40"></div>
 
@@ -465,7 +471,28 @@
 
     <script src="components.js"></script>
     <script>
-        const API = "http://127.0.0.1:8000";
+        // API is declared by components.js — do NOT redeclare const API here.
+        // Use the global `API` variable that components.js already provides.
+        console.log("[Sarthi Memory] script loaded, API =", typeof API !== "undefined" ? API : "UNDEFINED!");
+
+        // ----------------------------------------------------------------
+        // Connection error banner
+        // ----------------------------------------------------------------
+        let apiOnline = true;
+        function showApiError(msg) {
+            if (apiOnline) {
+                apiOnline = false;
+                const banner = document.getElementById("api-error-banner");
+                if (banner) { banner.textContent = msg; banner.classList.remove("hidden"); }
+            }
+        }
+        function hideApiError() {
+            if (!apiOnline) {
+                apiOnline = true;
+                const banner = document.getElementById("api-error-banner");
+                if (banner) banner.classList.add("hidden");
+            }
+        }
 
         // ----------------------------------------------------------------
         // Utility helpers
@@ -554,8 +581,12 @@
             try {
                 const res = await fetch(url);
                 if (!res.ok) return null;
+                hideApiError();
                 return await res.json();
-            } catch { return null; }
+            } catch (err) {
+                showApiError("Could not connect to Sarthi API at " + API + " — is the server running?");
+                return null;
+            }
         }
 
         // ----------------------------------------------------------------

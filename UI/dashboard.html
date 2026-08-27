@@ -265,37 +265,56 @@
         <section class="space-y-4">
             <h3 class="font-label-caps text-label-caps text-on-surface-variant opacity-60">SYSTEM UTILIZATION</h3>
             <div class="grid grid-cols-2 gap-4">
+                <!-- CPU Ring -->
                 <div class="glass-panel p-4 rounded-xl flex flex-col items-center">
                     <svg class="w-16 h-16 ring-chart" viewbox="0 0 36 36">
                         <path class="text-white/5"
                             d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                             fill="none" stroke="currentColor" stroke-width="2.5"></path>
-                        <path class="text-primary"
+                        <path id="dash-cpu" class="text-primary"
                             d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                            fill="none" stroke="currentColor" stroke-dasharray="24, 100" stroke-linecap="round"
+                            fill="none" stroke="currentColor" stroke-dasharray="0, 100" stroke-linecap="round"
                             stroke-width="2.5"></path>
                     </svg>
                     <div class="text-center mt-2">
-                        <p class="font-data-mono text-data-mono font-bold text-primary">24%</p>
+                        <p id="val-cpu" class="font-data-mono text-data-mono font-bold text-primary">—%</p>
+                        <p id="val-cpu-temp" class="font-data-mono text-[10px] text-on-surface-variant mt-0.5">—</p>
                         <p class="font-label-caps text-[10px] opacity-60">CPU</p>
                     </div>
                 </div>
+                <!-- RAM Ring -->
                 <div class="glass-panel p-4 rounded-xl flex flex-col items-center">
                     <svg class="w-16 h-16 ring-chart" viewbox="0 0 36 36">
                         <path class="text-white/5"
                             d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                             fill="none" stroke="currentColor" stroke-width="2.5"></path>
-                        <path class="text-primary-fixed"
+                        <path id="dash-ram" class="text-primary-fixed"
                             d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                            fill="none" stroke="currentColor" stroke-dasharray="42, 100" stroke-linecap="round"
+                            fill="none" stroke="currentColor" stroke-dasharray="0, 100" stroke-linecap="round"
                             stroke-width="2.5"></path>
                     </svg>
                     <div class="text-center mt-2">
-                        <p class="font-data-mono text-data-mono font-bold text-primary-fixed">42%</p>
+                        <p id="val-ram" class="font-data-mono text-data-mono font-bold text-primary-fixed">—%</p>
                         <p class="font-label-caps text-[10px] opacity-60">RAM</p>
                     </div>
                 </div>
             </div>
+            <!-- GPU -->
+            <div class="glass-panel p-4 rounded-xl">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="font-data-mono text-data-mono text-on-surface-variant text-[10px]">GPU</span>
+                    <span id="val-gpu" class="font-data-mono text-data-mono text-tertiary font-bold text-xs">—%</span>
+                </div>
+                <div class="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
+                    <div id="bar-gpu" class="h-full bg-tertiary rounded-full transition-all duration-500 shadow-[0_0_6px_rgba(255,221,196,0.5)]" style="width: 0%"></div>
+                </div>
+                <div class="flex justify-between mt-1.5">
+                    <span id="name-gpu" class="text-[9px] text-on-surface-variant truncate max-w-[180px]">—</span>
+                    <span id="mem-gpu" class="text-[9px] text-on-surface-variant">—</span>
+                </div>
+            </div>
+            <!-- SSD / Disks -->
+            <div id="dash-disks" class="flex flex-col gap-2"></div>
         </section>
         <!-- Knowledge Statistics -->
         <section class="space-y-4">
@@ -346,6 +365,8 @@
     <div id="footer"></div>
     <script src="components.js"></script>
     <script>
+        const DashAPI = "http://127.0.0.1:8000";
+
         // Page-specific: counter animation for knowledge stats
         function animateCounter(id, start, end, duration) {
             let current = start;
@@ -362,10 +383,100 @@
             }, stepTime);
         }
 
+        function escDash(v) {
+            const d = document.createElement("div");
+            d.textContent = v == null ? "" : String(v);
+            return d.innerHTML;
+        }
+
+        async function loadDashMetrics() {
+            try {
+                const res = await fetch(DashAPI + "/system/metrics");
+                if (!res.ok) throw new Error("HTTP " + res.status);
+                const data = await res.json();
+                if (!data.success) return;
+
+                // CPU ring
+                const cpuPct = data.cpu.percent || 0;
+                document.getElementById("dash-cpu").setAttribute("stroke-dasharray", cpuPct + ", 100");
+                document.getElementById("val-cpu").textContent = cpuPct.toFixed(1) + "%";
+                // CPU temperature
+                const cpuTempEl = document.getElementById("val-cpu-temp");
+                if (data.cpu.temperature && data.cpu.temperature.current) {
+                    const c = data.cpu.temperature.current;
+                    cpuTempEl.textContent = c.toFixed(1) + "\u00B0C";
+                    if (c >= 80) cpuTempEl.className = "font-data-mono text-[10px] text-error";
+                    else if (c >= 60) cpuTempEl.className = "font-data-mono text-[10px] text-tertiary";
+                    else cpuTempEl.className = "font-data-mono text-[10px] text-primary-container";
+                } else {
+                    cpuTempEl.textContent = "N/A";
+                    cpuTempEl.className = "font-data-mono text-[10px] text-on-surface-variant";
+                }
+
+                // RAM ring
+                const ramPct = data.ram.percent || 0;
+                document.getElementById("dash-ram").setAttribute("stroke-dasharray", ramPct + ", 100");
+                document.getElementById("val-ram").textContent = ramPct.toFixed(1) + "%";
+
+                // GPU
+                if (data.gpu) {
+                    document.getElementById("val-gpu").textContent = data.gpu.utilization_percent + "%";
+                    document.getElementById("bar-gpu").style.width = data.gpu.utilization_percent + "%";
+                    document.getElementById("name-gpu").textContent = data.gpu.name || "GPU";
+                    document.getElementById("mem-gpu").textContent = data.gpu.mem_used_mb + "/" + data.gpu.mem_total_mb + " MB";
+                } else {
+                    document.getElementById("val-gpu").textContent = "N/A";
+                    document.getElementById("bar-gpu").style.width = "0%";
+                    document.getElementById("name-gpu").textContent = "No GPU detected";
+                    document.getElementById("mem-gpu").textContent = "";
+                }
+
+                // Disks
+                const diskList = document.getElementById("dash-disks");
+                diskList.innerHTML = "";
+                (data.disks || []).forEach((disk) => {
+                    const pct = disk.percent || 0;
+                    const item = document.createElement("div");
+                    item.className = "glass-panel p-3 rounded-xl";
+                    item.innerHTML =
+                        '<div class="flex items-center justify-between mb-2">' +
+                        '  <span class="font-data-mono text-data-mono text-on-surface-variant text-[10px]">' +
+                        escDash(disk.device || "DISK") + '</span>' +
+                        '  <span class="font-data-mono text-data-mono text-primary-fixed-dim font-bold text-xs">' +
+                        pct.toFixed(1) + '%</span>' +
+                        '</div>' +
+                        '<div class="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">' +
+                        '  <div class="h-full bg-secondary rounded-full transition-all duration-500" style="width: ' + pct + '%"></div>' +
+                        '</div>' +
+                        '<div class="flex justify-between mt-1.5">' +
+                        '  <span class="text-[9px] text-on-surface-variant">' +
+                        (disk.used_gb || 0).toFixed(1) + ' / ' + (disk.total_gb || 0).toFixed(1) + ' GB</span>' +
+                        '  <span class="text-[9px] text-on-surface-variant">' +
+                        (disk.free_gb || 0).toFixed(1) + ' GB free</span>' +
+                        '</div>';
+                    diskList.appendChild(item);
+                });
+            } catch (err) {
+                console.warn("Dashboard metrics error:", err);
+            }
+        }
+
         function initializePage() {
             animateCounter('counter-apps', 100, 128, 2000);
             animateCounter('counter-agents', 10, 42, 2000);
             animateCounter('counter-nodes', 0, 9, 1500);
+            loadDashMetrics();
+            // Adaptive polling — pause when tab is hidden to save resources
+            let dashInterval = setInterval(loadDashMetrics, 10000);
+            document.addEventListener("visibilitychange", () => {
+                if (document.hidden) {
+                    clearInterval(dashInterval);
+                    dashInterval = null;
+                } else {
+                    loadDashMetrics(); // immediate refresh on tab focus
+                    dashInterval = setInterval(loadDashMetrics, 10000);
+                }
+            });
         }
     </script>
 </body>
