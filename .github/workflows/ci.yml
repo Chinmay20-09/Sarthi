@@ -1,68 +1,62 @@
 name: CI
 
 on:
-push:
-branches: [master, testing]
-pull_request:
-branches: [master, testing]
+  push:
+    branches: [master, testing]
+  pull_request:
+    branches: [master, testing]
 
 jobs:
-lint:
-name: Lint
-runs-on: ubuntu-latest
-steps:
-- uses: actions/checkout@v4
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-```
-  - uses: actions/setup-python@v5
-    with:
-      python-version: "3.12"
-      cache: pip
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
 
-  - name: Install dependencies
-    run: pip install -e .
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
 
-  - name: Ruff lint
-    run: ruff check .
+      - name: Ruff lint
+        run: ruff check .
 
-  - name: Ruff format check
-    run: ruff format --check .
-```
+      - name: Ruff format check
+        run: ruff format --check .
 
-test:
-name: Tests
-runs-on: ubuntu-latest
-steps:
-- uses: actions/checkout@v4
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-```
-  - uses: actions/setup-python@v5
-    with:
-      python-version: "3.12"
-      cache: pip
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
 
-  - name: Install dependencies
-    run: pip install -e .
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
 
-  - name: Run tests
-    run: python -m pytest tests/ -q --tb=short
-```
+      - name: Run tests
+        run: python -m pytest tests/ -q --tb=short
 
-smoke:
-name: Smoke test
-runs-on: ubuntu-latest
-steps:
-- uses: actions/checkout@v4
+  smoke:
+    name: Smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-```
-  - uses: actions/setup-python@v5
-    with:
-      python-version: "3.12"
-      cache: pip
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
 
-  - name: Install dependencies
-    run: pip install -e .
+      - name: Install dependencies
+        run: pip install -e .
 
-  - name: Run smoke test
-    run: python main-test.py
-```
+      - name: Run smoke test
+        run: python main-test.py

@@ -15,6 +15,13 @@ dependencies = [
     "pystray",
     "pillow",
     "psutil",
+    "rapidfuzz",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pytest",
 ]
 
 # ---------------------------------------------------------------------------
