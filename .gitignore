@@ -151,6 +151,15 @@ sandbox/
 sandbox_test/
 results/
 # ==========================================
+# Secrets / OAuth Tokens
+# ==========================================
+
+secrets/
+*_token.json
+*credentials*.json
+client_secret_*.json
+
+# ==========================================
 # Misc
 # ==========================================
 

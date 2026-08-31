@@ -24,6 +24,8 @@ if sys.stdout is None:
 if sys.stderr is None:
     sys.stderr = open(os.devnull, "w", encoding="utf-8")
 
+import json
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
@@ -123,6 +125,20 @@ class ChatMessageRequest(BaseModel):
     content: dict
 
 
+class ConnectorRequest(BaseModel):
+    name: str
+    type: str  # calendar, email, cloud, messaging, storage, etc.
+    service: str  # google_calendar, gmail, outlook, etc.
+    config: dict = {}
+
+
+class ConnectorUpdateRequest(BaseModel):
+    name: str | None = None
+    type: str | None = None
+    service: str | None = None
+    config: dict | None = None
+
+
 @app.get("/", include_in_schema=False)
 def root():
     return RedirectResponse(url="/ui/dashboard.html")
@@ -165,11 +181,18 @@ def _detect_response_mode(result: dict) -> str:
 
     Returns "command" when the deterministic pipeline handled the request,
     or "hermes" when the NLP fallback skill handled it.
+
+    The NLP skill signals ownership via:
+      - result.source == "nlp" (success case)
+      - top-level source == "nlp" (error/unavailable case)
     """
-    if result.get("success") and result.get("result"):
-        r = result["result"]
-        if isinstance(r, dict) and r.get("source") == "nlp":
+    # Check the nested result object first (success path)
+    if result.get("result") and isinstance(result["result"], dict):
+        if result["result"].get("source") == "nlp":
             return "hermes"
+    # Check top-level source (error/unavailable path where result is None)
+    if result.get("source") == "nlp":
+        return "hermes"
     return "command"
 
 
@@ -588,6 +611,277 @@ def disable_skill(skill_id: str):
     """Disable a skill."""
     success = skill_registry.disable(skill_id)
     return {"success": success, "skill_id": skill_id}
+
+
+# ---------------------------------------------------------------------------
+# External Connectors (Calendar, Gmail, etc.)
+# ---------------------------------------------------------------------------
+
+@app.get("/connectors")
+def list_connectors():
+    """List all external connectors with live status from the registry."""
+    from connectors.registry import get_registry
+    from database.manager import get_database
+    from database.models import CREATE_CONNECTORS
+
+    db = get_database()
+    db.create_table(CREATE_CONNECTORS)
+    rows = db.fetch_all("SELECT * FROM connectors ORDER BY created_at DESC")
+    registry = get_registry()
+
+    result = []
+    for row in rows:
+        try:
+            row["config"] = json.loads(row["config"])
+        except (TypeError, ValueError):
+            row["config"] = {}
+
+        # Merge registry metadata (icon, auth_type, tools) into the DB row
+        reg = registry.get(row.get("service", ""))
+        if reg:
+            row["icon"] = reg.metadata.icon
+            row["auth_type"] = reg.metadata.auth_type.value
+            row["tools"] = [
+                {"name": t.name, "description": t.description}
+                for t in reg.metadata.tools
+            ]
+            # Get live status from the connector implementation
+            try:
+                live_status = reg.get_status().value
+                row["status"] = live_status
+            except Exception:
+                pass  # Keep DB status
+        else:
+            row.setdefault("icon", "extension")
+            row.setdefault("auth_type", "api_key")
+            row.setdefault("tools", [])
+
+        result.append(row)
+
+    return {"success": True, "connectors": result}
+
+
+@app.post("/connectors")
+def add_connector(request: ConnectorRequest):
+    """Add a new external connector."""
+    from database.manager import get_database
+    from database.models import CREATE_CONNECTORS
+
+    db = get_database()
+    db.create_table(CREATE_CONNECTORS)
+    db.execute(
+        "INSERT INTO connectors (name, type, service, config, status, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, 'disconnected', datetime('now'), datetime('now'))",
+        (request.name, request.type, request.service, json.dumps(request.config)),
+    )
+    row = db.fetch_one("SELECT * FROM connectors WHERE id = last_insert_rowid()")
+    if row:
+        try:
+            row["config"] = json.loads(row["config"])
+        except (TypeError, ValueError):
+            row["config"] = {}
+    return {"success": True, "connector": row}
+
+
+@app.put("/connectors/{connector_id}")
+def update_connector(connector_id: int, request: ConnectorUpdateRequest):
+    """Update an existing connector."""
+    from database.manager import get_database
+    from database.models import CREATE_CONNECTORS
+
+    db = get_database()
+    db.create_table(CREATE_CONNECTORS)
+
+    # Check if connector exists
+    existing = db.fetch_one("SELECT * FROM connectors WHERE id = ?", (connector_id,))
+    if not existing:
+        return {"success": False, "error": f"Connector not found: {connector_id}"}
+
+    # Build dynamic update
+    updates = []
+    params = []
+    if request.name is not None:
+        updates.append("name = ?")
+        params.append(request.name)
+    if request.type is not None:
+        updates.append("type = ?")
+        params.append(request.type)
+    if request.service is not None:
+        updates.append("service = ?")
+        params.append(request.service)
+    if request.config is not None:
+        updates.append("config = ?")
+        params.append(json.dumps(request.config))
+
+    if updates:
+        updates.append("updated_at = datetime('now')")
+        params.append(connector_id)
+        db.execute(
+            f"UPDATE connectors SET {', '.join(updates)} WHERE id = ?",
+            tuple(params),
+        )
+
+    row = db.fetch_one("SELECT * FROM connectors WHERE id = ?", (connector_id,))
+    if row:
+        try:
+            row["config"] = json.loads(row["config"])
+        except (TypeError, ValueError):
+            row["config"] = {}
+    return {"success": True, "connector": row}
+
+
+@app.delete("/connectors/{connector_id}")
+def delete_connector(connector_id: int):
+    """Remove an external connector."""
+    from database.manager import get_database
+    from database.models import CREATE_CONNECTORS
+
+    db = get_database()
+    db.create_table(CREATE_CONNECTORS)
+    existing = db.fetch_one("SELECT * FROM connectors WHERE id = ?", (connector_id,))
+    if not existing:
+        return {"success": False, "error": f"Connector not found: {connector_id}"}
+    db.execute("DELETE FROM connectors WHERE id = ?", (connector_id,))
+    return {"success": True, "deleted_id": connector_id}
+
+
+@app.post("/connectors/{connector_id}/test")
+def test_connector(connector_id: int):
+    """Test a connector's configuration."""
+    from database.manager import get_database
+    from database.models import CREATE_CONNECTORS
+
+    db = get_database()
+    db.create_table(CREATE_CONNECTORS)
+    row = db.fetch_one("SELECT * FROM connectors WHERE id = ?", (connector_id,))
+    if not row:
+        return {"success": False, "error": f"Connector not found: {connector_id}"}
+
+    # For now, mark as connected if it has config; a real implementation
+    # would validate API keys / OAuth tokens against the actual service.
+    try:
+        config = json.loads(row["config"]) if row["config"] else {}
+    except (TypeError, ValueError):
+        config = {}
+
+    if not config:
+        return {"success": False, "status": "error", "message": "No configuration set. Add credentials first."}
+
+    db.execute(
+        "UPDATE connectors SET status = 'connected', updated_at = datetime('now') WHERE id = ?",
+        (connector_id,),
+    )
+    return {"success": True, "status": "connected", "message": f"{row['name']} is now connected."}
+
+
+# ---------------------------------------------------------------------------
+# Google Calendar Connector (OAuth2)
+# ---------------------------------------------------------------------------
+
+@app.get("/connectors/registry")
+def connector_registry():
+    """List all available connector types (from the Python registry)."""
+    from connectors.registry import get_registry
+
+    registry = get_registry()
+    return {"success": True, "connectors": registry.list_all()}
+
+
+@app.get("/connectors/google_calendar/status")
+def google_calendar_status():
+    """Check Google Calendar connection status."""
+    from connectors.registry import get_registry
+
+    registry = get_registry()
+    gc = registry.get("google_calendar")
+    if gc is None:
+        return {"success": False, "error": "Google Calendar connector not available"}
+
+    return {
+        "success": True,
+        "connected": gc.is_connected(),
+        "status": gc.get_status().value,
+        "has_credentials": gc._load_client_config() is not None,
+    }
+
+
+@app.post("/connectors/google_calendar/connect")
+def google_calendar_connect():
+    """Start the Google Calendar OAuth2 flow.
+
+    Opens the browser to Google's authorization page and waits
+    for the OAuth callback on a local server.
+    """
+    from connectors.registry import get_registry
+
+    registry = get_registry()
+    gc = registry.get("google_calendar")
+    if gc is None:
+        return {"success": False, "error": "Google Calendar connector not available"}
+
+    # Check if already connected
+    if gc.is_connected():
+        return {"success": True, "message": "Already connected"}
+
+    result = gc.connect()
+    return result
+
+
+@app.get("/connectors/google_calendar/callback")
+def google_calendar_callback(code: str | None = None, error: str | None = None):
+    """Handle the Google OAuth2 callback.
+
+    This endpoint is called by Google after the user authorizes.
+    For the desktop flow, the local server handles this directly,
+    but this endpoint exists as a fallback.
+    """
+    from connectors.registry import get_registry
+
+    registry = get_registry()
+    gc = registry.get("google_calendar")
+    if gc is None:
+        return {"success": False, "error": "Google Calendar connector not available"}
+
+    if error:
+        return {"success": False, "error": error}
+    if not code:
+        return {"success": False, "error": "No authorization code provided"}
+
+    result = gc.handle_auth_callback(
+        f"http://localhost:8090?code={code}"
+    )
+    return result
+
+
+@app.post("/connectors/google_calendar/disconnect")
+def google_calendar_disconnect():
+    """Disconnect Google Calendar — remove stored tokens."""
+    from connectors.registry import get_registry
+
+    registry = get_registry()
+    gc = registry.get("google_calendar")
+    if gc is None:
+        return {"success": False, "error": "Google Calendar connector not available"}
+
+    result = gc.disconnect()
+    return result
+
+
+@app.get("/connectors/google_calendar/events")
+def google_calendar_events(max_results: int = 10):
+    """Fetch upcoming events from Google Calendar."""
+    from connectors.registry import get_registry
+
+    registry = get_registry()
+    gc = registry.get("google_calendar")
+    if gc is None:
+        return {"success": False, "error": "Google Calendar connector not available"}
+
+    if not gc.is_connected():
+        return {"success": False, "error": "Not connected — please connect Google Calendar first"}
+
+    result = gc.execute_tool("list_events", {"max_results": max_results})
+    return result
 
 
 @app.get("/system/metrics")

@@ -16,6 +16,7 @@ dependencies = [
     "pillow",
     "psutil",
     "rapidfuzz",
+    "google-auth-oauthlib",
 ]
 
 [project.optional-dependencies]
@@ -31,6 +32,7 @@ dev = [
 include = [
     "actions*",
     "brain*",
+    "connectors*",
     "database*",
     "events*",
     "hermes*",

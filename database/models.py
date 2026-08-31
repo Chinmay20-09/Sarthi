@@ -123,6 +123,23 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 """
 
 # =============================================================================
+# External Connectors Table
+# =============================================================================
+
+CREATE_CONNECTORS = """
+CREATE TABLE IF NOT EXISTS connectors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    service TEXT NOT NULL,
+    status TEXT DEFAULT 'disconnected',
+    config TEXT DEFAULT '{}',
+    created_at TEXT,
+    updated_at TEXT
+)
+"""
+
+# =============================================================================
 # Registry: all known table schemas
 # =============================================================================
 
@@ -135,4 +152,5 @@ ALL_TABLES: dict[str, str] = {
     "settings": CREATE_SETTINGS,
     "conversation_messages": CREATE_CONVERSATION_MESSAGES,
     "chat_messages": CREATE_CHAT_MESSAGES,
+    "connectors": CREATE_CONNECTORS,
 }

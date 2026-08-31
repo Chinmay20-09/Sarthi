@@ -125,6 +125,46 @@
       "tool_used": null,
       "timestamp": "2026-08-27T17:04:40.901073+00:00",
       "duration_ms": 15314.276500000233
+    },
+    {
+      "task_id": "task_ec3715",
+      "prompt": "hello",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-31T18:52:34.024794+00:00",
+      "duration_ms": 14137.119600000005
+    },
+    {
+      "task_id": "task_d7e409",
+      "prompt": "hello",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-31T18:53:28.963380+00:00",
+      "duration_ms": 15758.85290000042
+    },
+    {
+      "task_id": "task_27e292",
+      "prompt": "hello",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-31T18:57:59.786213+00:00",
+      "duration_ms": 17782.19959999933
+    },
+    {
+      "task_id": "task_aa5174",
+      "prompt": "hello",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-31T19:00:05.116452+00:00",
+      "duration_ms": 16765.389700000014
     }
   ],
   "how are you ?": [
@@ -157,6 +197,16 @@
       "tool_used": null,
       "timestamp": "2026-08-26T18:44:36.480267+00:00",
       "duration_ms": 12575.30080000015
+    },
+    {
+      "task_id": "task_2afbd0",
+      "prompt": "How are you ?",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-31T18:50:13.922963+00:00",
+      "duration_ms": 125361.60310000014
     }
   ],
   "hey ??": [
@@ -603,6 +653,42 @@
       "tool_used": null,
       "timestamp": "2026-08-31T17:59:37.596144+00:00",
       "duration_ms": 142758.67710000012
+    }
+  ],
+  "open youtube and play lost in love": [
+    {
+      "task_id": "chat_cfee8d45",
+      "prompt": "open youtube and play lost in love",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": "open_website",
+      "timestamp": "2026-08-31T18:52:04.451692+00:00",
+      "duration_ms": 48844.12080000038
+    }
+  ],
+  "it didn't played the music": [
+    {
+      "task_id": "task_ed552e",
+      "prompt": "it didn't played the music",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-08-31T18:53:08.064880+00:00",
+      "duration_ms": 21702.16100000016
+    }
+  ],
+  "open youtube and search lost in love": [
+    {
+      "task_id": "chat_2dab1224",
+      "prompt": "open youtube and search lost in love",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": "open_website",
+      "timestamp": "2026-08-31T18:55:40.482396+00:00",
+      "duration_ms": 30027.292900000248
     }
   ]
 }
