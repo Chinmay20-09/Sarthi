@@ -213,45 +213,32 @@
                 </div>
             </div>
         </div>
+
+        <!-- Command Input -->
+        <div class="mt-8 w-full max-w-2xl">
+            <div class="glass-panel p-2 rounded-2xl flex items-center gap-2 shadow-[0_10px_40px_rgba(0,0,0,0.5)]">
+                <div class="flex-1">
+                    <input id="dash-input" type="text"
+                        class="w-full bg-transparent border-none text-on-surface font-body-lg text-body-lg focus:ring-0 focus:outline-none placeholder-on-surface-variant/50 px-4 py-3"
+                        placeholder="Type a command or ask anything..." autocomplete="off" spellcheck="false">
+                </div>
+                <button id="dash-send"
+                    class="w-10 h-10 rounded-full bg-surface-container border border-white/10 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-white/5 transition-all hover:border-primary/50 mr-1"
+                    title="Send">
+                    <span class="material-symbols-outlined">arrow_upward</span>
+                </button>
+            </div>
+        </div>
+
         <!-- Command Timeline -->
-        <div class="mt-24 w-full max-w-2xl space-y-4">
+        <div class="mt-8 w-full max-w-2xl space-y-4">
             <h3 class="font-label-caps text-label-caps text-on-surface-variant opacity-60 mb-4 px-2">COMMAND TIMELINE
             </h3>
-            <div
-                class="glass-panel p-6 rounded-xl flex items-center justify-between group hover:border-primary/40 transition-all duration-500 overflow-hidden relative">
-                <div class="scanning-line"></div>
-                <div class="flex items-center gap-4">
-                    <div
-                        class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                        <span class="material-symbols-outlined">mic</span>
-                    </div>
-                    <div>
-                        <p class="font-body-lg text-body-lg font-semibold text-on-surface">Open Chrome</p>
-                        <p class="font-body-sm text-body-sm text-on-surface-variant">Last activity: 2 mins ago</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2 text-primary-container">
-                    <span class="material-symbols-outlined text-sm">check_circle</span>
-                    <span class="font-label-caps text-label-caps font-bold">EXECUTED</span>
-                </div>
+            <div id="timeline-empty" class="text-center py-8">
+                <span class="material-symbols-outlined text-3xl text-on-surface-variant/30">history</span>
+                <p class="text-on-surface-variant/40 text-xs mt-2 font-data-mono">No commands yet</p>
             </div>
-            <div
-                class="glass-panel p-6 rounded-xl flex items-center justify-between group hover:border-primary/40 transition-all duration-500">
-                <div class="flex items-center gap-4">
-                    <div
-                        class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-                        <span class="material-symbols-outlined">mic</span>
-                    </div>
-                    <div>
-                        <p class="font-body-lg text-body-lg font-semibold text-on-surface">Search Python decorators</p>
-                        <p class="font-body-sm text-body-sm text-on-surface-variant">Active processing</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2 text-tertiary-container">
-                    <span class="material-symbols-outlined text-sm animate-spin">refresh</span>
-                    <span class="font-label-caps text-label-caps font-bold uppercase">Opened Browser</span>
-                </div>
-            </div>
+            <div id="timeline-list" class="space-y-3"></div>
         </div>
     </main>
     <!-- Right Panel (Today's Overview) -->
@@ -366,8 +353,107 @@
     <script src="components.js"></script>
     <script>
         const DashAPI = "http://127.0.0.1:8000";
+        let dashProcessing = false;
 
-        // Page-specific: counter animation for knowledge stats
+        // ---------------------------------------------------------------------
+        // Command Input + Timeline
+        // ---------------------------------------------------------------------
+        function updateDashStatus(text) {
+            const el = document.getElementById("status");
+            if (el) el.innerText = text;
+        }
+
+        function addTimelineEntry(text, response) {
+            const empty = document.getElementById("timeline-empty");
+            if (empty) empty.remove();
+            const list = document.getElementById("timeline-list");
+            const isHermes = response.routing === "hermes";
+            const isSuccess = response.success;
+            const action = response.action || (isHermes ? "hermes" : "error");
+            const target = response.target || "";
+            const icon = isHermes ? "forum" : (isSuccess ? "check_circle" : "error");
+            const iconClass = isHermes ? "text-tertiary" : (isSuccess ? "text-primary-container" : "text-error");
+            const badgeText = isHermes ? "ASKED SARTHI" : (isSuccess ? "EXECUTED" : "FAILED");
+            const badgeClass = isHermes ? "text-tertiary-container" : (isSuccess ? "text-primary-container" : "text-error");
+            const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+            const item = document.createElement("div");
+            item.className = "glass-panel p-4 rounded-xl flex items-center justify-between group hover:border-primary/40 transition-all duration-500";
+            item.innerHTML =
+                '<div class="flex items-center gap-4">' +
+                '  <div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary border border-primary/20">' +
+                '    <span class="material-symbols-outlined">' + escDash(icon === "check_circle" || icon === "error" ? "terminal" : icon) + '</span>' +
+                '  </div>' +
+                '  <div>' +
+                '    <p class="font-body-lg text-body-lg font-semibold text-on-surface">' + escDash(text) + '</p>' +
+                '    <p class="font-body-sm text-body-sm text-on-surface-variant">' + escDash(now) + '</p>' +
+                '  </div>' +
+                '</div>' +
+                '<div class="flex items-center gap-2 ' + badgeClass + '">' +
+                '  <span class="material-symbols-outlined text-sm">' + icon + '</span>' +
+                '  <span class="font-label-caps text-label-caps font-bold">' + badgeText + '</span>' +
+                '</div>';
+            list.prepend(item);
+        }
+
+        async function dashSendCommand(text) {
+            text = (text || "").trim();
+            if (dashProcessing || !text) return;
+            dashProcessing = true;
+            const input = document.getElementById("dash-input");
+            const sendBtn = document.getElementById("dash-send");
+            input.disabled = true;
+            sendBtn.disabled = true;
+            updateDashStatus("Thinking...");
+
+            // 15-second timeout for command processing
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+            try {
+                const response = await fetch(DashAPI + "/command", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: text }),
+                    signal: controller.signal,
+                });
+                clearTimeout(timeoutId);
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                const payload = await response.json();
+
+                if (payload.routing === "hermes") {
+                    // AI response — navigate to Chat with state
+                    const state = {
+                        userMessage: text,
+                        assistantMessage: payload.text || "",
+                        assistantPayload: payload,
+                    };
+                    sessionStorage.setItem("sarthi_initial_chat", JSON.stringify(state));
+                    window.location.href = "chat.html";
+                    return;
+                }
+
+                // Deterministic command — show result on Home
+                addTimelineEntry(text, payload);
+                updateDashStatus(payload.success ? (payload.text || "Done") : (payload.text || "Failed"));
+                setTimeout(() => updateDashStatus("Ready"), 3000);
+            } catch (err) {
+                clearTimeout(timeoutId);
+                console.error("Command error:", err);
+                const isTimeout = err.name === "AbortError";
+                updateDashStatus(isTimeout ? "Timed out" : "Connection Failed");
+                setTimeout(() => updateDashStatus("Ready"), 3000);
+            } finally {
+                dashProcessing = false;
+                input.disabled = false;
+                sendBtn.disabled = false;
+                input.value = "";
+                input.focus();
+            }
+        }
+
+        // ---------------------------------------------------------------------
+        // Counter animation for knowledge stats
+        // ---------------------------------------------------------------------
         function animateCounter(id, start, end, duration) {
             let current = start;
             const range = end - start;
@@ -466,6 +552,20 @@
             animateCounter('counter-agents', 10, 42, 2000);
             animateCounter('counter-nodes', 0, 9, 1500);
             loadDashMetrics();
+
+            // Command input handlers
+            const input = document.getElementById("dash-input");
+            const sendBtn = document.getElementById("dash-send");
+            if (input && sendBtn) {
+                sendBtn.addEventListener("click", () => dashSendCommand(input.value));
+                input.addEventListener("keydown", (e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        dashSendCommand(input.value);
+                    }
+                });
+            }
+
             // Adaptive polling — pause when tab is hidden to save resources
             let dashInterval = setInterval(loadDashMetrics, 10000);
             document.addEventListener("visibilitychange", () => {

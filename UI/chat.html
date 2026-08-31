@@ -1621,12 +1621,17 @@
         async function sendHermesQuestion(text, input) {
             setCurrentTask("Hermes thinking...");
             input.placeholder = "Hermes is thinking...";
+            // 30-second timeout to prevent the UI from freezing
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
             try {
                 const response = await fetch(SarthiAPI + "/hermes/chat", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ message: text, session_id: hermesSessionId() }),
+                    signal: controller.signal,
                 });
+                clearTimeout(timeoutId);
                 if (!response.ok) throw new Error("HTTP " + response.status);
                 const payload = await response.json();
                 // Pin whatever session the server resolved, in case it differs
@@ -1643,9 +1648,13 @@
                 addAssistantMessage(rendered);
                 persistChatMessage("assistant", rendered);
             } catch (err) {
+                clearTimeout(timeoutId);
                 console.error("Hermes error:", err);
+                const isTimeout = err.name === "AbortError";
                 const rendered = {
-                    text: "Local Hermes is unavailable. Check that Ollama is running.",
+                    text: isTimeout
+                        ? "Hermes took too long to respond. The model may be overloaded — try again shortly."
+                        : "Local Hermes is unavailable. Check that Ollama is running.",
                     action: "",
                     target: "",
                     success: false,
@@ -2168,6 +2177,36 @@
             hermesSessionId(); // ensure a stable chat session id before anything else
             input.focus();
             loadMode();
+
+            // Load initial state from Dashboard (command → chat fallback)
+            const initialState = sessionStorage.getItem("sarthi_initial_chat");
+            if (initialState) {
+                sessionStorage.removeItem("sarthi_initial_chat");
+                (async () => {
+                    try {
+                        const state = JSON.parse(initialState);
+                        // Display the user message and Hermes response
+                        addUserMessage(state.userMessage || "");
+                        await persistChatMessage("user", { text: state.userMessage || "" });
+                        if (state.assistantPayload) {
+                            addAssistantMessage(state.assistantPayload);
+                            updateLastExecution(state.assistantPayload);
+                            persistChatMessage("assistant", state.assistantPayload);
+                        } else if (state.assistantMessage) {
+                            const rendered = {
+                                text: state.assistantMessage,
+                                action: "", target: "", success: true,
+                                provider: "Hermes",
+                            };
+                            addAssistantMessage(rendered);
+                            persistChatMessage("assistant", rendered);
+                        }
+                    } catch (e) {
+                        console.warn("Failed to load initial chat state:", e);
+                    }
+                })();
+            }
+
             checkPendingApps();
             loadHermesTools();
             loadSandbox();

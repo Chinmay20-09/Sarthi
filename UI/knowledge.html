@@ -240,8 +240,8 @@
                         <span class="font-data-mono text-[10px] text-on-surface-variant">UPTIME: 99.9%</span>
                     </div>
                     <div>
-                        <h3 class="font-label-caps text-label-caps text-on-surface-variant">CONNECTED APPS</h3>
-                        <p class="font-display-lg text-[32px] text-white">24 <span
+                        <h3 class="font-label-caps text-label-caps text-on-surface-variant">CONNECTORS</h3>
+                        <p class="font-display-lg text-[32px] text-white"><span id="connector-count">0</span> <span
                                 class="text-sm font-normal text-primary">active</span></p>
                     </div>
                 </div>
@@ -289,9 +289,20 @@
                     </div>
                 </div>
             </section>
-            <!-- Connected Apps Side Panel -->
+            <!-- Connectors Side Panel -->
             <section class="col-span-4 flex flex-col gap-gutter">
-                <div id="applications-list"></div>
+                <div class="glass-panel p-6 rounded-xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-label-caps text-label-caps text-on-surface-variant">CONNECTORS</h3>
+                        <button id="scan-btn" class="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-label-caps text-primary border border-primary/20 rounded-lg hover:bg-primary/10 transition-all">
+                            <span class="material-symbols-outlined text-[14px]">refresh</span>
+                            SCAN
+                        </button>
+                    </div>
+                    <div id="connectors-list" class="flex flex-col gap-2 max-h-[400px] overflow-y-auto">
+                        <div class="text-xs text-on-surface-variant py-4 text-center">Loading connectors...</div>
+                    </div>
+                </div>
                 <div class="glass-panel p-6 rounded-xl h-48 relative overflow-hidden">
                     <h3 class="font-label-caps text-label-caps text-on-surface-variant mb-4">STORAGE HEALTH</h3>
                     <div class="flex items-end gap-1 h-20">
@@ -406,6 +417,118 @@
     <div id="footer"></div>
     <script src="components.js"></script>
     <script>
+        const KnowledgeAPI = "http://127.0.0.1:8000";
+
+        function escK(v) {
+            const d = document.createElement("div");
+            d.textContent = v == null ? "" : String(v);
+            return d.innerHTML;
+        }
+
+        // ---------------------------------------------------------------------
+        // Connectors (Skills) Management
+        // ---------------------------------------------------------------------
+        async function loadConnectors() {
+            const container = document.getElementById("connectors-list");
+            if (!container) return;
+            try {
+                const response = await fetch(KnowledgeAPI + "/skills");
+                const skills = await response.json();
+                container.innerHTML = "";
+
+                if (!skills.length) {
+                    container.innerHTML = '<div class="text-xs text-on-surface-variant py-4 text-center">No connectors installed.</div>';
+                    return;
+                }
+
+                let activeCount = 0;
+                skills.forEach(skill => {
+                    if (skill.enabled) activeCount++;
+                    const icon = skill.icon || "extension";
+                    const statusColor = skill.enabled ? "text-primary" : "text-on-surface-variant/40";
+                    const statusBg = skill.enabled ? "bg-primary/10" : "bg-white/5";
+                    const statusBorder = skill.enabled ? "border-primary/20" : "border-white/5";
+                    const toggleBg = skill.enabled ? "bg-primary" : "bg-white/20";
+                    const toggleDot = skill.enabled ? "translate-x-5" : "translate-x-0.5";
+
+                    const item = document.createElement("div");
+                    item.className = "p-3 rounded-lg border " + statusBorder + " hover:bg-white/5 transition-all";
+                    item.innerHTML =
+                        '<div class="flex items-center justify-between">' +
+                        '  <div class="flex items-center gap-3 min-w-0">' +
+                        '    <div class="w-8 h-8 rounded-lg ' + statusBg + ' flex items-center justify-center flex-shrink-0">' +
+                        '      <span class="material-symbols-outlined text-sm ' + statusColor + '">' + escK(icon) + '</span>' +
+                        '    </div>' +
+                        '    <div class="min-w-0">' +
+                        '      <p class="font-body-sm text-body-sm font-medium truncate">' + escK(skill.name) + '</p>' +
+                        '      <p class="text-[10px] text-on-surface-variant truncate">v' + escK(skill.version) + '</p>' +
+                        '    </div>' +
+                        '  </div>' +
+                        '  <button class="toggle-btn flex-shrink-0 relative inline-flex h-5 w-9 items-center rounded-full transition-colors ' + toggleBg + '" data-skill-id="' + escK(skill.id) + '" data-enabled="' + skill.enabled + '">' +
+                        '    <span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ' + toggleDot + '"></span>' +
+                        '  </button>' +
+                        '</div>' +
+                        '<p class="text-[10px] text-on-surface-variant mt-1.5 line-clamp-2 pl-11">' + escK(skill.description) + '</p>';
+
+                    // Toggle handler
+                    const toggleBtn = item.querySelector(".toggle-btn");
+                    toggleBtn.addEventListener("click", () => toggleConnector(skill.id, toggleBtn));
+
+                    container.appendChild(item);
+                });
+
+                // Update stat card
+                const countEl = document.getElementById("connector-count");
+                if (countEl) countEl.textContent = activeCount;
+            } catch (err) {
+                console.warn("Failed to load connectors:", err);
+                container.innerHTML = '<div class="text-xs text-on-surface-variant py-4 text-center">Connectors unavailable.</div>';
+            }
+        }
+
+        async function toggleConnector(skillId, btn) {
+            const isEnabled = btn.dataset.enabled === "true";
+            const endpoint = isEnabled
+                ? KnowledgeAPI + "/skills/" + skillId + "/disable"
+                : KnowledgeAPI + "/skills/" + skillId + "/enable";
+
+            btn.disabled = true;
+            try {
+                const response = await fetch(endpoint, { method: "POST" });
+                const result = await response.json();
+                if (result.success) {
+                    // Reload the full list to keep UI consistent
+                    await loadConnectors();
+                }
+            } catch (err) {
+                console.error("Toggle failed:", err);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function scanConnectors() {
+            const btn = document.getElementById("scan-btn");
+            if (!btn) return;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-symbols-outlined text-[14px] animate-spin">refresh</span> SCANNING...';
+            try {
+                // Trigger a system scan to discover new applications
+                await fetch(KnowledgeAPI + "/command", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: "scan my system" }),
+                });
+                // Reload connectors after scan
+                await loadConnectors();
+            } catch (err) {
+                console.warn("Scan failed:", err);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span class="material-symbols-outlined text-[14px]">refresh</span> SCAN';
+            }
+        }
+
         function initializePage() {
             // Micro-interactions for glass panels
             document.querySelectorAll('.glass-panel').forEach(panel => {
@@ -431,31 +554,12 @@
                 });
             }
 
-            // Load applications
-            loadApplications();
-        }
+            // Scan button
+            const scanBtn = document.getElementById("scan-btn");
+            if (scanBtn) scanBtn.addEventListener("click", scanConnectors);
 
-        async function loadApplications() {
-            try {
-                const response = await fetch("http://127.0.0.1:8000/applications");
-                const apps = await response.json();
-                const container = document.getElementById("applications-list");
-                if (!container) return;
-                container.innerHTML = "";
-                apps.slice(0, 10).forEach(app => {
-                    container.innerHTML += `
-            <div class="flex items-center justify-between p-3 rounded-lg border border-white/5 hover:bg-white/5 transition-all">
-                <div>
-                    <p class="font-body-lg font-medium">${app.name}</p>
-                    <p class="text-xs text-on-surface-variant">${app.category}</p>
-                </div>
-                <span class="material-symbols-outlined text-primary">check_circle</span>
-            </div>
-        `;
-                });
-            } catch (err) {
-                console.warn("Failed to load applications", err);
-            }
+            // Load connectors (skills)
+            loadConnectors();
         }
     </script>
 </body>

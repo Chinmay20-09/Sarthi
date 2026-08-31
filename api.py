@@ -159,6 +159,20 @@ def _mode_command_response(text: str, mode: str) -> dict:
     }
 
 
+def _detect_response_mode(result: dict) -> str:
+    """Detect whether a brain-pipeline response was executed deterministically
+    or routed to the Hermes conversational layer.
+
+    Returns "command" when the deterministic pipeline handled the request,
+    or "hermes" when the NLP fallback skill handled it.
+    """
+    if result.get("success") and result.get("result"):
+        r = result["result"]
+        if isinstance(r, dict) and r.get("source") == "nlp":
+            return "hermes"
+    return "command"
+
+
 def _conversation_response(text: str, session_id: str | None) -> dict:
     """Plain conversational reply for conversation mode — no task execution.
 
@@ -181,6 +195,7 @@ def _conversation_response(text: str, session_id: str | None) -> dict:
             "error": "conversation unavailable",
             "source": "nlp",
             "mode": CONVERSATION_MODE,
+            "routing": "hermes",
         }
 
     if response.success:
@@ -201,6 +216,7 @@ def _conversation_response(text: str, session_id: str | None) -> dict:
             "provider": response.provider,
             "model": response.model,
             "mode": CONVERSATION_MODE,
+            "routing": "hermes",
         }
     return {
         "action": "conversation",
@@ -212,12 +228,28 @@ def _conversation_response(text: str, session_id: str | None) -> dict:
         "error": response.error,
         "source": "nlp",
         "mode": CONVERSATION_MODE,
+        "routing": "hermes",
     }
 
 
 @app.post("/command")
 def command(request: CommandRequest):
     """Process a text command through the brain pipeline."""
+    # Validate empty input
+    if not request.text or not request.text.strip():
+        return {
+            "action": None,
+            "target": None,
+            "status": "error",
+            "success": False,
+            "text": "Please enter a command.",
+            "result": None,
+            "error": "empty input",
+            "input": request.text,
+            "mode": get_mode(),
+            "routing": "command",
+        }
+
     bus.publish("intent_received", {"text": request.text}, source="api")
 
     # Mode commands ("conversation mode", "/exit", ...) work in every mode.
@@ -225,6 +257,7 @@ def command(request: CommandRequest):
     if mode_cmd is not None:
         result = _mode_command_response(request.text, set_mode(mode_cmd))
         result["input"] = request.text
+        result["routing"] = "command"
         bus.publish("command_completed", result, source="api")
         return result
 
@@ -240,6 +273,7 @@ def command(request: CommandRequest):
     result = response.to_api_dict()
     result["input"] = request.text
     result["mode"] = get_mode()
+    result["routing"] = _detect_response_mode(result)
     bus.publish("command_completed", result, source="api")
     return result
 
@@ -298,6 +332,7 @@ def listen_command():
     api_result = response.to_api_dict()
     api_result["input"] = text
     api_result["mode"] = get_mode()
+    api_result["routing"] = _detect_response_mode(api_result)
 
     bus.publish("command_completed", api_result, source="api")
     return api_result
