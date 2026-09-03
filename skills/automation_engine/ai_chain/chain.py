@@ -82,15 +82,18 @@ def run_ai_chain(
         ChainOutcome describing every step, saved files, and status.
     """
     request = ChainRequest(query=query, ai1=ai1, ai2=ai2, save_images=save_images)
+    if execute is None:
+        execute = not get_test_mode()
+
     try:
         spec1, spec2 = resolve_site(request.ai1), resolve_site(request.ai2)
     except ValueError as exc:
-        return ChainOutcome(
+        outcome = ChainOutcome(
             request=request, success=False, status="failed", message=str(exc)
         )
-
-    if execute is None:
-        execute = not get_test_mode()
+        if execute:
+            _save_to_sandbox(request, outcome)
+        return outcome
 
     if not execute:
         return _plan_only(request, spec1, spec2)
@@ -106,9 +109,11 @@ def run_ai_chain(
         ctrl.release()
         announce(VOICE_CANCELLED)
         print("Hands-off mode ended — you can use your keyboard and mouse again.")
-        return ChainOutcome(
+        outcome = ChainOutcome(
             request=request, success=False, status="aborted", message=f"Aborted: {exc}"
         )
+        _save_to_sandbox(request, outcome)
+        return outcome
 
     run = ChainRun(request.query, root=results_root)
     run.write_text("01_query.txt", request.query)
@@ -119,7 +124,7 @@ def run_ai_chain(
         step1 = _drive(ctrl, run, spec1, request.query, index=1)
         steps.append(step1)
         if not step1.success:
-            return _finish(
+            return _finish_and_record(
                 request, steps, run, "failed",
                 f"AI1 ({spec1.label}) failed: {step1.error}",
             )
@@ -128,7 +133,7 @@ def run_ai_chain(
         step2 = _drive(ctrl, run, spec2, step1.response, index=2)
         steps.append(step2)
         if not step2.success:
-            return _finish(
+            return _finish_and_record(
                 request, steps, run, "failed",
                 f"AI2 ({spec2.label}) failed: {step2.error}",
             )
@@ -147,13 +152,13 @@ def run_ai_chain(
         )
         if harvested:
             message += f" | image: {harvested[0]}"
-        return _finish(request, steps, run, "completed", message)
+        return _finish_and_record(request, steps, run, "completed", message)
 
     except AbortError as exc:
-        return _finish(request, steps, run, "aborted", f"Aborted: {exc}")
+        return _finish_and_record(request, steps, run, "aborted", f"Aborted: {exc}")
     except Exception as exc:
         logger.exception("AI chain failed")
-        return _finish(request, steps, run, "failed", f"Chain failed: {exc}")
+        return _finish_and_record(request, steps, run, "failed", f"Chain failed: {exc}")
     finally:
         ctrl.release()
         announce(VOICE_DONE)
@@ -243,3 +248,70 @@ def _finish(
         run_dir=run.dir,
         message=message,
     )
+
+
+def _finish_and_record(
+    request: ChainRequest,
+    steps: list[StepOutcome],
+    run: ChainRun,
+    status: str,
+    message: str,
+) -> ChainOutcome:
+    """Build the outcome and record it in the Hermes sandbox (real runs)."""
+    outcome = _finish(request, steps, run, status, message)
+    _save_to_sandbox(request, outcome)
+    return outcome
+
+
+def _save_to_sandbox(request: ChainRequest, outcome: ChainOutcome) -> None:
+    """
+    Record a real chain run in the Hermes sandbox so failed/aborted queries
+    stay visible in the sandbox viewer (and are kept by /clean).
+
+    Dry-run plans are never recorded. A sandbox failure must never change
+    the chain outcome, so everything is wrapped and only logged.
+    """
+    try:
+        from hermes.config.loader import ConfigLoader
+        from hermes.models import Task
+        from hermes.providers.base import ProviderResponse
+        from hermes.sandbox import TaskSandbox
+
+        trace = [
+            {
+                "site": step.site_key,
+                "prompt": step.prompt,
+                "response": step.response,
+                "error": step.error,
+                "duration_ms": step.duration_ms,
+            }
+            for step in outcome.steps
+        ]
+
+        text = outcome.message or ""
+        if outcome.run_dir is not None:
+            text = f"{text}\nRun folder: {outcome.run_dir}"
+
+        response = ProviderResponse(
+            success=outcome.success,
+            provider="ai_chain",
+            model=f"{request.ai1} -> {request.ai2}",
+            text=text,
+            error="" if outcome.success else (outcome.message or "ai_chain failed"),
+            tool_used="ai_chain",
+        )
+        task = Task(prompt=request.query, task_type="ai_chain")
+
+        sandbox = TaskSandbox(ConfigLoader().load().sandbox_path)
+        sandbox.save(
+            task,
+            response,
+            duration_ms=sum(step.duration_ms for step in outcome.steps),
+            trace=trace,
+        )
+        logger.info(
+            f"ai_chain run recorded in sandbox: {request.query!r} "
+            f"({outcome.status})"
+        )
+    except Exception:
+        logger.exception("Could not save ai_chain run to sandbox")

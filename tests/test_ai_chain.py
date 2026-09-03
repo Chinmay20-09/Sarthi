@@ -12,6 +12,7 @@ import pytest
 from brain.intent import Intent
 from skills.automation_engine.ai_chain.calibration import resolve_site
 from skills.automation_engine.ai_chain.chain import run_ai_chain
+from skills.automation_engine.ai_chain.control import AbortError
 from skills.automation_engine.ai_chain.models import ChainOutcome, ChainRequest
 from skills.automation_engine.ai_chain.parsing import extract_reply, parse_chain_command
 from skills.automation_engine.ai_chain.storage import ChainRun, slugify
@@ -267,6 +268,106 @@ class TestFindWindow:
         ctrl = control.ScreenController(dry_run=False)
         with pytest.raises(RuntimeError, match="Could not find a browser window titled like 'ChatGPT'"):
             ctrl.open_site("https://chatgpt.com/", "ChatGPT", wait=1.0)
+
+
+# ----------------------------------------------------------------------
+# Sandbox recording (failed/aborted runs stay visible in the sandbox)
+# ----------------------------------------------------------------------
+
+
+class _AbortController:
+    """ScreenController stand-in that aborts on the first check."""
+
+    def check_abort(self):
+        raise AbortError("Aborted by user (Ctrl+Alt+X).")
+
+    def release(self):
+        pass
+
+
+def _tmp_sandbox(monkeypatch, tmp_path):
+    """Point HERMES_SANDBOX_PATH at a temp dir and clear the config cache."""
+    from hermes.config.loader import ConfigLoader
+
+    monkeypatch.setenv("HERMES_SANDBOX_PATH", str(tmp_path))
+    monkeypatch.setattr(ConfigLoader, "_cached", None)
+    return tmp_path
+
+
+class TestSandboxRecording:
+    def test_aborted_chain_is_recorded_in_sandbox(self, monkeypatch, tmp_path):
+        """A real run that aborts still lands in the sandbox index."""
+        from hermes.sandbox import TaskSandbox
+
+        root = _tmp_sandbox(monkeypatch, tmp_path)
+        monkeypatch.setattr(
+            "skills.automation_engine.ai_chain.chain.announce", lambda msg: None
+        )
+
+        outcome = run_ai_chain(
+            "make a logo",
+            ai1="chatgpt",
+            ai2="gemini",
+            execute=True,
+            controller=_AbortController(),
+        )
+
+        assert outcome.status == "aborted"
+        records = TaskSandbox(str(root)).lookup("make a logo")
+        assert len(records) == 1
+        assert records[0]["status"] == "error"
+        assert records[0]["provider"] == "ai_chain"
+        assert records[0]["model"] == "chatgpt -> gemini"
+
+    def test_failed_chain_records_trace_and_error(self, monkeypatch, tmp_path):
+        """A step failure keeps the error and trace in the sandbox record."""
+        from hermes.sandbox import TaskSandbox
+        from skills.automation_engine.ai_chain.chain import _save_to_sandbox
+        from skills.automation_engine.ai_chain.models import StepOutcome
+
+        root = _tmp_sandbox(monkeypatch, tmp_path)
+        request = ChainRequest(
+            query="birthday invitation image prompt", ai1="chatgpt", ai2="gemini"
+        )
+        step = StepOutcome(
+            index=1,
+            site_key="chatgpt",
+            site_label="ChatGPT",
+            prompt="birthday invitation image prompt",
+            error="Could not find a browser window titled like 'ChatGPT'",
+            duration_ms=6123,
+        )
+        outcome = ChainOutcome(
+            request=request,
+            success=False,
+            status="failed",
+            steps=[step],
+            message="AI1 (ChatGPT) failed: Could not find a browser window titled like 'ChatGPT'",
+        )
+
+        _save_to_sandbox(request, outcome)
+
+        sandbox = TaskSandbox(str(root))
+        records = sandbox.lookup("birthday invitation image prompt")
+        assert len(records) == 1
+        task = sandbox.get_task(records[0]["task_id"])
+        assert task is not None
+        assert "Could not find a browser window" in task["response"]
+        assert task["trace"] and task["trace"][0]["error"].startswith("Could not find")
+        assert task["metadata"]["status"] == "error"
+
+    def test_planned_run_never_touches_sandbox(self, monkeypatch, tmp_path):
+        """Dry-run plans (test mode) are not recorded."""
+        from hermes.sandbox import TaskSandbox
+
+        root = _tmp_sandbox(monkeypatch, tmp_path)
+
+        outcome = run_ai_chain(
+            "make a logo", ai1="chatgpt", ai2="gemini", execute=False
+        )
+
+        assert outcome.status == "planned"
+        assert TaskSandbox(str(root)).lookup("make a logo") == []
 
 
 # ----------------------------------------------------------------------
