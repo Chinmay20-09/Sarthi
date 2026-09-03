@@ -11,10 +11,15 @@ Responsibilities:
 - For "open X and search Q" / "open X and play Y", use everything after the
   keyword (stopping at the full stop) as the query and produce an open
   intent plus a site-aware search/play intent
+- Recognize AI-chain commands ("run/chain/automate <query> from <AI> to <AI>")
+  so "run ... from chatgpt to gemini" is not mistaken for an app open
 - Return a normalized Intent for downstream processing
 """
 
+import re
+
 from brain.intent import Intent
+from brain.wordfinder import find_target_keyword
 
 ACTION_WORDS = {
     # App / web actions
@@ -48,6 +53,9 @@ ACTION_WORDS = {
     "clean": "clean",
     "cleanup": "clean",
     "clear": "clean",
+    # AI chain actions (automation engine laptop automation)
+    "chain": "chain",
+    "automate": "chain",
 }
 
 FILLER_WORDS = {
@@ -89,6 +97,37 @@ _CONNECTOR_WORDS = {"and", "then", "&"}
 _QUERY_PREFIX_WORDS = {"for", "about", "on", "the", "a", "an", "to"}
 # Punctuation that may trail the query / target and should be dropped.
 _TRAILING_PUNCTUATION = ".,!?;:"
+
+# AI-chain commands: a trigger word plus a "from <AI> to <AI>" clause.
+# "run" is also an app-open word, so the from-to clause is what
+# disambiguates the sentence into a chain instead of an app launch.
+_CHAIN_TRIGGER_WORDS = {"chain", "automate", "run"}
+_CHAIN_FROM_TO_RE = re.compile(
+    r"\bfrom\s+(?P<ai1>[\w .-]+?)\s+to\s+(?P<ai2>[\w .-]+?)(?:[.!?;,]|$)",
+    re.IGNORECASE,
+)
+# Names the ai_chain module recognises (kept in sync with
+# ai_chain/calibration.py SITE_ALIASES so the interpreter needs no
+# automation imports).
+_CHAIN_AI_NAMES = frozenset(
+    {
+        "chatgpt",
+        "chat gpt",
+        "gpt",
+        "openai",
+        "open ai chat",
+        "gemini",
+        "google gemini",
+    }
+)
+
+# "open <AI1> <query> ... to <AI2>" — e.g. "open chatgpt and get prompt
+# for ... and send it to gemini". Recognised as an AI chain so the whole
+# sentence is not swallowed as the target of "open".
+_OPEN_CHAIN_RE = re.compile(
+    r"^\s*open\s+(?P<ai1>[\w .-]+?)\s+(?P<body>.*?)\bto\s+(?P<ai2>[\w .-]+?)(?:[.!?;,]|$)",
+    re.IGNORECASE | re.DOTALL,
+)
 
 
 def _token_key(token: str) -> str:
@@ -171,6 +210,19 @@ def _interpret_query(text: str) -> list[Intent]:
                 )
             ]
 
+    # AI chain: "run/chain/automate <query> from <AI> to <AI>" is a
+    # chain command. Without this, "run <query> from chatgpt to gemini"
+    # is read as an app-open (run -> open) and fails trying to launch an
+    # application named after the query.
+    chain_intent = _parse_chain_intent(stripped)
+    if chain_intent is not None:
+        return [chain_intent]
+
+    # AI chain, "open" flavour: "open chatgpt and <query> ... to gemini".
+    open_chain = _parse_open_chain(stripped)
+    if open_chain is not None:
+        return [open_chain]
+
     tokens = stripped.split()
     keys = [_token_key(tok) for tok in tokens]
 
@@ -200,6 +252,16 @@ def _interpret_query(text: str) -> list[Intent]:
 
     target = " ".join(target_words).strip().rstrip(_TRAILING_PUNCTUATION)
 
+    # Open-family actions: stop the target at the first known keyword
+    # (wordfinder keyword DB) instead of taking the whole sentence, so
+    # "open chatgpt and get prompt ..." targets "chatgpt". Sentences
+    # without a known keyword keep the legacy whole-target behaviour
+    # (e.g. "open visual studio code").
+    if action in _OPEN_ACTION_WORDS and target_words:
+        keyword = find_target_keyword(target_words)
+        if keyword is not None:
+            target = keyword[0]
+
     return [
         Intent(
             action=action,
@@ -208,6 +270,47 @@ def _interpret_query(text: str) -> list[Intent]:
             raw_text=stripped,
         )
     ]
+
+
+def _parse_chain_intent(text: str) -> Intent | None:
+    """Build a chain intent from a "<trigger> <query> from <AI> to <AI>" sentence.
+
+    Only fires when the sentence starts with a chain trigger word AND the
+    from-to clause names known AIs, so plain "run chrome" (no from-to) or
+    "run from home to office" (unknown names) keep their normal meaning.
+    The full sentence is kept as the target/raw_text: the automation skill
+    re-parses it with parse_chain_command to split query vs. AIs.
+    """
+    match = _CHAIN_FROM_TO_RE.search(text)
+    if match is None:
+        return None
+    first = text.split(maxsplit=1)[0].lower().rstrip(_TRAILING_PUNCTUATION)
+    if first not in _CHAIN_TRIGGER_WORDS:
+        return None
+    ai1 = " ".join(match.group("ai1").strip().lower().split())
+    ai2 = " ".join(match.group("ai2").strip().lower().split())
+    if ai1 not in _CHAIN_AI_NAMES or ai2 not in _CHAIN_AI_NAMES:
+        return None
+    return Intent(action="chain", target=text, confidence=1.0, raw_text=text)
+
+
+def _parse_open_chain(text: str) -> Intent | None:
+    """Build a chain intent from an "open <AI1> <query> ... to <AI2>" sentence.
+
+    Example: "open chatgpt and get prompt for making birthday invitation
+    image prompt and sendit to gemini" -> chain chatgpt -> gemini, with
+    the query extracted by parse_chain_command. Fires only when both AI
+    names are known, so "open chrome and go to settings" keeps its
+    normal open meaning.
+    """
+    match = _OPEN_CHAIN_RE.match(text)
+    if match is None:
+        return None
+    ai1 = " ".join(match.group("ai1").strip().lower().split())
+    ai2 = " ".join(match.group("ai2").strip().lower().split())
+    if ai1 not in _CHAIN_AI_NAMES or ai2 not in _CHAIN_AI_NAMES:
+        return None
+    return Intent(action="chain", target=text, confidence=1.0, raw_text=text)
 
 
 def _parse_compound(tokens: list[str], keys: list[str], raw_text: str) -> list[Intent] | None:

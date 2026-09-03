@@ -1,0 +1,16 @@
+{
+  "_comment": "Sarthi wordfinder keywords. Copy this file to keywords.json (same folder) and edit it — or run 'python -m brain.wordfinder add <keyword>'. Each keyword ends an 'open ...' target: the interpreter stops the target at the first known keyword instead of swallowing the whole sentence, so 'open chatgpt and get prompt ...' opens 'chatgpt'. Multi-word keywords work ('chat gpt'). Add the apps and sites you ask about often.",
+  "keywords": [
+    "chatgpt",
+    "gemini",
+    "youtube",
+    "spotify",
+    "telegram",
+    "whatsapp",
+    "notepad",
+    "calculator",
+    "file explorer",
+    "task manager",
+    "visual studio code"
+  ]
+}

@@ -8,6 +8,8 @@
     "commands": [
         "Generate assistant for project_tracker",
         "Analyze skill capabilities",
-        "Build assistant.json from manifest"
+        "Build assistant.json from manifest",
+        "Chain a prompt through ChatGPT then Gemini",
+        "Ask ChatGPT for an image prompt and let Gemini make it"
     ]
 }

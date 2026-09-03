@@ -509,6 +509,46 @@
       "tool_used": null,
       "timestamp": "2026-09-03T15:01:08.058227+00:00",
       "duration_ms": 1.1479000004328554
+    },
+    {
+      "task_id": "fallback_test_001",
+      "prompt": "This task will trigger fallback",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-09-03T16:53:43.268976+00:00",
+      "duration_ms": 0.12489999971876387
+    },
+    {
+      "task_id": "fallback_test_001",
+      "prompt": "This task will trigger fallback",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-09-03T17:24:12.450640+00:00",
+      "duration_ms": 0.09929999941959977
+    },
+    {
+      "task_id": "fallback_test_001",
+      "prompt": "This task will trigger fallback",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-09-03T17:35:00.570003+00:00",
+      "duration_ms": 0.08420000085607171
+    },
+    {
+      "task_id": "fallback_test_001",
+      "prompt": "This task will trigger fallback",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-09-03T17:58:10.949240+00:00",
+      "duration_ms": 0.2628999991429737
     }
   ]
 }

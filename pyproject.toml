@@ -25,6 +25,15 @@ dev = [
     "pytest",
 ]
 
+# Laptop-control stack used by the automation engine's ai_chain module
+# (lazily imported — the core app works without it).
+automation = [
+    "pyautogui>=0.9.54",
+    "keyboard>=0.13.5",
+    "pyperclip>=1.8",
+    "pywin32>=306",
+]
+
 # ---------------------------------------------------------------------------
 # Package discovery — flat layout with multiple top-level packages
 # ---------------------------------------------------------------------------

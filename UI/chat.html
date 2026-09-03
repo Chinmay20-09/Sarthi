@@ -747,6 +747,7 @@
                 if (visual.type === "project_status") return renderProjectCards(visual.data);
                 if (visual.type === "scan_results") return renderScanCard(visual.data);
                 if (visual.type === "app_decision") return renderAppDecisionCard(visual.data);
+                if (visual.type === "open_choice") return renderOpenChoiceCard(visual.data);
                 if (visual.type === "github_username_prompt") return renderGithubUsernamePrompt(visual.data);
                 if (visual.type === "clean_tasks") return renderCleanTasksCard(visual.data);
             }
@@ -843,6 +844,46 @@
             card.querySelector('[data-act="run"]').addEventListener("click", async () => {
                 await apiRunApp(data.name);
                 addSystemMessage("Running " + data.name + " anyway...");
+                card.remove();
+            });
+            card.querySelector('[data-act="cancel"]').addEventListener("click", () => card.remove());
+            return card;
+        }
+
+        // "open X" found neither an application nor a website — let the user
+        // choose: scan the system, or search the browser and remember it.
+        function renderOpenChoiceCard(data) {
+            const card = el("div", "glass-card rounded-xl p-5 w-full border border-primary/30");
+            card.innerHTML =
+                '<div class="flex items-center gap-3 mb-3 border-b border-white/10 pb-2">' +
+                '  <span class="material-symbols-outlined text-primary-container">travel_explore</span>' +
+                '  <span class="font-label-caps text-label-caps text-on-surface">NOT FOUND</span>' +
+                '</div>' +
+                '<p class="font-body-lg text-body-lg text-on-surface mb-1">' + esc(data.name) + '</p>' +
+                '<p class="text-on-surface-variant text-xs mb-4">I couldn\'t find ' + esc(data.name) +
+                ' as an application or a website. What would you like to do?</p>' +
+                '<div class="flex gap-2 flex-wrap">' +
+                '  <button data-act="scan" class="px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30 text-primary text-xs font-medium hover:bg-primary/20 transition-all">Scan my system</button>' +
+                '  <button data-act="browser" class="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-on-surface-variant text-xs font-medium hover:bg-white/10 transition-all">Search on browser</button>' +
+                '  <button data-act="cancel" class="px-3 py-1.5 rounded-lg text-on-surface-variant text-xs hover:text-on-surface transition-all">Cancel</button>' +
+                '</div>';
+
+            card.querySelector('[data-act="scan"]').addEventListener("click", async () => {
+                card.remove();
+                await sendCommand("scan my system");
+            });
+            card.querySelector('[data-act="browser"]').addEventListener("click", async () => {
+                const button = card.querySelector('[data-act="browser"]');
+                button.disabled = true;
+                button.textContent = "Searching...";
+                const result = await apiSearchAndSave(data.name);
+                if (result && result.success) {
+                    addSystemMessage('Searched "' + data.name + '" in your browser and saved it as a website — '
+                        + 'next time "open ' + data.name + '" opens it directly.');
+                } else {
+                    addSystemMessage('Could not search "' + data.name + '": '
+                        + ((result && result.error) || "unknown error"));
+                }
                 card.remove();
             });
             card.querySelector('[data-act="cancel"]').addEventListener("click", () => card.remove());
@@ -957,6 +998,17 @@
 
         async function apiRunApp(name) {
             const response = await fetch(SarthiAPI + "/applications/run", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: name }),
+            });
+            return response.json();
+        }
+
+        // "Search on browser" fallback — searches the browser and remembers
+        // the site as a website so the next "open <name>" opens it directly.
+        async function apiSearchAndSave(name) {
+            const response = await fetch(SarthiAPI + "/websites/search-and-save", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name: name }),

@@ -129,6 +129,43 @@ def test_open_and_play_then_second_sentence():
 
 
 # ---------------------------------------------------------------------------
+# Interpreter: open-target keyword truncation + "open ... to AI" chains
+# ---------------------------------------------------------------------------
+
+
+def test_open_stops_at_known_keyword():
+    """'open chatgpt and get prompt ...' targets 'chatgpt', not the sentence."""
+    intent = interpret("open chatgpt and get prompt for making a logo")
+    assert intent.action == "open"
+    assert intent.target == "chatgpt"
+
+
+def test_open_without_known_keyword_keeps_whole_target():
+    """Sentences without a known keyword keep the legacy whole-target."""
+    intent = interpret("open my blue folder")
+    assert intent.action == "open"
+    assert intent.target == "blue folder"
+
+
+def test_open_chain_recognised_from_open_ai1_to_ai2():
+    """'open chatgpt and <query> ... to gemini' becomes an AI chain."""
+    text = (
+        "open chatgpt and get prompt for making birthday invitation "
+        "image prompt and sendit to gemini"
+    )
+    intent = interpret(text)
+    assert intent.action == "chain"
+    assert intent.raw_text == text
+
+
+def test_open_to_unknown_ai_is_not_a_chain():
+    """'open chatgpt ... to somewhere-unknown' stays an open command."""
+    intent = interpret("open chatgpt and get my notes to the office")
+    assert intent.action == "open"
+    assert intent.target == "chatgpt"
+
+
+# ---------------------------------------------------------------------------
 # Interpreter: plain searches + legacy single intents
 # ---------------------------------------------------------------------------
 

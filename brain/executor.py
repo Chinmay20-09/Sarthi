@@ -204,12 +204,40 @@ class BrainExecutor:
             from skills.browser.main import BrowserSkill
 
             def handle_open(intent: Intent) -> dict[str, Any] | None:
-                """Handle 'open' action — try website first, then app."""
+                """Handle 'open' action — application first, then website.
+
+                Search order (user-facing contract):
+                    1. applications  — AppLauncherSkill (favourites-gated)
+                    2. websites      — BrowserSkill
+                    3. neither       — ask the user: scan the system, or
+                                       search the browser and remember the
+                                       site so next time it opens directly
+                                       (open_choice card in the UI)
+
+                A found-but-uncategorized app still surfaces its Favourite /
+                Ignore / Run Anyway decision instead of falling through to
+                the website search.
+                """
                 target = intent.target
                 if not target:
                     return {"success": False, "status": "error", "error": "No target specified"}
 
-                # Try opening as a website first
+                # Step 1 — desktop application
+                app_result = AppLauncherSkill().execute(Intent(action="open", target=target))
+                if app_result.get("success"):
+                    info = app_result.get("result") or {}
+                    return {
+                        "action": "open_application",
+                        "target": target,
+                        "application": info.get("application", target),
+                        "path": info.get("path", ""),
+                    }
+                if app_result.get("status") == "needs_decision":
+                    # The app exists but is ignored/unattended — keep the
+                    # existing Favourite / Ignore / Run Anyway prompt.
+                    return app_result
+
+                # Step 2 — website
                 site_result = BrowserSkill().execute(Intent(action="open", target=target))
                 if site_result.get("success"):
                     info = site_result.get("result") or {}
@@ -220,19 +248,21 @@ class BrainExecutor:
                         "url": info.get("url", ""),
                     }
 
-                # Fall back to opening as an application (favourites-gated)
-                app_result = AppLauncherSkill().execute(Intent(action="open", target=target))
-                if app_result.get("success"):
-                    info = app_result.get("result") or {}
-                    return {
-                        "action": "open_application",
-                        "target": target,
-                        "application": info.get("application", target),
-                        "path": info.get("path", ""),
-                    }
-
-                # needs_decision (ignored/unattended) and failures pass through
-                return app_result
+                # Step 3 — unknown everywhere: offer scan / browser search.
+                # Choosing "search on browser" also remembers the site in
+                # websites.json, so the same request opens directly next time.
+                return {
+                    "success": False,
+                    "status": "needs_decision",
+                    "handled": True,
+                    "error": f"'{target}' was not found as an application or a website.",
+                    "result": {
+                        "visual": {
+                            "type": "open_choice",
+                            "data": {"name": target},
+                        }
+                    },
+                }
 
             self.register_handler("open", handle_open)
 

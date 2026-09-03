@@ -448,6 +448,47 @@ def run_application(request: RunRequest):
     }
 
 
+@app.post("/websites/search-and-save")
+def search_and_save_website(request: RunRequest):
+    """
+    "Search on browser" fallback for an unknown "open X".
+
+    Opens a browser search for the name and remembers it as a website in
+    websites.json, so the next "open <name>" opens it directly instead of
+    asking the user again. In test mode nothing is opened or persisted.
+    """
+    from urllib.parse import quote
+
+    from brain.intent import Intent
+    from skills.browser.main import BrowserSkill
+
+    name = (request.name or "").strip()
+    if not name:
+        return {"success": False, "error": "No name specified"}
+
+    if get_test_mode():
+        return {
+            "success": True,
+            "test_mode": True,
+            "name": name,
+            "url": f"https://www.google.com/search?q={quote(name)}",
+        }
+
+    result = BrowserSkill().execute(Intent(action="search", target=name))
+    if not result.get("success"):
+        return {"success": False, "error": result.get("error") or "Browser search failed"}
+
+    url = (result.get("result") or {}).get("url", "")
+    if not url:
+        return {"success": False, "error": "Browser search returned no URL"}
+
+    if not knowledge.add_website(name, url, aliases=[name.lower()]):
+        return {"success": False, "error": "Could not save the website to knowledge."}
+
+    logger.info(f"Saved '{name}' as a website ({url})")
+    return {"success": True, "name": name, "url": url, "saved": True}
+
+
 @app.post("/settings")
 def save_setting(request: SettingRequest):
     """Persist a user setting (e.g. github_username) so it survives restarts."""

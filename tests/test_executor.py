@@ -187,6 +187,120 @@ class TestMultipleHandlers:
 
 
 # ---------------------------------------------------------------------------
+# Built-in "open" handler: application -> website -> ask (open_choice)
+# ---------------------------------------------------------------------------
+
+
+class TestOpenHandlerFlow:
+    """handle_open search order: applications, then websites, then ask."""
+
+    def _executor(self, monkeypatch, app_skill, site_skill):
+        monkeypatch.setattr("skills.app_launcher.main.AppLauncherSkill", app_skill)
+        monkeypatch.setattr("skills.browser.main.BrowserSkill", site_skill)
+        return BrainExecutor()
+
+    def test_application_is_tried_before_website(self, monkeypatch):
+        """A known app opens directly; the website skill is never consulted."""
+
+        class FakeAppSkill:
+            @staticmethod
+            def execute(intent):
+                return {
+                    "success": True,
+                    "status": "executed",
+                    "result": {"application": "Chrome", "path": r"C:\chrome.exe"},
+                }
+
+        class FakeBrowserSkill:
+            @staticmethod
+            def execute(intent):
+                raise AssertionError("website must not be tried when the app exists")
+
+        executor = self._executor(monkeypatch, FakeAppSkill, FakeBrowserSkill)
+        result = executor.execute(Intent(action="open", target="chrome"))
+
+        assert result["success"] is True
+        assert result["result"]["action"] == "open_application"
+        assert result["result"]["application"] == "Chrome"
+
+    def test_website_opened_when_app_not_found(self, monkeypatch):
+        """App not found -> the website knowledge base is searched."""
+
+        class FakeAppSkill:
+            @staticmethod
+            def execute(intent):
+                return {"success": False, "status": "not_found", "error": "Application not found"}
+
+        class FakeBrowserSkill:
+            @staticmethod
+            def execute(intent):
+                return {
+                    "success": True,
+                    "status": "executed",
+                    "result": {"website": "YouTube", "url": "https://youtube.com"},
+                }
+
+        executor = self._executor(monkeypatch, FakeAppSkill, FakeBrowserSkill)
+        result = executor.execute(Intent(action="open", target="youtube"))
+
+        assert result["success"] is True
+        assert result["result"]["action"] == "open_website"
+        assert result["result"]["url"] == "https://youtube.com"
+
+    def test_unknown_target_offers_open_choice(self, monkeypatch):
+        """Neither an app nor a website -> scan / search-on-browser prompt."""
+
+        class FakeAppSkill:
+            @staticmethod
+            def execute(intent):
+                return {"success": False, "status": "not_found", "error": "Application not found"}
+
+        class FakeBrowserSkill:
+            @staticmethod
+            def execute(intent):
+                return {"success": False, "status": "not_found", "error": "Website not found"}
+
+        executor = self._executor(monkeypatch, FakeAppSkill, FakeBrowserSkill)
+        result = executor.execute(Intent(action="open", target="mystery"))
+
+        assert result["success"] is False
+        assert result["status"] == "needs_decision"
+        assert result["result"]["visual"]["type"] == "open_choice"
+        assert result["result"]["visual"]["data"]["name"] == "mystery"
+
+    def test_found_but_uncategorized_app_keeps_decision_prompt(self, monkeypatch):
+        """An app that exists (ignored/unattended) keeps its own prompt."""
+
+        class FakeAppSkill:
+            @staticmethod
+            def execute(intent):
+                return {
+                    "success": False,
+                    "status": "needs_decision",
+                    "handled": True,
+                    "error": "not categorized yet",
+                    "result": {
+                        "visual": {
+                            "type": "app_decision",
+                            "data": {"name": "Slack", "app_status": "unattended"},
+                        }
+                    },
+                }
+
+        class FakeBrowserSkill:
+            @staticmethod
+            def execute(intent):
+                raise AssertionError("website must not be tried for a found app")
+
+        executor = self._executor(monkeypatch, FakeAppSkill, FakeBrowserSkill)
+        result = executor.execute(Intent(action="open", target="slack"))
+
+        assert result["success"] is False
+        assert result["status"] == "needs_decision"
+        assert result["result"]["visual"]["type"] == "app_decision"
+
+
+# ---------------------------------------------------------------------------
 # Default Handler Priority
 # ---------------------------------------------------------------------------
 

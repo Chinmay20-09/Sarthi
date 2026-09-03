@@ -150,6 +150,18 @@ knowledge/applications.json
 sandbox/
 sandbox_test/
 results/
+
+# ==========================================
+# User calibration (ai_chain laptop automation)
+# ==========================================
+
+skills/automation_engine/ai_chain/calibration.json
+
+# ==========================================
+# User-editable interpreter keywords (wordfinder)
+# ==========================================
+
+brain/keywords.json
 # ==========================================
 # Secrets / OAuth Tokens
 # ==========================================

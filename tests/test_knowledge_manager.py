@@ -289,6 +289,41 @@ class TestSave:
         assert steam["category"] == "game"
 
 
+class TestAddWebsite:
+    """add_website — the "search on browser" fallback that remembers a site."""
+
+    def test_add_new_website(self, manager):
+        """A brand-new site is appended with name, url and aliases."""
+        assert manager.add_website(
+            "Stack Overflow", "https://stackoverflow.com", aliases=["so"]
+        ) is True
+        site = manager.find_website("Stack Overflow")
+        assert site is not None
+        assert site["url"] == "https://stackoverflow.com"
+        assert "so" in site["aliases"]
+
+    def test_add_refreshes_existing_site_without_duplicates(self, manager):
+        """Re-adding a known site updates its URL, never duplicates it."""
+        manager.add_website("YouTube", "https://youtube.com/results")
+        site = manager.find_website("YouTube")
+        assert site["url"] == "https://youtube.com/results"
+        matches = [w for w in manager.load_websites() if w["name"].lower() == "youtube"]
+        assert len(matches) == 1
+
+    def test_add_persists_after_cache_clear(self, manager):
+        """The saved site survives a cache clear (it is written to disk)."""
+        manager.add_website("DuckDuckGo", "https://duckduckgo.com", aliases=["ddg"])
+        manager.clear_cache()
+        site = manager.find_website("DuckDuckGo")
+        assert site is not None
+        assert "ddg" in site["aliases"]
+
+    def test_add_requires_name_and_url(self, manager):
+        """Empty name or url is rejected without touching the file."""
+        assert manager.add_website("", "https://x.com") is False
+        assert manager.add_website("X", "") is False
+
+
 # ---------------------------------------------------------------------------
 # Categories (favourite / ignored / unattended)
 # ---------------------------------------------------------------------------
@@ -410,3 +445,64 @@ class TestFavouritesEndpoint:
 
         assert response.status_code == 200
         assert response.json() == []
+
+
+# ---------------------------------------------------------------------------
+# API: websites search-and-save ("search on browser" fallback)
+# ---------------------------------------------------------------------------
+
+
+class TestSearchAndSaveWebsiteEndpoint:
+    def test_search_and_save_remembers_site(self, monkeypatch):
+        """POST /websites/search-and-save searches and saves the site."""
+        from fastapi.testclient import TestClient
+
+        import api as api_module
+        from api import app
+
+        monkeypatch.setattr("api.get_test_mode", lambda: False)
+
+        class FakeBrowserSkill:
+            @staticmethod
+            def execute(intent):
+                return {
+                    "success": True,
+                    "status": "executed",
+                    "result": {
+                        "website": "Google",
+                        "url": "https://www.google.com/search?q=mystery",
+                    },
+                }
+
+        monkeypatch.setattr("skills.browser.main.BrowserSkill", FakeBrowserSkill)
+
+        saved = {}
+        monkeypatch.setattr(
+            api_module.knowledge,
+            "add_website",
+            lambda name, url, aliases=None: saved.update(name=name, url=url) or True,
+        )
+
+        client = TestClient(app)
+        response = client.post("/websites/search-and-save", json={"name": "mystery"})
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["saved"] is True
+        assert saved["name"] == "mystery"
+        assert "google.com/search?q=mystery" in saved["url"]
+
+    def test_search_and_save_requires_name(self, monkeypatch):
+        """An empty name is rejected without side effects."""
+        from fastapi.testclient import TestClient
+
+        from api import app
+
+        monkeypatch.setattr("api.get_test_mode", lambda: False)
+
+        client = TestClient(app)
+        response = client.post("/websites/search-and-save", json={"name": "   "})
+
+        assert response.status_code == 200
+        assert response.json()["success"] is False

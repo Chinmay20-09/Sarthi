@@ -522,6 +522,52 @@ class KnowledgeManager:
 
         return success
 
+    def add_website(self, name: str, url: str, aliases: list[str] | None = None) -> bool:
+        """
+        Add or refresh a single website in the knowledge base.
+
+        Used by the "search on browser" fallback: when "open X" finds
+        neither an application nor a website, the user can choose to
+        search X in the browser, and the result is remembered here so the
+        next "open X" opens it directly instead of asking again.
+
+        An existing entry (matched by lowercase name) gets its URL and
+        aliases refreshed; otherwise a new entity is appended.
+
+        Args:
+            name: Website name (e.g. "Stack Overflow")
+            url: URL to open for this site
+            aliases: Optional extra lookup names
+
+        Returns:
+            True if the knowledge base was persisted successfully
+        """
+        websites = self.load_websites()
+        clean_name = (name or "").strip()
+        if not clean_name or not url:
+            return False
+
+        new_aliases = [a for a in (aliases or []) if a and a.strip()]
+        found = False
+        for site in websites:
+            if str(site.get("name", "")).strip().lower() == clean_name.lower():
+                site["url"] = url
+                existing = [str(a).lower() for a in site.get("aliases", [])]
+                for alias in new_aliases:
+                    if alias.lower() not in existing:
+                        site.setdefault("aliases", []).append(alias)
+                found = True
+                break
+
+        if not found:
+            websites.append({
+                "name": clean_name,
+                "url": url,
+                "aliases": new_aliases,
+            })
+
+        return self.save_websites(websites)
+
     def refresh_applications(self) -> bool:
         """
         Refresh applications by rescanning system.

@@ -8,6 +8,9 @@ Public API:
     AutomationSkill — BaseSkill-compatible entry point
     AutomationEngine — core orchestrator (advanced usage)
 
+Submodules:
+    ai_chain — laptop-controlled AI chains (query -> ChatGPT -> Gemini)
+
 Usage:
     from skills.automation_engine import AutomationSkill
     skill = AutomationSkill()
