@@ -9,7 +9,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any
 
-from connectors.models import ConnectorMetadata, ConnectorStatus, ConnectorTool
+from connectors.models import ConnectorMetadata, ConnectorStatus
 
 logger = logging.getLogger(__name__)
 

@@ -130,6 +130,83 @@ def test_save_without_trace_skips_trace_file(tmp_path):
 
 
 # ----------------------------------------------------------------------
+# Sandbox: cleanup (shared by /clean and scripts/clean_sandbox.py)
+# ----------------------------------------------------------------------
+
+
+def _sandbox_with_mixed_tasks(tmp_path):
+    """Seed a sandbox with success + failure dirs/records across queries."""
+    sandbox = TaskSandbox(tmp_path)
+    for task_id in ("task_fail1", "task_fail2", "task_ok1", "task_ok2"):
+        (tmp_path / "tasks" / task_id).mkdir(parents=True)
+
+    index = {
+        "hello": [
+            {"task_id": "task_ok1", "status": "success", "prompt": "hello"},
+            {"task_id": "task_fail1", "status": "error", "prompt": "hello"},
+        ],
+        "cleanup me": [
+            {"task_id": "task_ok2", "status": "success", "prompt": "cleanup me"},
+        ],
+        "still failing": [
+            {"task_id": "task_fail2", "status": "error", "prompt": "still failing"},
+        ],
+    }
+    (tmp_path / "index.json").write_text(json.dumps(index), encoding="utf-8")
+    return sandbox, index
+
+
+def test_clean_removes_successes_keeps_failures(tmp_path):
+    """clean() deletes success dirs/records but keeps failed tasks for review."""
+    sandbox, _ = _sandbox_with_mixed_tasks(tmp_path)
+
+    result = sandbox.clean()
+
+    assert result["deleted_count"] == 2
+    assert result["failed_count"] == 2
+    assert result["queries_removed"] == 1  # "cleanup me" had only successes
+    assert result["queries_remaining"] == 2
+    assert sorted(result["removed_task_ids"]) == ["task_ok1", "task_ok2"]
+
+    # Success directories are gone; failed ones survive
+    assert not (tmp_path / "tasks" / "task_ok1").exists()
+    assert not (tmp_path / "tasks" / "task_ok2").exists()
+    assert (tmp_path / "tasks" / "task_fail1").is_dir()
+    assert (tmp_path / "tasks" / "task_fail2").is_dir()
+
+    # The index no longer references deleted successes
+    index = json.loads((tmp_path / "index.json").read_text(encoding="utf-8"))
+    assert set(index) == {"hello", "still failing"}
+    assert index["hello"] == [{"task_id": "task_fail1", "status": "error", "prompt": "hello"}]
+
+
+def test_clean_dry_run_does_not_touch_sandbox(tmp_path):
+    """A dry-run clean reports what would happen but changes nothing."""
+    sandbox, original_index = _sandbox_with_mixed_tasks(tmp_path)
+    before = (tmp_path / "index.json").read_text(encoding="utf-8")
+
+    result = sandbox.clean(dry_run=True)
+
+    assert result["deleted_count"] == 2
+    assert result["queries_remaining"] == 2
+    assert (tmp_path / "tasks" / "task_ok1").is_dir()  # still present
+    assert (tmp_path / "index.json").read_text(encoding="utf-8") == before
+    assert json.loads((tmp_path / "index.json").read_text(encoding="utf-8")) == original_index
+
+
+def test_clean_with_empty_index_is_noop(tmp_path):
+    """Cleaning a sandbox with no index does nothing and returns zero counts."""
+    sandbox = TaskSandbox(tmp_path)
+
+    result = sandbox.clean()
+
+    assert result["deleted_count"] == 0
+    assert result["failed_count"] == 0
+    assert result["queries_remaining"] == 0
+    assert not (tmp_path / "index.json").exists()
+
+
+# ----------------------------------------------------------------------
 # Orchestrator: sandbox persistence + trace recording
 # ----------------------------------------------------------------------
 

@@ -40,7 +40,6 @@ Sarthi is a Desktop AI Assistant built with a layered architecture:
 ```python
 from brain.engine import BrainEngine  # Main entry point
 from brain.intent import Intent       # Intent model
-from brain.entity_resolver import EntityResolver  # Backward-compat shim
 from knowledge.entity_resolver import EntityResolver  # Canonical location
 ```
 
@@ -65,10 +64,7 @@ from skills.base import BaseSkill
   - Instantiates skill classes dynamically
   - Manages skill lifecycle (enable, disable, list)
   
-- **manager.py** - OLD system (deprecated, for backward compat only)
-  - `load_skills()` - metadata loading
-  - `load_skill_instances()` - dynamic instantiation
-  - Status: Kept for backward compatibility, but not recommended for new code
+- **manager.py** - REMOVED (September 2026) — legacy loader superseded by `registry.py`
 
 **Available Skills:**
 - `app_launcher/` - Launch desktop applications
@@ -83,20 +79,16 @@ from skills.base import BaseSkill
 
 **Entity Resolution:**
 ```python
-# Canonical location
 from knowledge.entity_resolver import EntityResolver
-
-# Backward-compat shim (deprecated)
-from brain.entity_resolver import EntityResolver
 ```
 
 **Components:**
 - **entity_resolver.py** - CANONICAL entity resolution
-- **manager.py** - Knowledge graph management
-- **router.py** - Data source routing
-- **memory.py** - Caching layer
-- **writer.py** - Knowledge persistence
-- **scanners/** - Backward-compat shim (deprecated)
+- **manager.py** - Knowledge graph management + application refresh
+- **loader.py** - Pure JSON I/O
+- **cache.py** - TTL caching for knowledge data
+- **memory.py** - Conversation memory and preferences
+- **scanner integration** - Application discovery lives in `skills/scanner/`
 
 ### Database Layer (`database/`)
 
@@ -123,48 +115,18 @@ bus.subscribe("event_name", callback)
 
 ---
 
-## Deprecated/Legacy Code
+## Cleaned Up Code
 
-### ❌ To Remove (High Priority)
+### ✅ Removed (September 2026 cleanup)
 
-#### 1. brain/normalizer.py
-- **Status**: DEPRECATED - Use `brain.interpreter.interpret()` instead
-- **Reason**: Duplicate fuzzy matching now in interpreter
-- **Impact**: Creates 21 deprecation warnings in test suite
-- **Action**: Remove this file and `tests/test_normalizer.py`
+All modules scheduled for removal have been deleted from the codebase:
 
-#### 2. actions/ package
-- **Status**: DEPRECATED - Use BrainEngine instead
-- **Reason**: Architecture moved to skill-based system
-- **Contents**:
-  - `apps.py` - Shim for `skills/app_launcher/`
-  - `browser.py` - Shim for `skills/browser/`
-  - `files.py` - Incomplete stub
-  - `system.py` - Incomplete stub
-- **Action**: Plan removal for v2.0
-
-### ⚠️ Backward-Compat Shims (Keep for Now)
-
-#### 1. brain/entity_resolver.py
-- Re-exports from `knowledge.entity_resolver`
-- Used for backward compatibility
-- Plan: Remove in v2.0
-
-#### 2. brain/schemas.py
-- Single re-export of Intent model
-- Used in `brain/__init__.py`
-- Plan: Remove in v2.0
-
-#### 3. knowledge/scanners/__init__.py
-- Re-exports from `skills/scanner/`
-- Backward-compat shim
-- Plan: Remove in v2.0
-
-#### 4. skills/manager.py
-- Old skill discovery system
-- Kept for backward compatibility
-- **Recommendation**: Use `skills/registry.py` instead
-- Plan: Consolidate in next sprint
+- `brain/normalizer.py` + `tests/test_normalizer.py` — use `brain.interpreter.interpret()`
+- `actions/` package (`apps.py`, `browser.py`, `files.py`, `system.py`) — skills replace these
+- `brain/entity_resolver.py` — import from `knowledge.entity_resolver`
+- `brain/schemas.py` — import from `brain.intent`
+- `knowledge/scanners/` — application discovery now lives in `skills/scanner/`
+- `skills/manager.py` — use `skills/registry.py`
 
 ---
 
@@ -230,22 +192,22 @@ from config import SKILLS_DIR, WHISPER_MODEL, API_PORT
 
 ### ❌ DON'T USE (Deprecated)
 
+The shims below were removed in the September 2026 cleanup — don't
+reintroduce them. Use the canonical imports from the DO list above.
+
 ```python
-# ❌ Old brain resolver
-from brain.resolver import EntityResolver  # Use brain.entity_resolver instead
+# ❌ Removed — import from knowledge.entity_resolver
+from brain.resolver import EntityResolver
+from brain.entity_resolver import EntityResolver
 
-# ❌ Old skill loading
-from skills.manager import load_skill_instances  # Use registry instead
+# ❌ Removed — use skills.registry instead
+from skills.manager import load_skill_instances
 
-# ❌ Action executors
-from actions.apps import open_app  # Use BrainEngine instead
-from actions.browser import open_site  # Use BrainEngine instead
-
-# ❌ Deprecated normalizer
-from brain.normalizer import normalize  # Use brain.interpreter.interpret instead
-
-# ❌ Deprecated scanners
-from knowledge.scanners import scan_all  # Use skills.scanner instead
+# ❌ Removed — use skills instead
+from actions.apps import open_app
+from actions.browser import open_site
+from brain.normalizer import normalize
+from knowledge.scanners import scan_all
 ```
 
 ---
@@ -354,35 +316,33 @@ python -m pytest tests/test_skill_base.py -v
 ```
 
 ### Current Test Status
-- ✅ 209 tests passing
-- ⚠️ 21 deprecation warnings (from `brain/normalizer.py` - scheduled for removal)
+- ✅ 409 tests passing
+- ✅ No deprecation warnings (`brain/normalizer.py` removed)
 - ✅ No regressions
 
 ---
 
 ## Next Steps for v2.0
 
-1. **Remove Deprecated Modules**
-   - [ ] `brain/normalizer.py`
-   - [ ] `tests/test_normalizer.py`
-   - [ ] `actions/` package (files.py, system.py)
+1. **Remove Deprecated Modules** — ✅ done (September 2026)
+   - [x] `brain/normalizer.py` + `tests/test_normalizer.py`
+   - [x] `actions/` package (files.py, system.py)
 
-2. **Remove Backward-Compat Shims**
-   - [ ] `brain/entity_resolver.py` → import directly from `knowledge/`
-   - [ ] `brain/schemas.py` → import directly from `brain/intent.py`
-   - [ ] `knowledge/scanners/` → import directly from `skills/scanner/`
+2. **Remove Backward-Compat Shims** — ✅ done
+   - [x] `brain/entity_resolver.py` → import from `knowledge/`
+   - [x] `brain/schemas.py` → import from `brain/intent.py`
+   - [x] `knowledge/scanners/` → use `skills/scanner/`
 
-3. **Consolidate Skill Systems**
-   - [ ] Remove `skills/manager.py` (keep only `registry.py`)
-   - [ ] Update any remaining imports
+3. **Consolidate Skill Systems** — ✅ done
+   - [x] Removed `skills/manager.py` (only `registry.py` remains)
 
-4. **Architecture Improvements**
+4. **Architecture Improvements** (open)
    - [ ] Implement proper multi-step planner in `brain/planner.py`
    - [ ] Refactor global state management (e.g., in `wakeword.py`)
    - [ ] Add comprehensive API documentation
 
 ---
 
-**Last Updated:** August 14, 2026  
-**Status:** Post-Audit (3 critical issues fixed, system stable)  
+**Last Updated:** September 3, 2026  
+**Status:** Post-Audit — deprecated modules removed, docs refreshed  
 **Next Review:** Before v2.0 release

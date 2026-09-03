@@ -98,59 +98,45 @@ Both pointed to `knowledge/entity_resolver.py` as canonical location.
 ## Outstanding Issues Requiring Attention
 
 ### 1. **Deprecated Module - brain/normalizer.py** (HIGH)
-**Status:** ⚠️ NEEDS REMOVAL
+**Status:** ✅ RESOLVED — removed in the September 2026 cleanup
 
-**Issue:** Entire module deprecated in favor of `brain/interpreter.py`. Generates DeprecationWarning on every test run (14 warnings in test suite).
+**Issue:** Entire module deprecated in favor of `brain/interpreter.py`. Generated DeprecationWarnings on every test run.
 
-**Current Usage:** Only imported by `tests/test_normalizer.py` which is testing deprecated code.
-
-**Recommendation:**
-- Remove `brain/normalizer.py` 
-- Remove `tests/test_normalizer.py` (tests deprecated code)
-- Update any legacy code importing from normalizer to use `brain.interpreter.interpret()`
-
-**Action Items:**
-```bash
-# After confirming no production code uses it:
-rm brain/normalizer.py
-rm tests/test_normalizer.py
-```
+**Resolution:**
+- Removed `brain/normalizer.py`
+- Removed `tests/test_normalizer.py` (it tested deprecated code only)
+- Deprecation warnings are gone; use `brain.interpreter.interpret()` for new code
 
 ---
 
 ### 2. **Deprecated Package - actions/** (MEDIUM)
-**Status:** ⚠️ SCHEDULED FOR REMOVAL
+**Status:** ✅ RESOLVED — package removed in the September 2026 cleanup
 
-**Issue:** Entire `actions/` package marked as deprecated. Architecture has moved to skill-based system.
+**Issue:** Entire `actions/` package was deprecated. Architecture has moved to the skill-based system.
 
-**Files:** 
+**Files Removed:** 
 - `actions/apps.py` - Shim for `skills/app_launcher/`
 - `actions/browser.py` - Shim for `skills/browser/`
 - `actions/files.py` - Incomplete stub
 - `actions/system.py` - Incomplete stub
 
-**Recommendation:** 
-- Update any code importing from `actions/` to use BrainEngine:
+**Resolution:**
+- Removed the whole package; use skills or BrainEngine:
   ```python
-  # OLD (deprecated)
-  from actions.apps import open_app
-  open_app("Chrome")
-  
   # NEW (recommended)
   from brain.engine import BrainEngine
   engine = BrainEngine()
   response = engine.process("open Chrome")
   ```
-- Plan removal for v2.0
 
 ---
 
 ### 3. **Brain/schemas.py** (LOW)
-**Status:** ⚠️ MINIMAL SHIM - KEEP FOR BACKWARD COMPAT
+**Status:** ✅ RESOLVED — removed in the September 2026 cleanup
 
-**Issue:** Single re-export of Intent from brain.intent.py
+**Issue:** Was a single re-export of Intent from brain.intent.py
 
-**Recommendation:** Keep as documented backward-compatibility shim. Already documented in `brain/__init__.py`.
+**Resolution:** Removed; import `Intent` directly from `brain.intent`
 
 ---
 
@@ -160,8 +146,8 @@ rm tests/test_normalizer.py
 | File | Issue | Recommendation |
 |------|-------|-----------------|
 | `brain/planner.py` | Pass-through stub only. Comment says "Future: split compound commands" | Implement or document as future work |
-| `actions/files.py` | Complete stub: "Future: Create, read, write..." | Remove or implement |
-| `actions/system.py` | Complete stub: "Future: Shutdown, restart..." | Remove or implement |
+| `actions/files.py` | Complete stub: "Future: Create, read, write..." | ✅ Removed with `actions/` |
+| `actions/system.py` | Complete stub: "Future: Shutdown, restart..." | ✅ Removed with `actions/` |
 | `skills/automation_engine/preview.py` | Marked "Status: Stub" | Complete or remove |
 
 ---
@@ -205,13 +191,11 @@ else:
 - `database/manager.py` - Clean database interface
 - `events/bus.py` - Good event system
 
-### ⚠️ Needs Deprecation/Removal
-- `brain/normalizer.py` - Deprecated, should be removed
-- `actions/` package - Deprecated, shims only
+### ✅ Removed in Later Cleanup
+- `brain/normalizer.py` - Deprecated → removed (September 2026)
+- `actions/` package - Deprecated shims → removed (September 2026)
 
 ### 🔧 Incomplete/Stubs
-- `actions/files.py` - Stub
-- `actions/system.py` - Stub
 - `brain/planner.py` - Pass-through only
 - `skills/automation_engine/preview.py` - Stub
 
@@ -233,7 +217,7 @@ else:
 
 **Before Audit:** 209 passing tests  
 **After Audit:** 209 passing tests ✅  
-**Deprecation Warnings:** 21 (from `brain/normalizer.py` - will remove)
+**Since (September 2026):** 409 passing tests, 0 deprecation warnings
 
 No regressions introduced by changes.
 
@@ -242,19 +226,19 @@ No regressions introduced by changes.
 ## Recommended Action Plan
 
 ### Immediate (This Sprint)
-- [ ] Remove `brain/normalizer.py` and `tests/test_normalizer.py`
-- [ ] Add error handling for missing `UI/` directory in `api.py`
-- [ ] Review and decide: Keep or implement `brain/planner.py`
+- [x] Remove `brain/normalizer.py` and `tests/test_normalizer.py` — done
+- [ ] Add error handling for missing `UI/` directory in `api.py` — still open
+- [ ] Review and decide: Keep or implement `brain/planner.py` — still open
 
 ### Short-term (Next Sprint)
-- [ ] Remove `actions/files.py` and `actions/system.py` stubs
-- [ ] Update internal imports to avoid `skills/manager.py`
-- [ ] Document API changes required for removing `actions/` package
+- [x] Remove `actions/files.py` and `actions/system.py` stubs — done (package removed)
+- [x] Update internal imports to avoid `skills/manager.py` — done (module removed)
+- [x] Document API changes required for removing `actions/` package — done
 
 ### Long-term (v2.0 Planning)
-- [ ] Remove entire `actions/` package
-- [ ] Remove all backward-compat shims
-- [ ] Migrate all imports to canonical locations
+- [x] Remove entire `actions/` package — done
+- [x] Remove all backward-compat shims — done
+- [ ] Migrate all imports to canonical locations — in progress
 
 ---
 
@@ -270,9 +254,9 @@ from knowledge.entity_resolver import EntityResolver
 
 **DON'T:**
 ```python
-# ❌ Deprecated - will be removed
+# ❌ Removed — use the canonical imports above
 from actions.apps import open_app
-from brain.resolver import EntityResolver  
+from brain.resolver import EntityResolver
 from brain.normalizer import normalize
 from skills.manager import load_skill_instances
 ```
@@ -286,8 +270,8 @@ from skills.manager import load_skill_instances
 | Critical Issues Fixed | 3 |
 | Medium Issues Fixed | 2 |
 | Low Issues Fixed | 1 |
-| Outstanding High-Priority Issues | 1 |
-| Outstanding Medium-Priority Issues | 4 |
+| Outstanding High-Priority Issues | 0 |
+| Outstanding Medium-Priority Issues | 1 |
 | Files Deleted | 3 |
 | Files Modified | 5 |
 | Test Coverage Maintained | ✅ 100% |

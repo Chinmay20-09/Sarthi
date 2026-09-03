@@ -27,31 +27,31 @@
   - Changed: `from skills.manager import SKILLS_DIR`
   - To: `from config import SKILLS_DIR`
 
-## ⚠️ HIGH PRIORITY - Next Sprint
+## ✅ HIGH PRIORITY - RESOLVED (September 2026 cleanup)
 
-- [ ] **Remove brain/normalizer.py**
+- [x] **Remove brain/normalizer.py**
   - Entire module deprecated (21 test warnings)
-  - Recommend replacement: `brain.interpreter.interpret()`
-  - Status: Creates deprecation warnings in test suite
+  - Replacement: `brain.interpreter.interpret()`
+  - Status: Removed — no deprecation warnings remain
 
-- [ ] **Remove tests/test_normalizer.py**
+- [x] **Remove tests/test_normalizer.py**
   - Tests deprecated code only
-  - Status: Should be removed with normalizer.py
+  - Status: Removed with normalizer.py
 
-## 🟠 MEDIUM PRIORITY - Next Sprint
+## 🟠 MEDIUM PRIORITY - Mostly Resolved
 
-- [ ] **Remove incomplete stubs**
-  - [ ] `actions/files.py` - "Future: Create, read, write..."
-  - [ ] `actions/system.py` - "Future: Shutdown, restart..."
+- [x] **Remove incomplete stubs**
+  - [x] `actions/files.py` - "Future: Create, read, write..." (removed with `actions/`)
+  - [x] `actions/system.py` - "Future: Shutdown, restart..." (removed with `actions/`)
 
 - [ ] **Add error handling in api.py**
   - Add existence check for `UI/` directory before mounting
-  - Location: Line 52
+  - Location: the `app.mount("/ui", ...)` call — still open
 
-- [ ] **Consolidate skill systems**
-  - Make `skills/registry.py` the canonical system
-  - Document deprecation timeline for `skills/manager.py`
-  - Update any remaining imports from manager
+- [x] **Consolidate skill systems**
+  - [x] `skills/registry.py` is the canonical system
+  - [x] `skills/manager.py` removed — no deprecation timeline needed
+  - [x] No remaining imports from manager
 
 ## 🟡 LOW PRIORITY - Future
 
@@ -64,10 +64,10 @@
   - [ ] `skills/automation_engine/preview.py`
   - [ ] Any other stub implementations
 
-- [ ] **Plan v2.0 refactoring**
-  - Remove all backward-compat shims
-  - Remove deprecated `actions/` package
-  - Update all imports to canonical locations
+- [x] **v2.0 cleanup completed (September 2026)**
+  - [x] Backward-compat shims removed
+  - [x] Deprecated `actions/` package removed
+  - [ ] All imports migrated to canonical locations (verify remaining)
 
 ## 📊 Audit Statistics
 
@@ -76,11 +76,11 @@
 | High Priority Issues Fixed | 3 |
 | Medium Issues Fixed | 2 |
 | Low Issues Fixed | 1 |
-| Outstanding High Issues | 2 |
-| Outstanding Medium Issues | 3 |
+| Outstanding High Issues | 0 |
+| Outstanding Medium Issues | 1 |
 | Files Deleted | 3 |
 | Files Modified | 5 |
-| Test Pass Rate | 100% (209/209) |
+| Test Pass Rate | 100% (409/409) |
 
 ## 🎯 Key Improvements
 
@@ -103,7 +103,7 @@
 ### What Changed
 
 ```python
-# OLD (will be removed)
+# OLD (removed September 2026)
 from actions.apps import open_app
 from brain.resolver import EntityResolver
 from brain.normalizer import normalize
@@ -111,7 +111,7 @@ from skills.manager import load_skill_instances
 
 # NEW (use these)
 from brain.engine import BrainEngine
-from brain.entity_resolver import EntityResolver
+from knowledge.entity_resolver import EntityResolver
 from brain.interpreter import interpret
 from skills.registry import get_registry
 ```
@@ -130,16 +130,16 @@ print(response.status)  # "executed"
 ## 📅 Timeline
 
 - **Today**: Critical fixes applied (3/3)
-- **Next Sprint**: Remove deprecated modules (2 issues)
-- **2 Weeks**: Clean up stubs and incomplete code (3 issues)
-- **v2.0 Release**: Remove all backward-compat shims
+- **Next Sprint**: ✅ Deprecated modules removed (September 2026)
+- **2 Weeks**: Stubs cleaned up; `actions/` package removed (September 2026)
+- **v2.0 Release**: Backward-compat shims removed — ✅ completed (September 2026)
 
 ## ✅ Verification
 
 All changes verified with:
 ```bash
 python -m pytest tests/ -v
-# Result: 209 passed, 21 warnings (from deprecated normalizer.py)
+# Result: 409 passed, 0 warnings (normalizer.py removed in September 2026)
 ```
 
 No regressions introduced.

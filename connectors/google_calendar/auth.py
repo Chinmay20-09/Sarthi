@@ -14,8 +14,7 @@ See docs/GOOGLE_CALENDAR_SETUP.md for setup instructions.
 import json
 import logging
 import threading
-import webbrowser
-from pathlib import Path
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
@@ -36,16 +35,6 @@ SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 
 # Local server port for OAuth callback
 OAUTH_PORT = 8090
-
-
-def get_credentials_path() -> Path:
-    """Return the path to the Google OAuth client credentials file."""
-    return CREDENTIALS_FILE
-
-
-def get_token_path() -> Path:
-    """Return the path where the OAuth token is stored."""
-    return TOKEN_FILE
 
 
 def has_credentials() -> bool:
@@ -149,8 +138,6 @@ class OAuthCallbackHandler:
         Returns:
             Tuple of (auth_code, error_message). One will be None.
         """
-        from http.server import HTTPServer, BaseHTTPRequestHandler
-
         handler_class = self._make_handler()
 
         try:

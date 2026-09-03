@@ -6,10 +6,7 @@ Uses mocks for Google API calls — no real OAuth credentials needed.
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
-
+from unittest.mock import patch
 
 # ---------------------------------------------------------------------------
 # Connector models
@@ -73,22 +70,35 @@ class TestConnectorRegistry:
         assert r1 is r2
 
     def test_registry_registers_connector(self):
-        from connectors.registry import ConnectorRegistry
-        from connectors.models import AuthType, ConnectorMetadata
         from connectors.base import BaseConnector
+        from connectors.models import AuthType, ConnectorMetadata
+        from connectors.registry import ConnectorRegistry
 
         class MockConnector(BaseConnector):
             @property
             def metadata(self):
                 return ConnectorMetadata(
-                    id="mock", name="Mock", type="test", service="Mock",
+                    id="mock",
+                    name="Mock",
+                    type="test",
+                    service="Mock",
                     auth_type=AuthType.NONE,
                 )
-            def get_auth_url(self): return ""
-            def handle_auth_callback(self, url): return {"success": True}
-            def disconnect(self): return {"success": True}
-            def is_connected(self): return False
-            def execute_tool(self, name, params=None): return {"success": True}
+
+            def get_auth_url(self):
+                return ""
+
+            def handle_auth_callback(self, url):
+                return {"success": True}
+
+            def disconnect(self):
+                return {"success": True}
+
+            def is_connected(self):
+                return False
+
+            def execute_tool(self, name, params=None):
+                return {"success": True}
 
         registry = ConnectorRegistry()
         conn = MockConnector()
@@ -100,22 +110,35 @@ class TestConnectorRegistry:
         assert registry.count == 1
 
     def test_registry_list_all(self):
-        from connectors.registry import ConnectorRegistry
-        from connectors.models import AuthType, ConnectorMetadata
         from connectors.base import BaseConnector
+        from connectors.models import AuthType, ConnectorMetadata
+        from connectors.registry import ConnectorRegistry
 
         class MockConnector2(BaseConnector):
             @property
             def metadata(self):
                 return ConnectorMetadata(
-                    id="mock2", name="Mock2", type="test", service="Mock2",
+                    id="mock2",
+                    name="Mock2",
+                    type="test",
+                    service="Mock2",
                     auth_type=AuthType.NONE,
                 )
-            def get_auth_url(self): return ""
-            def handle_auth_callback(self, url): return {"success": True}
-            def disconnect(self): return {"success": True}
-            def is_connected(self): return False
-            def execute_tool(self, name, params=None): return {"success": True}
+
+            def get_auth_url(self):
+                return ""
+
+            def handle_auth_callback(self, url):
+                return {"success": True}
+
+            def disconnect(self):
+                return {"success": True}
+
+            def is_connected(self):
+                return False
+
+            def execute_tool(self, name, params=None):
+                return {"success": True}
 
         registry = ConnectorRegistry()
         registry.register(MockConnector2())
@@ -154,11 +177,15 @@ class TestGoogleCalendarConnector:
         from connectors.google_calendar.connector import GoogleCalendarConnector
 
         gc = GoogleCalendarConnector()
-        with patch("connectors.google_calendar.auth.CREDENTIALS_FILE") as mock_creds, \
-             patch("connectors.google_calendar.auth.TOKEN_FILE") as mock_token:
+        with (
+            patch("connectors.google_calendar.auth.CREDENTIALS_FILE") as mock_creds,
+            patch("connectors.google_calendar.auth.TOKEN_FILE") as mock_token,
+        ):
             mock_creds.exists.return_value = True
             mock_token.exists.return_value = False
-            with patch.object(gc, "_load_client_config", return_value={"installed": {"client_id": "test"}}):
+            with patch.object(
+                gc, "_load_client_config", return_value={"installed": {"client_id": "test"}}
+            ):
                 assert gc.is_connected() is False
 
     def test_connect_without_credentials_returns_error(self):
@@ -191,8 +218,13 @@ class TestGoogleCalendarConnector:
         from connectors.google_calendar.connector import GoogleCalendarConnector
 
         gc = GoogleCalendarConnector()
-        with patch.object(gc, "_load_client_config", return_value={"installed": {"client_id": "x"}}), \
-             patch("connectors.google_calendar.connector.get_valid_credentials", return_value={"access_token": "fake"}):
+        with (
+            patch.object(gc, "_load_client_config", return_value={"installed": {"client_id": "x"}}),
+            patch(
+                "connectors.google_calendar.connector.get_valid_credentials",
+                return_value={"access_token": "fake"},
+            ),
+        ):
             result = gc.execute_tool("nonexistent_tool")
             assert result["success"] is False
             assert "unknown" in result["error"].lower()
@@ -209,8 +241,10 @@ class TestAuthTokenManagement:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             token_path = Path(tmpdir) / "token.json"
-            with patch.object(auth, "TOKEN_FILE", token_path), \
-                 patch.object(auth, "TOKEN_DIR", Path(tmpdir)):
+            with (
+                patch.object(auth, "TOKEN_FILE", token_path),
+                patch.object(auth, "TOKEN_DIR", Path(tmpdir)),
+            ):
                 token_data = {"access_token": "test_token", "refresh_token": "test_refresh"}
                 result = auth.store_token(token_data)
                 assert result is True
@@ -247,6 +281,7 @@ class TestAuthTokenManagement:
 class TestConnectorAPIEndpoints:
     def test_list_connectors(self):
         from fastapi.testclient import TestClient
+
         from api import app
 
         client = TestClient(app)
@@ -258,6 +293,7 @@ class TestConnectorAPIEndpoints:
 
     def test_connector_registry_endpoint(self):
         from fastapi.testclient import TestClient
+
         from api import app
 
         client = TestClient(app)
@@ -271,6 +307,7 @@ class TestConnectorAPIEndpoints:
 
     def test_google_calendar_status(self):
         from fastapi.testclient import TestClient
+
         from api import app
 
         client = TestClient(app)
@@ -283,6 +320,7 @@ class TestConnectorAPIEndpoints:
 
     def test_google_calendar_events_not_connected(self):
         from fastapi.testclient import TestClient
+
         from api import app
 
         client = TestClient(app)
@@ -294,6 +332,7 @@ class TestConnectorAPIEndpoints:
 
     def test_google_calendar_disconnect(self):
         from fastapi.testclient import TestClient
+
         from api import app
 
         client = TestClient(app)
@@ -304,17 +343,21 @@ class TestConnectorAPIEndpoints:
 
     def test_add_and_delete_connector(self):
         from fastapi.testclient import TestClient
+
         from api import app
 
         client = TestClient(app)
 
         # Add
-        response = client.post("/connectors", json={
-            "name": "Test Calendar",
-            "type": "calendar",
-            "service": "google_calendar",
-            "config": {},
-        })
+        response = client.post(
+            "/connectors",
+            json={
+                "name": "Test Calendar",
+                "type": "calendar",
+                "service": "google_calendar",
+                "config": {},
+            },
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
@@ -332,6 +375,7 @@ class TestConnectorAPIEndpoints:
 
     def test_existing_command_still_works(self):
         from fastapi.testclient import TestClient
+
         from api import app
 
         client = TestClient(app)

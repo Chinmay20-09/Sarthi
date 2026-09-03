@@ -21,6 +21,7 @@ lookup — no scanning, no guessing task ids.
 
 import json
 import re
+import shutil
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -49,6 +50,11 @@ class TaskSandbox:
     def index_path(self) -> Path:
         """Path to the query index file (sandbox/index.json)."""
         return self._index_path
+
+    @property
+    def tasks_dir(self) -> Path:
+        """Directory holding task artifacts (sandbox/tasks)."""
+        return self._tasks_dir
 
     def _load_index(self) -> dict:
         """Load the query index, tolerating a missing/corrupt file."""
@@ -180,6 +186,76 @@ class TaskSandbox:
         self._index_path.write_text(json.dumps(index, indent=2), encoding="utf-8")
 
         return task_dir
+
+    # ------------------------------------------------------------------
+    # Cleanup
+    # ------------------------------------------------------------------
+
+    def clean(self, dry_run: bool = False) -> dict:
+        """Delete successful task dirs/records, keeping failed ones for review.
+
+        Successful task directories are removed and their index records
+        dropped. Queries that end up with no remaining records are removed
+        entirely; queries that still hold failures keep only their failed
+        records, so the index never points at deleted directories.
+
+        Args:
+            dry_run: When True nothing is deleted or rewritten (preview only).
+
+        Returns:
+            Dict with deleted_count, removed_task_ids, failed_count,
+            failed_records, queries_removed, and queries_remaining.
+        """
+        index = self._load_index()
+        deleted_count = 0
+        removed_task_ids: list[str] = []
+        failed_records: list[dict] = []
+        queries_to_remove: list[str] = []
+
+        for query, records in list(index.items()):
+            still_has_failed = False
+            kept_records: list[dict] = []
+
+            for rec in records:
+                task_id = rec.get("task_id", "")
+                if rec.get("status") == "success":
+                    # Delete the successful task directory and its index record
+                    task_dir = self._tasks_dir / task_id
+                    if task_dir.is_dir():
+                        removed_task_ids.append(task_id)
+                        if not dry_run:
+                            shutil.rmtree(task_dir)
+                    deleted_count += 1
+                else:
+                    # Keep failed tasks for review
+                    kept_records.append(rec)
+                    failed_records.append(rec)
+                    still_has_failed = True
+
+            if not still_has_failed:
+                queries_to_remove.append(query)
+            elif len(kept_records) != len(records):
+                # Query still has failures — drop records of deleted successes
+                # so the index never references removed directories.
+                index[query] = kept_records
+
+        # Remove queries that had no remaining failures
+        for query in queries_to_remove:
+            del index[query]
+
+        # Rewrite the index with only the remaining (failed) entries
+        if not dry_run and (index or deleted_count):
+            self._root.mkdir(parents=True, exist_ok=True)
+            self._index_path.write_text(json.dumps(index, indent=2), encoding="utf-8")
+
+        return {
+            "deleted_count": deleted_count,
+            "removed_task_ids": removed_task_ids,
+            "failed_count": len(failed_records),
+            "failed_records": failed_records,
+            "queries_removed": len(queries_to_remove),
+            "queries_remaining": len(index),
+        }
 
 
 def _read_text(path: Path) -> str:

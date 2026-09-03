@@ -114,15 +114,3 @@ def get_logger(name: str) -> logging.Logger:
         setup_logging()
 
     return logging.getLogger(name)
-
-
-def set_level(level: str) -> None:
-    """
-    Change the log level at runtime.
-
-    Args:
-        level: Log level string (DEBUG, INFO, WARNING, ERROR).
-    """
-    resolved_level = getattr(logging, level.upper(), logging.INFO)
-    logging.getLogger().setLevel(resolved_level)
-    logging.getLogger(__name__).info(f"Log level changed to {level.upper()}")

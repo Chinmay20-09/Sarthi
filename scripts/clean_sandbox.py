@@ -5,35 +5,29 @@ clean_sandbox.py — Clean up the Hermes sandbox.
 Deletes successful task directories and keeps failed ones.
 Logs failed tasks to sandbox/failed_tasks.log for review.
 
+The clean/prune logic itself lives in TaskSandbox.clean() (hermes/sandbox.py),
+shared with the in-app "/clean" slash command — this script only adds the
+CLI, the preview output, and the failed-task log.
+
 Usage:
     python scripts/clean_sandbox.py              # dry run (preview only)
     python scripts/clean_sandbox.py --apply      # actually delete
     python scripts/clean_sandbox.py --apply --log  # delete + write log
 """
 
-import json
-import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
 
-SANDBOX_ROOT = Path(__file__).resolve().parents[1] / "sandbox"
-INDEX_PATH = SANDBOX_ROOT / "index.json"
-TASKS_DIR = SANDBOX_ROOT / "tasks"
+# Make the project root importable when run as a plain script
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from hermes.sandbox import TaskSandbox  # noqa: E402
+
+SANDBOX_ROOT = ROOT / "sandbox"
 LOG_PATH = SANDBOX_ROOT / "failed_tasks.log"
-
-
-def load_index() -> dict:
-    if not INDEX_PATH.exists():
-        return {}
-    try:
-        return json.loads(INDEX_PATH.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return {}
-
-
-def write_index(index: dict) -> None:
-    INDEX_PATH.write_text(json.dumps(index, indent=2), encoding="utf-8")
 
 
 def log_failed(failed_records: list[dict]) -> None:
@@ -58,66 +52,40 @@ def log_failed(failed_records: list[dict]) -> None:
 
 
 def clean(dry_run: bool = True, write_log: bool = False) -> None:
-    index = load_index()
-    if not index:
+    sandbox = TaskSandbox(SANDBOX_ROOT)
+    result = sandbox.clean(dry_run=dry_run)
+
+    deleted_count = result["deleted_count"]
+    failed_records = result["failed_records"]
+
+    if not deleted_count and not failed_records and not result["queries_remaining"]:
         print("No index.json found or index is empty. Nothing to clean.")
         return
 
-    deleted_count = 0
-    kept_count = 0
-    failed_records: list[dict] = []
-    queries_to_remove: list[str] = []
+    # Report each removed (or would-be-removed) successful task directory
+    for task_id in result["removed_task_ids"]:
+        task_dir = sandbox.tasks_dir / task_id
+        if dry_run:
+            print(f"  [DRY RUN] Would delete: {task_dir}")
+        else:
+            print(f"  Deleted: {task_dir}")
 
-    for query, records in index.items():
-        still_has_failed = False
-        kept_records: list[dict] = []
-
-        for rec in records:
-            task_id = rec.get("task_id", "")
-            status = rec.get("status", "")
-
-            if status == "success":
-                # Delete successful task directory and its index record
-                task_dir = TASKS_DIR / task_id
-                if task_dir.is_dir():
-                    if dry_run:
-                        print(f"  [DRY RUN] Would delete: {task_dir}")
-                    else:
-                        shutil.rmtree(task_dir)
-                        print(f"  Deleted: {task_dir}")
-                deleted_count += 1
-            else:
-                # Keep failed tasks
-                kept_count += 1
-                failed_records.append(rec)
-                kept_records.append(rec)
-                still_has_failed = True
-                print(f"  Kept (failed): {task_id} — {rec.get('prompt', '?')[:60]}")
-
-        if not still_has_failed:
-            queries_to_remove.append(query)
-        elif len(kept_records) != len(records):
-            # Query still has failures to review — drop records of deleted
-            # successful tasks so the index never points at removed dirs.
-            index[query] = kept_records
-
-    # Remove queries that had no failed tasks
-    for query in queries_to_remove:
-        del index[query]
+    # Report the failed tasks that were kept
+    for rec in failed_records:
+        print(f"  Kept (failed): {rec.get('task_id', '?')} — {rec.get('prompt', '?')[:60]}")
 
     print(f"\n{'=' * 50}")
     print(f"  Successful tasks deleted : {deleted_count}")
-    print(f"  Failed tasks kept        : {kept_count}")
-    print(f"  Queries fully cleaned    : {len(queries_to_remove)}")
-    print(f"  Queries with failures    : {len(index)}")
+    print(f"  Failed tasks kept        : {result['failed_count']}")
+    print(f"  Queries fully cleaned    : {result['queries_removed']}")
+    print(f"  Queries with failures    : {result['queries_remaining']}")
     print(f"{'=' * 50}")
 
     if dry_run:
         print("\n  This was a DRY RUN. No files were modified.")
         print("  Run with --apply to actually delete files.")
     else:
-        write_index(index)
-        print(f"\n  Updated: {INDEX_PATH}")
+        print(f"\n  Updated: {sandbox.index_path}")
 
     if write_log and failed_records:
         log_failed(failed_records)

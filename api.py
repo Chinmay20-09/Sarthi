@@ -617,6 +617,7 @@ def disable_skill(skill_id: str):
 # External Connectors (Calendar, Gmail, etc.)
 # ---------------------------------------------------------------------------
 
+
 @app.get("/connectors")
 def list_connectors():
     """List all external connectors with live status from the registry."""
@@ -642,8 +643,7 @@ def list_connectors():
             row["icon"] = reg.metadata.icon
             row["auth_type"] = reg.metadata.auth_type.value
             row["tools"] = [
-                {"name": t.name, "description": t.description}
-                for t in reg.metadata.tools
+                {"name": t.name, "description": t.description} for t in reg.metadata.tools
             ]
             # Get live status from the connector implementation
             try:
@@ -765,7 +765,11 @@ def test_connector(connector_id: int):
         config = {}
 
     if not config:
-        return {"success": False, "status": "error", "message": "No configuration set. Add credentials first."}
+        return {
+            "success": False,
+            "status": "error",
+            "message": "No configuration set. Add credentials first.",
+        }
 
     db.execute(
         "UPDATE connectors SET status = 'connected', updated_at = datetime('now') WHERE id = ?",
@@ -777,6 +781,7 @@ def test_connector(connector_id: int):
 # ---------------------------------------------------------------------------
 # Google Calendar Connector (OAuth2)
 # ---------------------------------------------------------------------------
+
 
 @app.get("/connectors/registry")
 def connector_registry():
@@ -847,9 +852,7 @@ def google_calendar_callback(code: str | None = None, error: str | None = None):
     if not code:
         return {"success": False, "error": "No authorization code provided"}
 
-    result = gc.handle_auth_callback(
-        f"http://localhost:8090?code={code}"
-    )
+    result = gc.handle_auth_callback(f"http://localhost:8090?code={code}")
     return result
 
 

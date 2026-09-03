@@ -147,14 +147,6 @@ class TelemetryCollector:
             },
         }
 
-    def get_vram_total(self) -> float | None:
-        """Return the VRAM total from the most recent snapshot, if available."""
-        if self._gpu_vram_used_history:
-            # We store used values; total is tracked per-snapshot.
-            # Return None here — the caller should track total separately.
-            pass
-        return None
-
     # ------------------------------------------------------------------
     # Periodic background sampler
     # ------------------------------------------------------------------

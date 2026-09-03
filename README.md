@@ -208,7 +208,6 @@ sarthi/
 │   ├── engine.py       # BrainEngine orchestrator
 │   ├── interpreter.py  # Text → Intent parser
 │   ├── planner.py      # Multi-step plan decomposer
-│   ├── resolver.py     # Fuzzy entity matcher
 │   ├── executor.py     # Handler dispatcher
 │   ├── intent.py       # Intent data model
 │   ├── context.py      # Pipeline runtime context
@@ -217,12 +216,9 @@ sarthi/
 ├── knowledge/      # Entity knowledge base
 │   ├── manager.py      # KnowledgeManager (singleton)
 │   ├── loader.py       # Pure JSON I/O
-│   ├── scanners/       # Application discovery
+│   ├── entity_resolver.py  # Fuzzy entity matcher
 │   ├── applications.json  # 1040+ discovered apps
 │   └── websites.json      # Curated websites
-│
-│   ├── scanners/       # Application discovery engine
-│   │   └── application_scanner.py  # 500-line scanner
 │
 ├── database/       # Persistent storage
 │   ├── manager.py      # DatabaseManager (SQLite)
@@ -233,7 +229,10 @@ sarthi/
 │
 ├── skills/         # Pluggable capabilities
 │   ├── base.py         # BaseSkill ABC
-│   ├── manager.py      # Skill loader
+│   ├── registry.py     # Skill discovery (auto-loads skills/)
+│   ├── app_launcher/   # Launch installed applications
+│   ├── browser/        # Open websites
+│   ├── scanner/        # Application discovery engine
 │   ├── project_tracker/# GitHub integration
 │   └── automation_engine/# Code automation
 │
@@ -241,11 +240,6 @@ sarthi/
 │   ├── recorder.py     # Microphone recording
 │   ├── speech_to_text.py # Whisper transcription (lazy model)
 │   └── wake_word.py    # Wake word detection (WakeWordListener)
-│
-├── actions/        # Built-in action handlers
-│   ├── apps.py         # Application launcher (dynamic)
-│   ├── browser.py      # Website opener (dynamic)
-│   └── executor.py     # Legacy dispatcher
 │
 ├── utils/          # Shared utilities
 │   ├── logger.py       # Centralized logging setup
@@ -377,7 +371,10 @@ Scanner returns list (no direct file writes)
 
 ### 1. Application Scanner
 
-**File:** `knowledge/scanners/application_scanner.py` (420+ lines)
+**File:** `skills/scanner/application_scanner.py` (595 lines)
+
+Ships as the **scanner** skill, exposed via `ScannerSkill` (`skills/scanner/main.py`).
+`KnowledgeManager.refresh_applications()` delegates here.
 
 Automatically discovers installed applications from standard Windows locations.
 
@@ -415,7 +412,7 @@ When the same application is found in multiple locations, a 5-tier priority syst
 #### Usage
 
 ```python
-from knowledge.scanners.application_scanner import scan_all
+from skills.scanner.application_scanner import scan_all
 
 # Run full scan — returns list of dicts
 applications = scan_all()
@@ -492,16 +489,15 @@ resolver = EntityResolver()
 
 ### 5. Application Executor
 
-**File:** `actions/apps.py`
+**File:** `skills/app_launcher/main.py` (AppLauncherSkill)
 
-Dynamically finds applications via KnowledgeManager.
+Launches applications resolved via KnowledgeManager.
 
 ```python
-from actions.apps import open_app
+from skills.app_launcher import AppLauncherSkill
 
-open_app("vscode")              # ✓ Works
-open_app("visual studio code")  # ✓ Works
-open_app("Code")                # ✓ Works
+skill = AppLauncherSkill()
+skill.execute(intent)   # Or: BrainEngine().process("open vscode")
 ```
 
 ### 6. Future Entity Types
@@ -670,14 +666,14 @@ mypy .
 
 | Module | Lines | Status |
 |---|---|---|
-| `knowledge/scanners/application_scanner.py` | 420 lines | ✅ Production-ready |
-| `knowledge/loader.py` | 120 lines | ✅ Production-ready |
-| `knowledge/manager.py` | 350+ lines | ✅ Production-ready |
+| `skills/scanner/application_scanner.py` | 595 lines | ✅ Production-ready |
+| `knowledge/loader.py` | 150 lines | ✅ Production-ready |
+| `knowledge/manager.py` | 594 lines | ✅ Production-ready |
 | `knowledge/applications.json` | 1040 apps | ✅ Generated |
 | `knowledge/websites.json` | 5 sites | ✅ Curated |
-| `brain/entity_resolver.py` | ~200 lines | ✅ Refactored (DI) |
-| `actions/apps.py` | ~60 lines | ✅ Refactored |
-| `actions/browser.py` | ~60 lines | ✅ Refactored |
+| `knowledge/entity_resolver.py` | ~300 lines | ✅ Refactored (DI) |
+| `skills/app_launcher/main.py` | ~190 lines | ✅ Refactored |
+| `skills/browser/main.py` | ~320 lines | ✅ Refactored |
 
 ### Quality Metrics
 

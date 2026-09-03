@@ -5,7 +5,7 @@ Dispatches resolved intents to the appropriate handler.
 Supports skill-based dispatch where each capability is a separate skill.
 
 The Executor maintains a registry of handlers:
-    - Built-in handlers (e.g., open_app, open_site from actions/)
+    - Built-in handlers for core actions (e.g., open_application, open_site)
     - Skill handlers (loaded from skills/ directory and registered by action)
     - Fallback: tries all registered skills when no direct handler matches
 """
@@ -366,22 +366,21 @@ class BrainExecutor:
 
     @staticmethod
     def _handle_clean(intent: Intent) -> dict[str, Any] | None:
-        """Handle '/clear' — clean successful sandbox tasks, keep failed ones.
+        """Handle '/clean' — clean successful sandbox tasks, keep failed ones.
 
         Successful task directories and index entries are removed.
         Failed tasks are kept for review.
         The database (command_history, memory, chat) is never touched.
         """
-        import json
-        import shutil
-
         from hermes.config.loader import ConfigLoader
         from hermes.sandbox import TaskSandbox
 
         sandbox = TaskSandbox(ConfigLoader().load().sandbox_path)
-        index = sandbox._load_index()
+        result = sandbox.clean()
+        deleted_count = result["deleted_count"]
+        failed_count = result["failed_count"]
 
-        if not index:
+        if not deleted_count and not failed_count:
             return {
                 "success": True,
                 "status": "executed",
@@ -392,49 +391,15 @@ class BrainExecutor:
                 },
             }
 
-        deleted_count = 0
-        failed_records: list[dict] = []
-        queries_to_remove: list[str] = []
-
-        for query, records in index.items():
-            still_has_failed = False
-            kept_records: list[dict] = []
-            for rec in records:
-                task_id = rec.get("task_id", "")
-                if rec.get("status") == "success":
-                    # Delete the successful task directory and its index record
-                    task_dir = sandbox._tasks_dir / task_id
-                    if task_dir.is_dir():
-                        shutil.rmtree(task_dir)
-                    deleted_count += 1
-                else:
-                    failed_records.append(rec)
-                    kept_records.append(rec)
-                    still_has_failed = True
-            if not still_has_failed:
-                queries_to_remove.append(query)
-            elif len(kept_records) != len(records):
-                # Query still has failures to review — drop records of deleted
-                # successful tasks so the index never points at removed dirs.
-                index[query] = kept_records
-
-        # Prune queries that had no remaining failures
-        for query in queries_to_remove:
-            del index[query]
-
-        # Rewrite the index with only failed entries
-        sandbox._root.mkdir(parents=True, exist_ok=True)
-        sandbox._index_path.write_text(json.dumps(index, indent=2), encoding="utf-8")
-
-        if failed_records:
+        if failed_count:
             message = (
                 f"Cleared {deleted_count} successful sandbox task(s). "
-                f"{len(failed_records)} failed task(s) kept for review."
+                f"{failed_count} failed task(s) kept for review."
             )
         else:
             message = (
                 f"All done! Cleared {deleted_count} successful sandbox task(s). "
-                f"Sandbox is now empty."
+                "Sandbox is now empty."
             )
 
         return {
@@ -443,6 +408,6 @@ class BrainExecutor:
             "result": {
                 "message": message,
                 "deleted_count": deleted_count,
-                "failed_count": len(failed_records),
+                "failed_count": failed_count,
             },
         }

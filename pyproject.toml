@@ -46,7 +46,9 @@ include = [
 # Ruff — linter + formatter (replaces flake8, black, isort)
 # ============================================================================
 [tool.ruff]
-target-version = "py311"
+# Match requires-python (>=3.10): keeps UP-suggestions aligned with what
+# the code can actually use (e.g. no StrEnum/datetime.UTC nudges).
+target-version = "py310"
 line-length = 100
 
 # Files to exclude (mirrors .gitignore)
