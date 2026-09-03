@@ -1,9 +1,13 @@
+import logging
+
 import httpx
 
 from hermes.config.settings import HermesConfig
 from hermes.models import Task
 
 from .base import AIProvider, ProviderResponse
+
+logger = logging.getLogger(__name__)
 
 
 class LocalHermesProvider(AIProvider):
@@ -36,6 +40,19 @@ class LocalHermesProvider(AIProvider):
                 error="Missing Ollama URL",
             )
 
+        # CPU-only inference can overrun even the long local budget when Ollama
+        # is cold-loading the model on the first request. Retry once on a pure
+        # timeout: by the second attempt the model is warm, so a slow first
+        # call no longer fails the whole task. Non-timeout errors (HTTP errors,
+        # bad payloads) are never retried.
+        response = self._attempt(task)
+        if not response.success and response.error == "Connection timeout":
+            logger.warning("Ollama generation timed out (model %s) — retrying once", self._model)
+            response = self._attempt(task)
+        return response
+
+    def _attempt(self, task: Task) -> ProviderResponse:
+        """One post/parse round-trip to Ollama, mapping failures to a response."""
         try:
             response = self._post(task)
             response.raise_for_status()

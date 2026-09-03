@@ -406,9 +406,12 @@
             sendBtn.disabled = true;
             updateDashStatus("Thinking...");
 
-            // 15-second timeout for command processing
+            // Commands that route to Hermes/NLP can take minutes on a CPU
+            // model (the backend waits up to its local_timeout, default 180s).
+            // Keep the abort above that budget so slow-but-working commands
+            // are never cut off — it only guards against a hung server.
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000);
+            const timeoutId = setTimeout(() => controller.abort(), 300000);
             try {
                 const response = await fetch(DashAPI + "/command", {
                     method: "POST",

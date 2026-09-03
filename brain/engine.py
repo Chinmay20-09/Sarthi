@@ -24,9 +24,9 @@ from typing import Any
 from brain.context import BrainContext
 from brain.executor import BrainExecutor
 from brain.intent import Intent
-from brain.interpreter import interpret
+from brain.interpreter import interpret_many
 from brain.planner import Planner
-from brain.response import BrainResponse
+from brain.response import BrainResponse, step_payload
 from knowledge.entity_resolver import EntityResolver
 
 logger = logging.getLogger(__name__)
@@ -118,7 +118,8 @@ class BrainEngine:
         Process a natural language command through the full pipeline.
 
         Pipeline:
-            1. Interpret text → Intent
+            1. Interpret text → List[Intent] (one per '.'-separated query,
+               "open X and search/play Y" expands to two intents)
             2. Plan → List[Intent] (multi-step support)
             3. Resolve entities → enriched Intent
             4. Execute → result
@@ -133,15 +134,27 @@ class BrainEngine:
         context = BrainContext(original_text=text)
 
         try:
-            # Step 1: Interpret
+            # Step 1: Interpret — every '.'-separated query becomes an intent,
+            # and "open X and search/play Y" becomes an open + a search/play
+            # intent, so multi-query input executes each part in sequence.
             context.stage = "interpret"
-            intent = interpret(text)
-            context.intent = intent
-            logger.debug(f"Interpreted: action={intent.action}, target={intent.target}")
+            intents = interpret_many(text)
+            # interpret_many returns [] only for empty/all-punctuation input;
+            # fall back to an unknown intent so the pipeline still completes.
+            if not intents:
+                from brain.intent import Intent
 
-            # Step 2: Plan
+                intents = [Intent(action="unknown", raw_text=text or "")]
+            context.intent = intents[0]
+            logger.debug(
+                f"Interpreted {len(intents)} intent(s): {intents[0].action} {intents[0].target}"
+            )
+
+            # Step 2: Plan — each parsed intent flows through the planner
             context.stage = "plan"
-            plan = self.planner.plan(intent, context)
+            plan: list[Intent] = []
+            for intent in intents:
+                plan.extend(self.planner.plan(intent, context))
 
             # Step 3: Resolve
             context.stage = "resolve"
@@ -149,7 +162,7 @@ class BrainEngine:
 
             # Step 4: Execute
             context.stage = "execute"
-            result = self._execute_plan(resolved, context)
+            result, steps = self._execute_plan(resolved, context)
 
             elapsed = (datetime.now() - start).total_seconds() * 1000
 
@@ -161,6 +174,7 @@ class BrainEngine:
                 execution_ms=elapsed,
                 error=result.get("error"),
                 resolved=context.resolved,
+                steps=steps or None,
             )
 
         except Exception as e:
@@ -200,18 +214,28 @@ class BrainEngine:
         context.resolved = resolved_any
         return resolved
 
-    def _execute_plan(self, plan: list[Intent], context: BrainContext) -> dict[str, Any]:
-        """Execute all intents in the plan sequentially."""
+    def _execute_plan(
+        self, plan: list[Intent], context: BrainContext
+    ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+        """Execute all intents in the plan sequentially.
+
+        Returns the last (or failing) result plus an API-shaped payload for
+        EVERY executed step, so multi-query commands can show one card per
+        action instead of only the final reply.
+        """
         final_result: dict[str, Any] = {"success": True, "status": "completed"}
+        steps: list[dict[str, Any]] = []
 
         for step_idx, intent in enumerate(plan):
             logger.debug(f"Executing step {step_idx + 1}/{len(plan)}")
             result = self.executor.execute(intent, context)
+            steps.append(step_payload(intent, result))
 
             if not result.get("success", False):
-                # Fail fast — stop on first error
-                return result
+                # Fail fast — stop on first error (the failing step is kept
+                # in ``steps`` so the UI can show where it stopped)
+                return result, steps
 
             final_result = result
 
-        return final_result
+        return final_result, steps

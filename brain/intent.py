@@ -23,11 +23,14 @@ class Intent(BaseModel):
         action: The action to perform (open, search, play, close, etc.)
         target: The target entity (application, website, file, etc.)
         confidence: Confidence score of the interpretation (0.0 to 1.0)
+        site: Optional site a search should run on (e.g. "youtube" from
+              "open youtube and search AI"). Empty for plain searches.
     """
 
     action: str = "unknown"
     target: str = ""
     confidence: float = 0.0
+    site: str = ""
     # The original user text, preserved through interpretation so skills
     # (e.g. the Natural Language Processor) can hold a real conversation.
     raw_text: str = ""

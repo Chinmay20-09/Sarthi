@@ -11,6 +11,8 @@ ARCHITECTURE:
 """
 
 import logging
+import re
+import urllib.request
 import webbrowser
 from typing import Any
 
@@ -58,7 +60,11 @@ class BrowserSkill(BaseSkill):
             return self._open_website(target)
 
         if action == "search":
-            return self._search(target)
+            # "open X and search Q" sets intent.site so the search runs on
+            # the opened site (e.g. youtube.com/results) when it is a
+            # website, and falls back to Google for apps like Chrome.
+            site = getattr(intent, "site", "") or ""
+            return self._search(target, site=site)
 
         if action == "play":
             return self._play(target)
@@ -73,18 +79,28 @@ class BrowserSkill(BaseSkill):
     # Search
     # ------------------------------------------------------------------
 
-    def _search(self, target: str) -> dict[str, Any]:
+    def _search(self, target: str, site: str = "") -> dict[str, Any]:
         """
         Search on a website or Google.
 
         "search YouTube"  → opens youtube.com/results?search_query=...
         "search python"   → opens google.com/search?q=...
         "search GitHub python" → opens github.com/search?q=...
+        "open youtube and search AI" (site="youtube") → opens
+        youtube.com/results?search_query=AI; a non-website site (an app
+        like "chrome") falls back to Google.
         """
         logger.debug(f"Searching: {target}")
         target = target.strip()
         if not target:
             return {"success": False, "status": "error", "error": "No search query provided"}
+
+        # An explicit site (from "open X and search Q") takes priority.
+        if site:
+            website = self.knowledge.find_website(site)
+            if website and website.get("url"):
+                return self._search_on_site(website, target)
+            return self._google_search(target)
 
         # Check if target contains a known website name first
         words = target.split()
@@ -128,6 +144,33 @@ class BrowserSkill(BaseSkill):
             base = url.rstrip("/")
             search_url = f"{base}/search?q={query.replace(' ', '+')}"
 
+        # For YouTube searches, try to play the first video directly
+        if "youtube.com" in url.lower():
+            first_video_url = self._get_first_youtube_video(query)
+            if first_video_url:
+                if get_test_mode():
+                    return {
+                        "success": True,
+                        "status": "test_mode",
+                        "result": {
+                            "website": name,
+                            "url": first_video_url,
+                            "query": query,
+                            "test_mode": True,
+                        },
+                    }
+                webbrowser.open(first_video_url)
+                return {
+                    "success": True,
+                    "status": "executed",
+                    "result": {
+                        "website": name,
+                        "url": first_video_url,
+                        "query": query,
+                        "action": "playing",
+                    },
+                }
+
         if get_test_mode():
             return {
                 "success": True,
@@ -141,6 +184,21 @@ class BrowserSkill(BaseSkill):
             "status": "executed",
             "result": {"website": name, "url": search_url, "query": query},
         }
+
+    def _get_first_youtube_video(self, query: str) -> str | None:
+        """Fetch the first YouTube video URL for a search query without an API key."""
+        try:
+            search_url = f"https://www.youtube.com/results?search_query={query.replace(' ', '+')}"
+            req = urllib.request.Request(search_url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                html = resp.read().decode("utf-8", errors="ignore")
+            # Extract video IDs from the rendered page data
+            match = re.search(r'"videoId":"([a-zA-Z0-9_-]{11})"', html)
+            if match:
+                return f"https://www.youtube.com/watch?v={match.group(1)}"
+        except Exception as e:
+            logger.debug(f"Could not fetch first YouTube video: {e}")
+        return None
 
     def _google_search(self, query: str) -> dict[str, Any]:
         """Perform a Google search."""
@@ -165,16 +223,21 @@ class BrowserSkill(BaseSkill):
     def _play(self, target: str) -> dict[str, Any]:
         """Play media on YouTube or Spotify.
 
-        "play lofi"      → opens youtube.com/results?search_query=lofi
-        "play music"     → opens youtube.com/results?search_query=music
+        "play lofi"      → opens youtube.com/watch?v=... (first video)
+        "play music"     → opens youtube.com/watch?v=... (first video)
         """
         logger.debug(f"Playing: {target}")
         target = target.strip()
         if not target:
             return {"success": False, "status": "error", "error": "No media query provided"}
 
-        # Default: YouTube search for the query
-        url = f"https://www.youtube.com/results?search_query={target.replace(' ', '+')}"
+        # Try to get the first video directly
+        first_video_url = self._get_first_youtube_video(target)
+        url = (
+            first_video_url
+            or f"https://www.youtube.com/results?search_query={target.replace(' ', '+')}"
+        )
+
         if get_test_mode():
             return {
                 "success": True,
@@ -185,7 +248,12 @@ class BrowserSkill(BaseSkill):
         return {
             "success": True,
             "status": "executed",
-            "result": {"website": "YouTube", "url": url, "query": target},
+            "result": {
+                "website": "YouTube",
+                "url": url,
+                "query": target,
+                "action": "playing" if first_video_url else "searching",
+            },
         }
 
     # ------------------------------------------------------------------

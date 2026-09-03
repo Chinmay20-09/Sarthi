@@ -70,13 +70,14 @@ def clean(dry_run: bool = True, write_log: bool = False) -> None:
 
     for query, records in index.items():
         still_has_failed = False
+        kept_records: list[dict] = []
 
         for rec in records:
             task_id = rec.get("task_id", "")
             status = rec.get("status", "")
 
             if status == "success":
-                # Delete successful task directory
+                # Delete successful task directory and its index record
                 task_dir = TASKS_DIR / task_id
                 if task_dir.is_dir():
                     if dry_run:
@@ -89,11 +90,16 @@ def clean(dry_run: bool = True, write_log: bool = False) -> None:
                 # Keep failed tasks
                 kept_count += 1
                 failed_records.append(rec)
+                kept_records.append(rec)
                 still_has_failed = True
                 print(f"  Kept (failed): {task_id} — {rec.get('prompt', '?')[:60]}")
 
         if not still_has_failed:
             queries_to_remove.append(query)
+        elif len(kept_records) != len(records):
+            # Query still has failures to review — drop records of deleted
+            # successful tasks so the index never points at removed dirs.
+            index[query] = kept_records
 
     # Remove queries that had no failed tasks
     for query in queries_to_remove:

@@ -582,23 +582,35 @@
                 '</span>';
             content.appendChild(badge);
 
-            content.appendChild(
-                el("div", "text-on-surface font-body-lg text-body-lg", esc(payload.text || "Done."))
-            );
+            // Multi-query command (e.g. "open youtube and play lofi. how are
+            // you") — show one block per executed step instead of only the
+            // final reply, so every action gets its own card.
+            const stepsArr = Array.isArray(payload.steps) ? payload.steps : [];
+            if (stepsArr.length > 1) {
+                const stepsBox = el("div", "flex flex-col gap-3 w-full");
+                stepsArr.forEach((step, i) => {
+                    stepsBox.appendChild(renderStepBlock(step, i, stepsArr.length));
+                });
+                content.appendChild(stepsBox);
+            } else {
+                content.appendChild(
+                    el("div", "text-on-surface font-body-lg text-body-lg", esc(payload.text || "Done."))
+                );
 
-            const card = renderResultCard(payload);
-            if (card) content.appendChild(card);
+                const card = renderResultCard(payload);
+                if (card) content.appendChild(card);
 
-            // After a scan, offer the newly discovered apps for categorization.
-            // Skipped when restoring a persisted transcript (silent restore).
-            if (!opts.silent && card && payload.result && payload.result.visual &&
-                payload.result.visual.type === "scan_results") {
-                const newApps = (payload.result.visual.data || {}).new_unattended || [];
-                if (newApps.length) startCategorizationQueue(newApps);
+                // After a scan, offer the newly discovered apps for categorization.
+                // Skipped when restoring a persisted transcript (silent restore).
+                if (!opts.silent && card && payload.result && payload.result.visual &&
+                    payload.result.visual.type === "scan_results") {
+                    const newApps = (payload.result.visual.data || {}).new_unattended || [];
+                    if (newApps.length) startCategorizationQueue(newApps);
+                }
+
+                const pipeline = renderPipeline(payload);
+                if (pipeline) content.appendChild(pipeline);
             }
-
-            const pipeline = renderPipeline(payload);
-            if (pipeline) content.appendChild(pipeline);
 
             wrapper.appendChild(content);
             row.appendChild(wrapper);
@@ -655,6 +667,45 @@
                         { icon: "memory" });
                 }
             }
+        }
+
+        // ---------------------------------------------------------------------
+        // Per-step block for multi-query commands
+        // ---------------------------------------------------------------------
+        // Renders ONE executed step (server shape: step_payload in
+        // brain/response.py): action/target/status/success/text plus the
+        // skill result used for visual cards, and source/provider/model.
+        function renderStepBlock(step, index, total) {
+            const ok = !!step.success;
+            const action = String(step.action || "step").toUpperCase();
+            const block = el("div", "glass-card rounded-xl p-3 w-full flex flex-col gap-2");
+
+            const header = el("div", "flex items-center gap-2 flex-wrap");
+            header.innerHTML =
+                '<span class="material-symbols-outlined text-sm ' + (ok ? "text-primary-container" : "text-error") + '">' +
+                (ok ? "check_circle" : "error") + '</span>' +
+                '<span class="font-data-mono text-[10px] text-on-surface-variant tracking-wide">STEP ' + (index + 1) + ' / ' + total + '</span>' +
+                '<span class="font-data-mono text-[10px] text-on-surface font-semibold">' + esc(action) + '</span>' +
+                (step.target ? '<span class="font-data-mono text-[10px] text-primary truncate">' + esc(step.target) + '</span>' : '') +
+                (step.status && step.status !== "executed" && step.status !== "completed" &&
+                    (ok ? '<span class="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">' : '<span class="text-[10px] px-2 py-0.5 rounded-full bg-error/10 text-error border border-error/30">') +
+                    esc(String(step.status).toUpperCase()) + '</span>') +
+                (step.provider ? '<span class="font-data-mono text-[10px] text-tertiary ml-auto">' +
+                    esc(providerDisplayName(step.provider) + (step.model ? " · " + step.model : "")) + '</span>' : '');
+            block.appendChild(header);
+
+            // Visual card when the step produced one (website/app launch,
+            // scan...). Conversational steps (source="nlp") render as text.
+            const card = step.source !== "nlp" ? renderResultCard(step) : null;
+            if (card) block.appendChild(card);
+
+            const msg = String(step.text || "").trim();
+            if (msg && (!card || step.source === "nlp")) {
+                block.appendChild(
+                    el("div", "text-on-surface text-sm whitespace-pre-wrap", esc(msg))
+                );
+            }
+            return block;
         }
 
         // ---------------------------------------------------------------------
@@ -1505,6 +1556,10 @@
         // — no recognized handler, or a "what/how" question that half-matched
         // a skill — go to Hermes.
         function shouldRouteToHermes(payload) {
+            // A multi-step command was already executed by Sarthi (open/play/
+            // reply...). Render its per-step cards here — never re-send the
+            // whole text to Hermes, which would re-run every action.
+            if (Array.isArray(payload.steps) && payload.steps.length > 1) return false;
             if (payload.success || (payload.result && payload.result.visual)) return false;
             if (payload.status === "no_handler" || payload.action === "unknown") return true;
             return ["what", "how"].includes(payload.action);
@@ -1621,9 +1676,13 @@
         async function sendHermesQuestion(text, input) {
             setCurrentTask("Hermes thinking...");
             input.placeholder = "Hermes is thinking...";
-            // 30-second timeout to prevent the UI from freezing
+            // The local model runs on CPU and routinely needs 60-180s+ to
+            // answer (the server waits up to its own local_timeout, default
+            // 180s). Keep this abort well above that budget so slow-but-working
+            // generations are never cut off mid-thought — it only guards
+            // against a genuinely hung server.
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            const timeoutId = setTimeout(() => controller.abort(), 300000);
             try {
                 const response = await fetch(SarthiAPI + "/hermes/chat", {
                     method: "POST",
@@ -1653,7 +1712,7 @@
                 const isTimeout = err.name === "AbortError";
                 const rendered = {
                     text: isTimeout
-                        ? "Hermes took too long to respond. The model may be overloaded — try again shortly."
+                        ? "The model still hasn't responded after 5 minutes. Check that Ollama is running and healthy, then try again."
                         : "Local Hermes is unavailable. Check that Ollama is running.",
                     action: "",
                     target: "",

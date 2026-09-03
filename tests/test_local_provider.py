@@ -96,3 +96,72 @@ def test_404_reports_ollama_error_body(monkeypatch):
     assert response.provider == "Ollama"
     assert "HTTP 404" in response.error
     assert "model 'x' not found" in response.error
+
+
+def _timeout_error(url: str) -> httpx.ReadTimeout:
+    """A ReadTimeout shaped like httpx raises on an over-budget generation."""
+    return httpx.ReadTimeout("timed out", request=httpx.Request("POST", url))
+
+
+def test_retries_once_on_timeout_then_succeeds(monkeypatch):
+    """A timeout (cold model load) is retried once; the warm retry succeeds."""
+    config = HermesConfig(model="openai/gpt-5", local_model="hermes3:8b")
+    provider = LocalHermesProvider(config)
+
+    calls = {"n": 0}
+
+    def fake_post(url, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise _timeout_error(url)
+        return _make_response_success()
+
+    monkeypatch.setattr(provider._client, "post", fake_post)
+
+    response = provider.generate(Task(prompt="Say hello"))
+
+    assert calls["n"] == 2
+    assert response.success is True
+    assert response.provider == "Ollama"
+    assert response.text == "Hello from Ollama"
+
+
+def test_does_not_retry_more_than_once_on_timeout(monkeypatch):
+    """Two consecutive timeouts still fail with the standard timeout error."""
+    config = HermesConfig(model="openai/gpt-5", local_model="hermes3:8b")
+    provider = LocalHermesProvider(config)
+
+    calls = {"n": 0}
+
+    def fake_post(url, **kwargs):
+        calls["n"] += 1
+        raise _timeout_error(url)
+
+    monkeypatch.setattr(provider._client, "post", fake_post)
+
+    response = provider.generate(Task(prompt="Say hello"))
+
+    assert calls["n"] == 2
+    assert response.success is False
+    assert response.error == "Connection timeout"
+
+
+def test_non_timeout_errors_are_not_retried(monkeypatch):
+    """HTTP errors (e.g. model missing) fail immediately — no pointless retry."""
+    config = HermesConfig(model="openai/gpt-5", local_model="hermes3:8b")
+    provider = LocalHermesProvider(config)
+
+    calls = {"n": 0}
+
+    def fake_post(url, **kwargs):
+        calls["n"] += 1
+        request = httpx.Request("POST", url)
+        raise httpx.HTTPStatusError("Not Found", request=request, response=_make_response_404())
+
+    monkeypatch.setattr(provider._client, "post", fake_post)
+
+    response = provider.generate(Task(prompt="Say hello"))
+
+    assert calls["n"] == 1
+    assert response.success is False
+    assert "HTTP 404" in response.error

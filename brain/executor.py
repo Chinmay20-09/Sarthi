@@ -398,19 +398,25 @@ class BrainExecutor:
 
         for query, records in index.items():
             still_has_failed = False
+            kept_records: list[dict] = []
             for rec in records:
                 task_id = rec.get("task_id", "")
                 if rec.get("status") == "success":
-                    # Delete the successful task directory
+                    # Delete the successful task directory and its index record
                     task_dir = sandbox._tasks_dir / task_id
                     if task_dir.is_dir():
                         shutil.rmtree(task_dir)
                     deleted_count += 1
                 else:
                     failed_records.append(rec)
+                    kept_records.append(rec)
                     still_has_failed = True
             if not still_has_failed:
                 queries_to_remove.append(query)
+            elif len(kept_records) != len(records):
+                # Query still has failures to review — drop records of deleted
+                # successful tasks so the index never points at removed dirs.
+                index[query] = kept_records
 
         # Prune queries that had no remaining failures
         for query in queries_to_remove:
