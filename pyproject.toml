@@ -34,6 +34,13 @@ automation = [
     "pywin32>=306",
 ]
 
+# Browser Awareness: DOM-level inspection of arbitrary websites through
+# the installed Chrome (channel="chrome" — no bundled browser download).
+# Lazily imported — the core app and the test suite work without it.
+browser = [
+    "playwright>=1.40",
+]
+
 # ---------------------------------------------------------------------------
 # Package discovery — flat layout with multiple top-level packages
 # ---------------------------------------------------------------------------

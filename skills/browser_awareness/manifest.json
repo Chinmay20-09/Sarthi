@@ -1,0 +1,12 @@
+{
+  "id": "browser_awareness",
+  "name": "Browser Awareness",
+  "description": "Inspects websites the Brain cannot drive deterministically: opens the page in an isolated browser session, builds a compact page snapshot, and lets Hermes observe the page and recommend validated actions (click, type, submit...) that the Brain executes.",
+  "version": "1.0.0",
+  "enabled": true,
+  "icon": "travel_explore",
+  "commands": [
+    "/browse example.com and find the pricing page",
+    "open example.com and find the More Information link"
+  ]
+}

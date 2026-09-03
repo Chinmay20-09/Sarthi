@@ -35,6 +35,18 @@ DEFAULT_SITES: dict[str, SiteSpec] = {
         composer=(0.5, 0.94),
         read_point=(0.5, 0.3),
         footer_markers=("ChatGPT can make mistakes",),
+        login_markers=(
+            "Log in",
+            "Sign up",
+            "Continue with",
+            "Email address",
+        ),
+        landing_markers=(
+            "New chat",
+            "What can I help with",
+            "Start with a prompt",
+        ),
+        loading_markers=("Stop generating", "Thinking", "Generating"),
     ),
     "gemini": SiteSpec(
         key="gemini",
@@ -52,6 +64,19 @@ DEFAULT_SITES: dict[str, SiteSpec] = {
             "Gemini may display inaccurate info",
             "This is an experimental feature",
         ),
+        login_markers=(
+            "Sign in",
+            "to continue to Gemini",
+            "Use Gemini",
+            "Continue to Gemini",
+        ),
+        landing_markers=(
+            "New chat",
+            "How can I help",
+            "Welcome to Gemini",
+            "Ask Gemini",
+        ),
+        loading_markers=("Stop", "Generating", "Creating"),
     ),
 }
 
@@ -173,6 +198,9 @@ def _apply_overrides(spec: SiteSpec, overrides: dict) -> SiteSpec:
         max_wait=float(data.get("max_wait", spec.max_wait)),
         stable_polls=int(data.get("stable_polls", spec.stable_polls)),
         footer_markers=tuple(data.get("footer_markers", spec.footer_markers)),
+        login_markers=tuple(data.get("login_markers", spec.login_markers)),
+        landing_markers=tuple(data.get("landing_markers", spec.landing_markers)),
+        loading_markers=tuple(data.get("loading_markers", spec.loading_markers)),
     )
     return SiteSpec(**kwargs)
 

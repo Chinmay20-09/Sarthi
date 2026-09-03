@@ -2,7 +2,7 @@
     "id": "project_tracker",
     "name": "Project Tracker",
     "description": "Tracks GitHub and Notion projects.",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "enabled": true,
     "icon": "folder",
     "commands": [

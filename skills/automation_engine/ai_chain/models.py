@@ -51,6 +51,14 @@ class SiteSpec:
     stable_polls: int = 2  # reads that must match before "done"
     # Text markers that end a copied transcript (footer noise to trim).
     footer_markers: tuple[str, ...] = ()
+    # Screen-state markers (see screen.py): words that tell the driver
+    # what the browser is showing *without* the sent prompt. Login walls,
+    # new-chat landing pages and loading spinners are recognised so the
+    # driver fails fast (or keeps waiting) instead of sending page chrome
+    # to the awareness model.
+    login_markers: tuple[str, ...] = ()
+    landing_markers: tuple[str, ...] = ()
+    loading_markers: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

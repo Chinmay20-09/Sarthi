@@ -130,6 +130,42 @@ def _clean_open_chain_body(body: str) -> str:
     return text.strip(" ,.!?;:").strip()
 
 
+# How much of a pasted prompt is checked back from the composer. Full
+# prompts can be huge (a whole AI reply); the first chunk is enough to
+# prove the paste landed in the right element.
+PASTE_VERIFY_CHARS = 240
+
+
+def paste_verify_prefix(prompt: str) -> str:
+    """First chunk of a prompt, cut on a word boundary.
+
+    Used to verify a paste landed in the composer: comparing the whole
+    prompt against a Ctrl+A/Ctrl+C round-trip is wasteful for long texts
+    and brittle when the UI reflows whitespace near the end, so only the
+    opening words are checked (whitespace-tolerantly).
+    """
+    text = (prompt or "").strip()
+    if len(text) <= PASTE_VERIFY_CHARS:
+        return text
+    cut = text[: PASTE_VERIFY_CHARS]
+    break_at = cut.rfind(" ")
+    return cut[:break_at] if break_at > 0 else cut
+
+
+def prompt_present(transcript: str, prompt: str) -> bool:
+    """True when the sent prompt appears in the copied transcript.
+
+    Uses the same whitespace-tolerant matching as extract_reply, so a
+    prompt rendered with different spacing still counts as present. When
+    the prompt is absent the transcript is likely page chrome (sidebars,
+    menus) rather than the conversation — the caller may want to ask a
+    smarter model to make sense of it.
+    """
+    if not prompt or not prompt.strip():
+        return True
+    return _last_fuzzy_match(transcript or "", prompt) is not None
+
+
 def _last_fuzzy_match(text: str, needle: str):
     """Last occurrence of needle in text, tolerant of whitespace runs.
 

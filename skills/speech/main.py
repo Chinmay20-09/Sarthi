@@ -34,7 +34,7 @@ class SpeechSkill(BaseSkill):
 
     name = "speech"
     description = "Voice input via microphone and Whisper transcription"
-    version = "1.0.0"
+    version = "1.1.0"
 
     # ------------------------------------------------------------------
     # BaseSkill interface

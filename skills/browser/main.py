@@ -37,7 +37,7 @@ class BrowserSkill(BaseSkill):
 
     name = "browser"
     description = "Opens websites in the default browser via the Knowledge Layer"
-    version = "1.0.0"
+    version = "1.1.0"
 
     # ------------------------------------------------------------------
     # BaseSkill interface

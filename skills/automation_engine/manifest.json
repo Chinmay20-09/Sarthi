@@ -2,7 +2,7 @@
     "id": "automation_engine",
     "name": "Automation Engine",
     "description": "Generates assistant configurations from skill manifests. Automates code generation and project analysis.",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "enabled": true,
     "icon": "automation",
     "commands": [

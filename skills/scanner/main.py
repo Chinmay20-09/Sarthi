@@ -40,7 +40,7 @@ class ScannerSkill(BaseSkill):
 
     name = "scanner"
     description = "Discovers installed applications and games from the system"
-    version = "1.0.0"
+    version = "1.1.0"
 
     # ------------------------------------------------------------------
     # BaseSkill interface

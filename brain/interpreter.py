@@ -56,6 +56,9 @@ ACTION_WORDS = {
     # AI chain actions (automation engine laptop automation)
     "chain": "chain",
     "automate": "chain",
+    # Browser awareness actions (inspect arbitrary websites)
+    "browse": "browse",
+    "visit": "browse",
 }
 
 FILLER_WORDS = {
@@ -98,6 +101,30 @@ _QUERY_PREFIX_WORDS = {"for", "about", "on", "the", "a", "an", "to"}
 # Punctuation that may trail the query / target and should be dropped.
 _TRAILING_PUNCTUATION = ".,!?;:"
 
+# Domains the deterministic skills already know how to operate quickly
+# ("open youtube.com and play song" stays on the fast, known path — it is
+# never routed to browser awareness).
+_DETERMINISTIC_DOMAINS = frozenset(
+    {
+        "youtube.com",
+        "www.youtube.com",
+        "github.com",
+        "www.github.com",
+        "google.com",
+        "www.google.com",
+        "stackoverflow.com",
+        "www.stackoverflow.com",
+    }
+)
+
+# A bare domain like "example.com" or "www.example.com/path" (no scheme
+# required) — the signal that the user wants browser awareness for a site
+# the deterministic knowledge base does not cover.
+_DOMAIN_RE = re.compile(
+    r"(?:https?://)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+){1,}(?:[/:][^\s]*)?",
+    re.IGNORECASE,
+)
+
 # AI-chain commands: a trigger word plus a "from <AI> to <AI>" clause.
 # "run" is also an app-open word, so the from-to clause is what
 # disambiguates the sentence into a chain instead of an app launch.
@@ -135,14 +162,48 @@ def _token_key(token: str) -> str:
     return token.lower().rstrip(_TRAILING_PUNCTUATION)
 
 
+# Full sentences AND domain/URL tokens may both contain '.' — the dots
+# inside "example.com" or "https://x.io/pricing" must not end a sentence.
+_DOMAIN_TOKEN_RE = re.compile(
+    r"(?i)(?:https?://)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+){1,}(?:[/:][^\s.!?;,]*)?"
+)
+_SENTINEL_CHAR = "\u0001"
+
+
 def split_queries(text: str) -> list[str]:
     """Split text into separate queries at full stops ('.').
 
     "open youtube and search AI. also tell me about weather" becomes
     ["open youtube and search AI", "also tell me about weather"]. Empty
-    fragments are dropped.
+    fragments are dropped. Dots that belong to a domain or URL
+    ("example.com", "https://x.io/pricing") are preserved — they never
+    split the sentence.
     """
-    return [part.strip() for part in (text or "").split(".") if part.strip()]
+    raw = text or ""
+    protected, holder = _protect_domain_tokens(raw)
+    parts = [part for part in protected.split(".") if part.strip()]
+    return [_restore_domain_tokens(part, holder).strip() for part in parts]
+
+
+def _protect_domain_tokens(text: str) -> tuple[str, dict[str, str]]:
+    """Swap domain/URL dots for sentinels so they survive sentence-splitting.
+
+    Returns (protected_text, {sentinel: original_token}).
+    """
+    holder: dict[str, str] = {}
+    result = text
+    for index, match in enumerate(_DOMAIN_TOKEN_RE.finditer(text)):
+        token = match.group(0)
+        sentinel = f"{_SENTINEL_CHAR}{index}{_SENTINEL_CHAR}"
+        holder[sentinel] = token
+        result = result.replace(token, sentinel, 1)
+    return result, holder
+
+
+def _restore_domain_tokens(part: str, holder: dict[str, str]) -> str:
+    for sentinel, token in holder.items():
+        part = part.replace(sentinel, token)
+    return part
 
 
 def interpret_many(text: str) -> list[Intent]:
@@ -325,6 +386,18 @@ def _parse_compound(tokens: list[str], keys: list[str], raw_text: str) -> list[I
     if open_index is None:
         return None
 
+    # "open <bare-domain> and <task>" — e.g. "open example.com and find the
+    # pricing page". The deterministic open/search path cannot drive an
+    # arbitrary website, so the whole sentence becomes ONE browse intent
+    # (url + objective re-parsed by the Browser Awareness skill). Known
+    # deterministic domains (youtube.com, github.com, ...) keep the fast
+    # existing path.
+    bare_domain = _extract_bare_domain(tokens)
+    if bare_domain is not None and bare_domain not in _DETERMINISTIC_DOMAINS:
+        return [
+            Intent(action="browse", target=bare_domain, confidence=1.0, raw_text=raw_text)
+        ]
+
     # The first search/play keyword after "open" drives the second intent.
     action_index = next(
         (i for i in range(open_index + 1, len(keys)) if keys[i] in _COMPOUND_ACTION_WORDS),
@@ -366,6 +439,19 @@ def _parse_compound(tokens: list[str], keys: list[str], raw_text: str) -> list[I
             raw_text=raw_text,
         ),
     ]
+
+
+def _extract_bare_domain(tokens: list[str]) -> str | None:
+    """First bare-domain/URL token in the sentence, or None.
+
+    "example.com", "www.example.com/pricing" and "https://x.io" all
+    count; plain words ("youtube", "chrome") do not.
+    """
+    for token in tokens:
+        match = _DOMAIN_RE.fullmatch(token.rstrip(_TRAILING_PUNCTUATION))
+        if match is not None:
+            return match.group(0)
+    return None
 
 
 def _build_search_intent(tokens: list[str], keyword_index: int, site: str, raw_text: str) -> Intent:

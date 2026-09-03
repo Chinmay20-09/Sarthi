@@ -36,7 +36,7 @@ class AppLauncherSkill(BaseSkill):
 
     name = "app_launcher"
     description = "Launches desktop applications via the Knowledge Layer"
-    version = "1.0.0"
+    version = "1.1.0"
 
     # ------------------------------------------------------------------
     # BaseSkill interface

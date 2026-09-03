@@ -2,7 +2,7 @@
     "id": "scanner",
     "name": "Application Scanner",
     "description": "Discovers installed applications, games, and websites from the system.",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "enabled": true,
     "icon": "scan",
     "commands": [

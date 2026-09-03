@@ -61,6 +61,30 @@ folder.
 Because there is no screen OCR or vision yet, everything is **coordinate
 and clipboard based** — which is why calibration exists.
 
+### Browser awareness (screen state + local Hermes model)
+
+The robot never guesses blindly about the browser screen — it classifies
+what each Ctrl+A/Ctrl+C copy actually contains before acting:
+
+- **Write side:** after pasting a prompt it copies the composer back and
+  checks the paste landed in the message box (re-focusing and retrying
+  up to 3 times) before pressing Enter. A missed paste — the click did
+  not hit the composer — fails in seconds with a *recalibrate the
+  composer point* hint instead of silently waiting out the whole budget
+  on a new-chat page.
+- **Read side:** the copy is classified against per-site markers. A
+  **login wall**, a **new-chat landing** (prompt never sent) or a
+  **still-loading** page is recognised deterministically and fails fast
+  with a precise message; a copy too small to be a page (a message
+  element captured whole) is re-read before anything is concluded.
+- Only transcripts that really look like a conversation but that the
+  heuristic failed to parse go to the **local Hermes model** (Ollama)
+  for extraction. Page chrome is never sent to it. If the model also
+  sees no real reply, the step fails with a clear message instead of
+  saving chrome as the answer. The call goes straight to the local
+  provider, so it costs no API credits and creates no extra sandbox
+  records.
+
 ## Calibration (recommended once per monitor)
 
 Window-fraction defaults usually work, but recording exact spots makes
@@ -75,6 +99,22 @@ python -m skills.automation_engine.ai_chain.calibrate --site gemini --point imag
 Points: `composer`, `read_point`, `image_download_point` (Gemini only).
 Stored in `calibration.json` (git-ignored). Skipping calibration is
 fine — the module falls back to estimated positions.
+
+**Tuning screen awareness:** each site ships word lists that tell the
+screen classifier apart a login wall from a new-chat landing from a
+loading page (`login_markers`, `landing_markers`, `loading_markers` in
+`calibration.py`). When a site changes its UI copy these words go
+stale — override them in `calibration.json` without touching code:
+
+```json
+{
+  "sites": {
+    "chatgpt": {
+      "login_markers": ["Log in", "Continue with", "Verify you are human"]
+    }
+  }
+}
+```
 
 ## Triggering
 

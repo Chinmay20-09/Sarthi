@@ -334,9 +334,22 @@ class BaseSkill(ABC):
 
 | Skill | Version | Description |
 |---|---|---|
-| `project_tracker` | 1.0.0 | GitHub & Notion project tracking |
-| `automation_engine` | 1.0.0 | Code generation and automation |
-| `speech` | 1.0.0 | Wake-word detection + Whisper |
+| `project_tracker` | 1.1.0 | GitHub & Notion project tracking |
+| `automation_engine` | 1.1.0 | AI-chain laptop automation + code generation |
+| `app_launcher` | 1.1.0 | Launch installed applications |
+| `browser` | 1.1.0 | Open/search known websites (deterministic) |
+| `scanner` | 1.1.0 | Application discovery engine |
+| `natural_language_processor` | 1.1.0 | Conversational fallback (Hermes chat) |
+| `speech` | 1.1.0 | Wake-word detection + Whisper |
+| `user_config` | 1.1.0 | User settings (github username, etc.) |
+| `personal_context` | 1.0.0 | Personal context (never changed since creation) |
+| `browser_awareness` | 1.0.0 | Inspect arbitrary websites (new in this release) |
+
+> **Version rule:** a skill's version is bumped (`1.0.0 → 1.1.0 → 1.2.0 …`)
+> whenever its code changes after the day it was created — bump **both**
+> `manifest.json` and the `BaseSkill.version` attribute in its `main.py`.
+> Any skill still at its creation version (`1.0.0`) has never been
+> modified, so a glance at the version column shows what has updates.
 
 ### Clean Architecture Refactoring
 

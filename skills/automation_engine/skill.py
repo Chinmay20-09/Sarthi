@@ -37,7 +37,7 @@ class AutomationSkill(BaseSkill):
 
     name = "automation_engine"
     description = "Generates assistant configs and automates code generation"
-    version = "1.0.0"
+    version = "1.1.0"
 
     def __init__(self):
         self.engine = AutomationEngine()

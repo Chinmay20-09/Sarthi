@@ -38,7 +38,7 @@ class GitHubProjectSkill(BaseSkill):
 
     name = "project_tracker"
     description = "Tracks GitHub and Notion projects"
-    version = "1.0.0"
+    version = "1.1.0"
 
     def __init__(self, username: str | None = None, token: str | None = None):
         """

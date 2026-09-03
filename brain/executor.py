@@ -202,6 +202,7 @@ class BrainExecutor:
         try:
             from skills.app_launcher.main import AppLauncherSkill
             from skills.browser.main import BrowserSkill
+            from skills.browser_awareness.main import BrowserAwarenessSkill
 
             def handle_open(intent: Intent) -> dict[str, Any] | None:
                 """Handle 'open' action — application first, then website.
@@ -265,6 +266,33 @@ class BrainExecutor:
                 }
 
             self.register_handler("open", handle_open)
+
+            def handle_browse(intent: Intent) -> dict[str, Any] | None:
+                """Handle 'browse' — inspect an arbitrary website.
+
+                Browser Awareness is the non-deterministic extension of the
+                open flow: when a user names a real website with a task on it
+                ("open example.com and find the pricing page") it opens an
+                isolated Chrome session, inspects the page, and lets Hermes
+                observe + recommend actions the Brain then validates.
+
+                Known deterministic flows ("open youtube and play song") never
+                reach this handler — the interpreter only routes domain-shaped
+                targets that are not covered by the deterministic skills.
+                """
+                skill = BrowserAwarenessSkill()
+                result = skill.execute(intent)
+                if isinstance(result, dict) and result.get("handled"):
+                    return result
+                return {
+                    "success": result.get("success", False),
+                    "status": result.get("status", "error"),
+                    "result": result.get("result"),
+                    "error": result.get("error")
+                    or f"Browser awareness could not handle: {intent.action}",
+                }
+
+            self.register_handler("browse", handle_browse)
 
         except ImportError as e:
             logger.warning(f"Could not register built-in handlers: {e}")

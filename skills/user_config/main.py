@@ -44,7 +44,7 @@ class UserConfigSkill(BaseSkill):
 
     name = "user_config"
     description = "Saves user settings (like your GitHub username) so Sarthi remembers them."
-    version = "1.0.0"
+    version = "1.1.0"
 
     def __init__(self, db=None):
         """
