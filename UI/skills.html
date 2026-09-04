@@ -337,7 +337,7 @@
             const grid = document.getElementById("tools-grid");
             if (!grid) return;
             try {
-                const response = await fetch("http://127.0.0.1:8000/hermes/tools");
+                const response = await fetch(API + "/hermes/tools");
                 if (!response.ok) throw new Error("HTTP " + response.status);
                 const payload = await response.json();
                 if (!payload.success || !payload.tools.length) {
@@ -413,7 +413,7 @@
 
         async function loadSkills() {
             try {
-                const response = await fetch("http://127.0.0.1:8000/skills");
+                const response = await fetch(API + "/skills");
                 const skills = await response.json();
                 const grid = document.getElementById("skills-grid");
                 if (!grid) return;

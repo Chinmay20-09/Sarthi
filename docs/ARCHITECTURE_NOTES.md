@@ -68,12 +68,15 @@ from skills.base import BaseSkill
 
 **Available Skills:**
 - `app_launcher/` - Launch desktop applications
-- `browser/` - Open websites in browser
-- `project_tracker/` - Track software projects
-- `automation_engine/` - Code generation & automation
+- `browser/` - Open/search known websites in the default browser
+- `browser_awareness/` - Inspect arbitrary websites (Playwright) with validated actions
+- `project_tracker/` - Track software projects (GitHub)
+- `automation_engine/` - AI-chain laptop automation & assistant generation
 - `scanner/` - Application discovery
 - `speech/` - Speech recognition features
 - `user_config/` - Configuration management
+- `personal_context/` - Personal profile fields (safe, field-scoped access)
+- `natural_language_processor/` - Conversational fallback via Hermes (registered last)
 
 ### Knowledge Layer (`knowledge/`)
 
@@ -178,7 +181,6 @@ from skills.base import BaseSkill
 # Knowledge
 from knowledge.entity_resolver import EntityResolver
 from knowledge.manager import get_manager
-from knowledge.router import DataSource
 
 # Database
 from database.manager import DatabaseManager
@@ -316,7 +318,7 @@ python -m pytest tests/test_skill_base.py -v
 ```
 
 ### Current Test Status
-- ✅ 409 tests passing
+- ✅ 549+ tests passing
 - ✅ No deprecation warnings (`brain/normalizer.py` removed)
 - ✅ No regressions
 
@@ -338,7 +340,6 @@ python -m pytest tests/test_skill_base.py -v
 
 4. **Architecture Improvements** (open)
    - [ ] Implement proper multi-step planner in `brain/planner.py`
-   - [ ] Refactor global state management (e.g., in `wakeword.py`)
    - [ ] Add comprehensive API documentation
 
 ---

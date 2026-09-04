@@ -23,6 +23,9 @@ ENV/
 
 .env
 .env.*
+# Keep the example file tracked so contributors can copy it (gitignore
+# negation must come after the ignore pattern above).
+!.env.example
 
 # ==========================================
 # IDE
@@ -68,18 +71,14 @@ dist/
 
 .DS_Store
 Thumbs.db
-desktop.ini
-
-# ==========================================
+desktop.ini# ==========================================
 # Temporary Files
 # ==========================================
 
 *.tmp
 *.temp
 *.bak
-
-# Wake word single-instance lock
-wakeword.pid
+
 
 # ==========================================
 # Audio Files (Temporary)

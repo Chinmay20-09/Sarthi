@@ -19,7 +19,7 @@ all_entities = manager.get_all_entities()  # For EntityResolver
 
 INTERNAL MODULES:
     loader.KnowledgeLoader  — Not exported. Use KnowledgeManager instead.
-    scanners.*              — Internal. Only KnowledgeManager calls scanners.
+    scanner (skills/scanner) — Internal. Only KnowledgeManager calls the scanner.
 """
 
 from .manager import KnowledgeManager, get_manager

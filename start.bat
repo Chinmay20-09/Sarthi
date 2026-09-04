@@ -6,9 +6,8 @@ cd /d "%~dp0"
 
 :: ──────────────────────────────────────────────────────────────────
 :: MODES
-::   start.bat            dev/debug — visible server windows (unchanged)
-::   start.bat background windowless API/UI for the wake-word flow
-::                         (launched by wakeword.py with CREATE_NO_WINDOW)
+::   start.bat            dev/debug — visible server windows
+::   start.bat background windowless API/UI (pythonw, no consoles)
 :: ──────────────────────────────────────────────────────────────────
 
 if /i "%~1"=="background" goto background
@@ -36,7 +35,7 @@ start "Sarthi UI" cmd /k python -m http.server 5500 --directory UI
 goto wait
 
 :: ── Background mode: pythonw never opens a console, so no terminal
-::    windows appear when the wake word launches Sarthi. Logging is safe
+::    windows appear when Sarthi launches windowless. Logging is safe
 ::    under pythonw because api.py / utils\run_ui_server.py redirect
 ::    None'd stdio to devnull at import. ─────────────────────────────
 :background
@@ -52,7 +51,7 @@ start "" "%PYW%" "%~dp0utils\run_ui_server.py"
 :wait
 :: Wait until backend is ready. ping is used instead of `timeout` because
 :: `timeout` refuses to run when stdin is not a console (e.g. when this
-:: batch runs under CREATE_NO_WINDOW from the wake-word flow).
+:: batch runs under CREATE_NO_WINDOW in background mode).
 ping -n 2 127.0.0.1 >nul
 curl -s http://127.0.0.1:8000/health >nul 2>&1
 if errorlevel 1 goto wait

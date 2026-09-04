@@ -1,3 +1,8 @@
+> ⚠️ **Historical document.** This is the record of the August 2026 audit
+> and the fixes it drove. The current compatibility audit lives at
+> [`AUDIT_REPORT.md`](../AUDIT_REPORT.md) (repo root) — read that one
+> first. Numbers below reflect the state at the time of writing.
+
 # Sarthi Codebase Audit Report
 **Date:** August 14, 2026  
 **Status:** Comprehensive audit completed with critical fixes applied
@@ -217,7 +222,7 @@ else:
 
 **Before Audit:** 209 passing tests  
 **After Audit:** 209 passing tests ✅  
-**Since (September 2026):** 409 passing tests, 0 deprecation warnings
+**Since (September 2026):** 549+ passing tests, 0 deprecation warnings
 
 No regressions introduced by changes.
 

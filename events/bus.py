@@ -206,7 +206,6 @@ class EventBus:
 
     # Speech
     SPEECH_RECOGNIZED = "speech_recognized"
-    WAKE_WORD_DETECTED = "wake_word_detected"
 
     # Brain
     INTENT_PARSED = "intent_parsed"

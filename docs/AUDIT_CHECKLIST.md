@@ -1,3 +1,7 @@
+> ⚠️ **Historical document.** Record of the August 2026 audit actions.
+> The current compatibility audit lives at
+> [`AUDIT_REPORT.md`](../AUDIT_REPORT.md) (repo root).
+
 # Sarthi Code Audit - Action Checklist
 
 ## ✅ COMPLETED FIXES
@@ -80,7 +84,7 @@
 | Outstanding Medium Issues | 1 |
 | Files Deleted | 3 |
 | Files Modified | 5 |
-| Test Pass Rate | 100% (409/409) |
+| Test Pass Rate | 100% (549/549) |
 
 ## 🎯 Key Improvements
 
@@ -139,7 +143,7 @@ print(response.status)  # "executed"
 All changes verified with:
 ```bash
 python -m pytest tests/ -v
-# Result: 409 passed, 0 warnings (normalizer.py removed in September 2026)
+# Result: 549 passed, 0 warnings (normalizer.py removed in September 2026)
 ```
 
 No regressions introduced.

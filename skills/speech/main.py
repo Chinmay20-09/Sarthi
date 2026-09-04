@@ -1,8 +1,8 @@
 """
 Speech Skill for Sarthi.
 
-Wraps wake-word detection and Whisper-based transcription as a
-proper BaseSkill compatible with the Skill Registry.
+Wraps Whisper-based transcription as a proper BaseSkill compatible
+with the Skill Registry.
 
 Speech is no longer a separate module — it is simply another capability.
 
@@ -25,7 +25,6 @@ class SpeechSkill(BaseSkill):
     Provides voice input capabilities:
         - Record audio from microphone
         - Transcribe using Whisper
-        - Detect wake word (phrase configured in variable.py)
 
     Usage:
         skill = SpeechSkill(knowledge_manager=manager, event_bus=bus)
@@ -58,9 +57,6 @@ class SpeechSkill(BaseSkill):
         if action in ("listen", "record"):
             return self._listen()
 
-        if action == "wakeword":
-            return self._check_wakeword()
-
         return {
             "success": False,
             "status": "unknown",
@@ -90,33 +86,6 @@ class SpeechSkill(BaseSkill):
             }
         except Exception as e:
             logger.error(f"Speech recognition failed: {e}")
-            return {
-                "success": False,
-                "status": "error",
-                "error": str(e),
-            }
-
-    def _check_wakeword(self) -> dict[str, Any]:
-        """Check for wake word detection."""
-        try:
-            from speech.wake_word import detect_wake_word
-
-            # Honor the user-configured phrase from variable.py when available
-            try:
-                import variable
-
-                wake_words = getattr(variable, "WAKE_WORDS", None)
-            except ImportError:
-                wake_words = None
-
-            detected = detect_wake_word(wake_words)
-            return {
-                "success": True,
-                "status": "wakeword_checked",
-                "result": {"detected": detected},
-            }
-        except Exception as e:
-            logger.error(f"Wake word detection failed: {e}")
             return {
                 "success": False,
                 "status": "error",

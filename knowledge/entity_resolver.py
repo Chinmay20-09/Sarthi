@@ -1,11 +1,8 @@
 """
-Entity Resolver for Sarthi — MOVED to knowledge layer.
+Entity Resolver for Sarthi — lives in the knowledge layer.
 
-This module was moved from brain/resolver.py because entity resolution
-is searching stored knowledge, NOT reasoning. It belongs in the
-Knowledge Layer per the three-layer architecture.
-
-Original location: brain/resolver.py (now a backward-compat shim)
+Entity resolution is searching stored knowledge, NOT reasoning, so it
+belongs in the Knowledge Layer per the three-layer architecture.
 
 ARCHITECTURE:
     EntityResolver resides in the Knowledge Layer because:

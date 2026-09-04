@@ -37,15 +37,15 @@
 
 | Capability | Description |
 |---|---|
-| 🎤 **Speech Recognition** | Wake-word detection and Whisper-based transcription |
+| 🎤 **Speech Recognition** | Whisper-based transcription of voice commands |
 | 🧠 **Brain Pipeline** | Interpret → Plan → Resolve → Execute |
-| 📱 **Entity Resolution** | Fuzzy matching for 1,000+ discovered applications + websites |
+| 📱 **Entity Resolution** | Fuzzy matching for 700+ discovered applications + websites |
 | 🛠️ **Skill System** | Pluggable skills: GitHub tracker, automation engine, browser |
 | 🗄️ **Knowledge Base** | Auto-discovers apps via scanner; stores entity data in JSON |
 | 🌐 **FastAPI Server** | REST API with CORS for the web UI |
 | 🎨 **Web UI** | 6-page dashboard with sidebar, dock, and HUD-style interface |
 | 🏠 **Privacy-First** | 100% local — no cloud dependencies |
-| 📦 **1040+ Discovered Apps** | Automatic scanning of Windows locations |
+| 📦 **700+ Discovered Apps** | Automatic scanning of Windows locations |
 
 ---
 
@@ -69,11 +69,15 @@ python -m venv .venv
 .venv\Scripts\activate       # Windows
 source .venv/bin/activate    # macOS/Linux
 
-# 3. Install dependencies
-pip install fastapi uvicorn pywin32
+# 3. Install dependencies (editable install pulls everything from pyproject.toml)
+pip install -e .
+
+# Optional capability stacks (installed lazily, not required for core)
+pip install -e ".[automation]"   # AI-chain laptop automation
+pip install -e ".[browser]"      # Browser Awareness (Playwright)
 
 # 4. Install dev dependencies (optional)
-pip install ruff mypy
+pip install -e ".[dev]"
 
 # 5. Run tests (optional)
 python -m pytest tests/ -v
@@ -91,7 +95,7 @@ python api.py
 
 ```bash
 python -c "from knowledge.manager import get_manager; get_manager().refresh_applications()"
-# Discovers 1000+ applications and saves to knowledge/applications.json
+# Discovers 700+ applications and saves to knowledge/applications.json
 ```
 
 ### Run the CLI (Voice)
@@ -101,48 +105,12 @@ python main.py
 # Press ENTER to speak a command
 ```
 
-### Run the Wake Word Launcher
+### Run Sarthi Windowless (Optional)
 
-```bash
-python wakeword.py            # keep listening (Ctrl+C to stop)
-python wakeword.py --once     # listen for one wake word, then exit
-```
-
-Say your wake word (default: **"hey sarthi"**) and Sarthi automatically runs
-`start.bat`, booting the API + UI and opening the website in your browser.
-
-**Run it in the background:** just double-click **`wakeword.bat`** — it starts a
-fully windowless `pythonw` supervisor (`wakeword.py --supervise`) that runs the
-listener as a child with a **Sarthi microphone icon in your system tray**:
-right-click it to Launch Sarthi, **Stop Sarthi**, open `logs/wakeword.log`, or
-**Exit** (which also stops the auto-restart loop). No console windows are ever
-created. The supervisor restarts the listener if it crashes, and uses the
-lightweight Whisper `tiny` model so it stays light on your system. Use
-`wakeword.bat debug` to run it in a visible console window instead.
-
-**Start it automatically at login:** run `wakeword.bat install` once — it adds a
-`HKCU\...\Run` entry that launches `pythonw wakeword.py --supervise` directly
-(no console flash at logon, no admin needed). `wakeword.bat status` shows
-whether autostart is on, and `wakeword.bat uninstall` removes it.
-
-**No terminal windows when Sarthi launches:** saying the wake word runs
-`start.bat` in its windowless *background* mode — the API and UI servers start
-under `pythonw` (no consoles), and only your browser opens. Run `start.bat`
-manually for the classic dev experience with visible server windows.
-
-**It sleeps while Sarthi is open:** after a wake word launches Sarthi, the
-listener goes dormant — it stops using the microphone entirely — until Sarthi
-is closed, then listens again automatically. No more false triggers while you
-work. Tune this in `variable.py` (`DORMANT_WHILE_RUNNING`, `SARTHI_HEALTH_URL`,
-`SARTHI_START_TIMEOUT`, `SARTHI_POLL_INTERVAL`).
-
-**Change the wake word anytime** by editing `variable.py` at the project root —
-no code changes needed:
-
-```python
-# variable.py
-WAKE_WORDS = ["hey sarthi", "hey sarti"]
-```
+`start.bat background` starts the API and UI servers under `pythonw` (no
+console windows) and opens your browser once the API is healthy — useful
+for launching Sarthi from a script or shortcut. Run `start.bat` manually
+for the classic dev experience with visible server windows.
 
 ### Open the Web UI
 
@@ -217,51 +185,64 @@ sarthi/
 │   ├── manager.py      # KnowledgeManager (singleton)
 │   ├── loader.py       # Pure JSON I/O
 │   ├── entity_resolver.py  # Fuzzy entity matcher
-│   ├── applications.json  # 1040+ discovered apps
+│   ├── applications.json  # 700+ discovered apps
 │   └── websites.json      # Curated websites
 │
 ├── database/       # Persistent storage
 │   ├── manager.py      # DatabaseManager (SQLite)
 │   ├── models.py       # Table schemas
-│   └── cache/          # In-memory query + browser caches
-│       ├── query_cache.py   # QueryCache (TTL query cache)
+│   └── cache/
 │       └── browser_cache.py # BrowserCache (browser session)
 │
 ├── skills/         # Pluggable capabilities
 │   ├── base.py         # BaseSkill ABC
 │   ├── registry.py     # Skill discovery (auto-loads skills/)
 │   ├── app_launcher/   # Launch installed applications
-│   ├── browser/        # Open websites
+│   ├── browser/        # Open/search known websites
+│   ├── browser_awareness/ # Inspect arbitrary websites (Playwright)
 │   ├── scanner/        # Application discovery engine
 │   ├── project_tracker/# GitHub integration
-│   └── automation_engine/# Code automation
+│   ├── automation_engine/# AI-chain automation
+│   ├── natural_language_processor/ # Conversational fallback (Hermes)
+│   └── ...             # speech, user_config, personal_context
+│
+├── hermes/         # Conversational layer + tool bridge
+│   ├── orchestrator.py  # HermesOrchestrator (chat + tools)
+│   ├── service.py       # Shared wiring (singletons)
+│   ├── tool_registry.py # Tools Hermes may request
+│   ├── providers/       # OpenRouter primary, Ollama fallback
+│   └── routes.py        # /hermes/* FastAPI routes
+│
+├── connectors/     # External service integrations
+│   ├── base.py         # BaseConnector ABC
+│   ├── registry.py     # Connector discovery
+│   └── google_calendar/# OAuth2 Google Calendar connector
 │
 ├── speech/         # Audio processing
 │   ├── recorder.py     # Microphone recording
-│   ├── speech_to_text.py # Whisper transcription (lazy model)
-│   └── wake_word.py    # Wake word detection (WakeWordListener)
+│   └── speech_to_text.py # Whisper transcription (lazy model)
 │
 ├── utils/          # Shared utilities
 │   ├── logger.py       # Centralized logging setup
-│   └── helpers.py      # Misc helpers
+│   ├── voice.py        # Spoken announcements (automation contract)
+│   └── telemetry.py    # Hardware telemetry
 │
 ├── UI/             # Web interface
 │   ├── components/     # Shared sidebar + footer
-│   ├── components.js   # Component loader
+│   ├── components.js   # Component loader (declares the API origin)
 │   ├── dashboard.html  # Main HUD
+│   ├── chat.html       # Chat / memory / sandbox UI
 │   ├── skills.html     # Skill repository
 │   ├── memory.html     # Neural context engine
-│   ├── knowledge.html  # Knowledge database
+│   ├── knowledge.html  # Knowledge database + connectors
 │   ├── history.html    # Command timeline
 │   └── settings.html   # System settings
 │
 ├── api.py          # FastAPI server
 ├── main.py         # CLI entry point
-├── wakeword.py     # Wake word launcher (runs start.bat on detection)
-├── wakeword.bat    # Background launcher — windowless, tray icon, auto-restart
-├── variable.py     # User config — change the wake word here
+├── start.bat       # Dev / windowless launcher for API + UI
 ├── config.py       # Central configuration
-└── tests/          # 109+ pytest unit tests
+└── tests/          # 550+ pytest unit tests
 ```
 
 ### Knowledge System
@@ -305,7 +286,7 @@ sarthi/
    │ JSON Files     │◄─────────────────────────────┘
    │                │
    │ applications.  │
-   │ json (1040 apps)
+   │ json (700+ apps)
    │                │
    │ websites.json  │
    │ (5 sites)      │
@@ -384,7 +365,7 @@ Scanner returns list (no direct file writes)
 
 ### 1. Application Scanner
 
-**File:** `skills/scanner/application_scanner.py` (595 lines)
+**File:** `skills/scanner/application_scanner.py`
 
 Ships as the **scanner** skill, exposed via `ScannerSkill` (`skills/scanner/main.py`).
 `KnowledgeManager.refresh_applications()` delegates here.
@@ -436,7 +417,7 @@ manager.save_applications(applications)
 
 ### 2. Knowledge Loader
 
-**File:** `knowledge/loader.py` (120 lines)
+**File:** `knowledge/loader.py`
 
 **Responsibility:** Pure JSON I/O only.
 
@@ -453,7 +434,7 @@ loader.is_valid()              # Validate structure
 
 ### 3. Knowledge Manager
 
-**File:** `knowledge/manager.py` (350+ lines)
+**File:** `knowledge/manager.py`
 
 **Responsibility:** Centralized knowledge system — the single source of truth for all entity access.
 
@@ -463,7 +444,7 @@ from knowledge.manager import get_manager
 manager = get_manager()
 
 # Load entity types
-apps = manager.load_applications()   # 1040+ apps
+apps = manager.load_applications()   # 700+ apps
 sites = manager.load_websites()      # 5+ sites
 
 # Search
@@ -480,12 +461,12 @@ manager.refresh_applications()
 
 ### 4. Entity Resolver
 
-**File:** `brain/entity_resolver.py`
+**File:** `knowledge/entity_resolver.py`
 
 Uses dependency injection — entities are passed in, not imported.
 
 ```python
-from brain.entity_resolver import EntityResolver
+from knowledge.entity_resolver import EntityResolver
 from knowledge.manager import get_manager
 
 # Injection
@@ -496,7 +477,7 @@ resolver = EntityResolver(entities=entities)
 result = resolver.resolve("open visual studio code")
 # → "open Code"
 
-# Backward compatible (lazy loads from manager)
+# Empty resolver (no entities to match)
 resolver = EntityResolver()
 ```
 
@@ -570,9 +551,10 @@ The web UI is served directly from the FastAPI server at `http://127.0.0.1:8000`
 | Page | Route | Description |
 |---|---|---|
 | **Home** | `dashboard.html` | Main HUD with status, stats, command input |
+| **Chat** | `chat.html` | Conversation, memory, sandbox viewer, test runner |
 | **Skills** | `skills.html` | Skill repository and management |
 | **Memory** | `memory.html` | Neural context engine |
-| **Knowledge** | `knowledge.html` | Knowledge database viewer |
+| **Knowledge** | `knowledge.html` | Knowledge database + connectors |
 | **History** | `history.html` | Command timeline |
 | **Settings** | `settings.html` | System configuration |
 
@@ -597,37 +579,28 @@ python -m pytest tests/test_interpreter.py -v
 python -m pytest tests/ --cov=.
 ```
 
-**109+ tests** across 9 test files:
+**550+ tests** across 39 test files. Key coverage:
 
 | Test File | Coverage |
 |---|---|
 | `test_brain_engine.py` | Brain pipeline orchestration |
-| `test_entity_resolver.py` | Fuzzy matching + knowledge base |
-| `test_database_manager.py` | SQLite CRUD operations |
-| `test_executor.py` | Handler dispatch + skills |
 | `test_interpreter.py` | Text → Intent parsing |
-| `test_knowledge_manager.py` | Loading, caching, entities |
-| `test_normalizer.py` | Text normalization |
-| `test_planner.py` | Plan decomposition |
-| `test_query_cache.py` | Cache TTL and invalidation |
+| `test_executor.py` | Handler dispatch + skills |
+| `test_resolver_matching.py` | Fuzzy matching quality (nonsense rejection) |
+| `test_knowledge_manager.py` | Loading, caching, categorization, entities |
+| `test_scanner.py` | Scanner data model + merge priority |
+| `test_pipeline_compatibility.py` | Scanner → Knowledge → Resolver, Brain → Hermes |
+| `test_hermes_api.py` | `/hermes/chat` endpoint |
+| `test_tool_bridge.py` | Hermes → Tool Registry loop |
+| `test_browser_awareness.py` | Browser Awareness safety gate + manager loop |
+| `test_browser.py` | Browser skill routes |
+| `test_connectors.py` | Connector registry + models |
 
-### Verification Results
+### Verification
 
 ```
-Testing KnowledgeManager...
-[PASS] Loading applications...           Found 1040 applications
-[PASS] Finding application...            Found: Code
-[PASS] Loading websites...               Found 5 websites
-[PASS] Finding website...                Found: GitHub
-[PASS] Getting all entities...           Total entities: 1045
-
-Testing EntityResolver...
-[PASS] Dependency injection...           Resolver created with 1045 entities
-[PASS] Entity resolution...              'open vscode' → 'open Code'
-                                         'open github' → 'open GitHub'
-
-Testing BrowserSkill...
-[PASS] Website lookup...                 Found website: Google
+python -m pytest tests/ -q
+# 550+ passed
 ```
 
 ---
@@ -650,8 +623,8 @@ mypy .
 ### Verification Checklist
 
 - [x] All hardcoded application definitions removed
-- [x] 1040+ applications automatically discovered
-- [x] Intelligent alias generation (1048 aliases)
+- [x] 700+ applications automatically discovered
+- [x] Intelligent alias generation
 - [x] Smart deduplication with 5-tier priority
 - [x] Zero hardcoded values (except metadata)
 - [x] Entity Resolver uses dependency injection
@@ -669,7 +642,7 @@ mypy .
 | Initial scan | 10-15 seconds (one-time) |
 | Cached lookup | < 1ms |
 | Entity resolution | < 10ms |
-| Memory usage | ~5MB (1040 apps cached) |
+| Memory usage | ~5MB (700+ apps cached) |
 
 ---
 
@@ -677,26 +650,28 @@ mypy .
 
 ### Code Artifacts
 
-| Module | Lines | Status |
-|---|---|---|
-| `skills/scanner/application_scanner.py` | 595 lines | ✅ Production-ready |
-| `knowledge/loader.py` | 150 lines | ✅ Production-ready |
-| `knowledge/manager.py` | 594 lines | ✅ Production-ready |
-| `knowledge/applications.json` | 1040 apps | ✅ Generated |
-| `knowledge/websites.json` | 5 sites | ✅ Curated |
-| `knowledge/entity_resolver.py` | ~300 lines | ✅ Refactored (DI) |
-| `skills/app_launcher/main.py` | ~190 lines | ✅ Refactored |
-| `skills/browser/main.py` | ~320 lines | ✅ Refactored |
+| Module | Status |
+|---|---|
+| `skills/scanner/application_scanner.py` | ✅ Production-ready |
+| `knowledge/loader.py` | ✅ Production-ready |
+| `knowledge/manager.py` | ✅ Production-ready |
+| `knowledge/entity_resolver.py` | ✅ Refactored (DI) |
+| `knowledge/applications.json` | ✅ Generated (700+ apps) |
+| `knowledge/websites.json` | ✅ Curated (5 sites) |
+| `skills/app_launcher/main.py` | ✅ Refactored |
+| `skills/browser/main.py` | ✅ Refactored |
+| `skills/browser_awareness/` | ✅ New (Playwright inspection) |
+| `hermes/` | ✅ Conversational layer + tool bridge |
+| `connectors/` | ✅ External service integrations |
 
 ### Quality Metrics
 
 | Metric | Score |
 |---|---|
-| Type coverage | 100% |
+| Type coverage | Advisory (mypy progressive mode) |
 | Error handling | Comprehensive |
-| Code quality | ⭐⭐⭐⭐⭐ |
+| Test suite | 550+ passing tests |
 | Performance | Optimized |
-| Scalability | Unlimited |
 | Maintainability | High |
 
 ### Architecture Phases
@@ -709,7 +684,7 @@ mypy .
 | 4 | Database package (SQLite, models, cache) | ✅ Complete |
 | 5 | Centralized logging setup | ✅ Complete |
 | 6 | UI consolidation (shared components) | ✅ Complete |
-| 7 | Unit tests (109+ tests) | ✅ Complete |
+| 7 | Unit tests (550+ tests) | ✅ Complete |
 | 8 | Automation engine cleanup | ✅ Complete |
 | 9 | Linting, formatting | ✅ Complete |
 | 10 | Clean architecture refactoring (Knowledge System) | ✅ Complete |
@@ -720,17 +695,29 @@ mypy .
 
 ## 🔮 Roadmap
 
-- **Memory package** — Persistent conversation history and user preferences
+**Implemented:**
+- **Memory** — Persistent conversation history, /remember facts, settings (SQLite)
+- **CI/CD** — GitHub Actions (`tests/ci.yml`): lint, format, tests, smoke test
+- **Connectors** — Google Calendar (OAuth2); Gmail/email/IoT planned via `connectors/`
+- **Hermes integration** — Conversational fallback, tool bridge, sandbox execution records
+- **Browser Awareness** — Playwright-based inspection of arbitrary websites
+
+**Planned (future):**
 - **Vision package** — Screen capture and OCR
 - **Multi-agent** — Collaborative AI agents for complex tasks
 - **Plugin marketplace** — External skill discovery and loading
-- **CI/CD** — GitHub Actions for automated testing and distribution
 - **More entity types** — Devices, contacts, plugins (no code changes needed)
+- **Hermes skill authoring** — validated creation/registration of new skills by Hermes (see `CONTRIBUTING.md` boundary)
 
 ---
 
 ## 🧑‍💻 Contributing
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) — it covers project structure, module
+ownership, the Hermes contribution boundary, and how to add a skill or a
+connector without touching core.
+
+Quick start:
 1. Create a feature branch: `git checkout -b feat/my-feature`
 2. Make changes and ensure tests pass: `python -m pytest tests/ -v`
 3. Format and lint: `ruff format . && ruff check --fix .`

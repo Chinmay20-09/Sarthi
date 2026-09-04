@@ -10,8 +10,12 @@ Variables:
 - HERMES_SANDBOX_PATH: path to store sandbox data
 
 Local Hermes-specific:
-- LOCAL_HERMES_URL: http://localhost:8088 (example)
+- LOCAL_HERMES_URL: http://localhost:11434 (Ollama's default port; the local provider
+  talks to Ollama's /api/chat endpoint)
 - LOCAL_HERMES_API_KEY: optional API key for local Hermes
+- LOCAL_HERMES_MODEL: model name as installed in Ollama (default: hermes3:8b)
+- LOCAL_HERMES_TIMEOUT: seconds before a local generation is considered failed
+  (default: 180 — CPU inference is slow)
 
 OpenRouter-specific:
 - OPENROUTER_API_KEY: your OpenRouter key (keep secret)
