@@ -359,18 +359,49 @@ surface is complete, and the test suite is green.
 
 ---
 
+## Hermes Model Compatibility
+
+**Scope:** post-audit refactor that makes Hermes provider/model-agnostic
+(Sarthi core is model-agnostic; Hermes is provider-agnostic; provider-specific
+behavior lives behind small adapters). Changing the model is a configuration
+change.
+
+| Item | Finding |
+|---|---|
+| Current provider | Config-driven, **local-first default**: `HERMES_PROVIDER=local` (no `.env` value → local-only Ollama, no cloud calls). Remote providers are opt-in (`openrouter`, `openai_compatible`/`openai`) and automatically get a local Ollama fallback. Canonical values: `local`/`ollama`, `openrouter`, `openai_compatible`/`openai`. Unknown values fall back to the safe **local** provider with a logged warning (never silently remote). |
+| Current model | `HERMES_MODEL` (default `openai/gpt-5`); local inference uses `LOCAL_HERMES_MODEL` (default `hermes3:8b`) |
+| Provider abstraction | `AIProvider` (`hermes/providers/base.py`): `generate(ModelRequest) -> ProviderResponse`, `capabilities() -> ModelCapabilities`. Request + response normalization happen inside adapters; Hermes core, orchestrator, planner, routes never import a concrete provider. |
+| Request normalization | `Task` (orchestration record: id/context) → `Task.to_request()` → `ModelRequest` (prompt, instructions, history, memory, tools, structured_output, images, temperature). Conversion happens at the `ProviderManager` boundary and inside adapters (`as_request`), so adapters never see orchestration metadata. |
+| Response normalization | Single `ProviderResponse{success, provider, model, text, error, tool_used, data, usage, raw}` — no provider payloads leak into Hermes. |
+| Configuration path | `.env` only: `HERMES_PROVIDER`, `HERMES_MODEL`, `LOCAL_HERMES_*`, `OPENROUTER_*`, `OPENAI_COMPATIBLE_URL`/`OPENAI_COMPATIBLE_API_KEY` (documented in `README_ENV.md`, `.env.example`). Loaded by `hermes/config/loader.py` into `HermesConfig`. |
+| Supported capabilities | Adapters declare only what they implement: Ollama + OpenAI-compatible both honor `structured_output` (JSON mode / `response_format=json_object`). `vision`, `streaming`, native `tool_calling` are not implemented — Hermes uses its prompt-based tool protocol + JSON parse/validation fallback for every model, so no capability is silently fabricated. |
+| Provider-specific code location | `hermes/providers/` only: `local_provider.py` (Ollama /api/chat), `openai_compatible.py` (generic /chat/completions), `openrouter_provider.py` (subclass: endpoint/key/headers). Selection in `hermes/providers/registry.py`. |
+| Adding a provider | Write one `AIProvider` adapter → register in `registry.py` → set `HERMES_PROVIDER`. No Brain/Interpreter/Resolver/Executor/Knowledge/Browser-Awareness/Skill-Registry changes. |
+| Browser Awareness compatibility | Independent of the configured model: the inspector/ai_chain accept an injected provider, and their default local model is built through the registry (`create_local_provider`), not a concrete import. PageSnapshot → observe → `validate_inspection` gate → SafeExecutor unchanged. |
+| API compatibility | `/hermes/*`, `/command`, `/listen`, `/browser/*`, `/skills/*` unchanged. Added `GET /hermes/status` (provider/model/capabilities/fallback; no secrets). |
+| Failure handling | Provider unavailable / invalid provider / timeout / malformed response / null content / missing endpoint / missing key → graceful `ProviderResponse(success=False, error=...)`; API returns structured errors, never crashes, never exposes keys. |
+| Tests | Existing suite **537 passed / 0 failed** (509 prior + 28 new in `tests/test_provider_abstraction.py`: interface, selection, request/response normalization, capability detection, structured-output flags, tool-call normalization, failure modes, BA decoupling, status endpoint). Two legacy tests updated to the new boundary (`test_fallback.py`, `test_tool_bridge.py`) — providers now assert on the normalized `ModelRequest`, not `Task` metadata. No live model or key required. |
+| Remaining limitations | Native tool-calling/vision/streaming are not wired (safe fallbacks exist); OpenAI-compatible capability detection is per-endpoint at request time (an endpoint that rejects `response_format` surfaces a graceful provider error); keyless endpoints send no auth header. |
+
+**Final status: PASS WITH LIMITATIONS** — Hermes is provider/model-agnostic
+and the next provider is cheap to add (adapter + registry entry + config). The
+limitations are unimplemented adapter features with existing safe fallbacks,
+not architectural gaps.
+
+---
+
 ## Final Report
 
 | Item | Result |
 |---|---|
-| Tests passed | 549 baseline; **561 after this audit** (12 new/rewritten tests, 0 removed test functions) |
+| Tests passed | 549 baseline; **561 after the audit pass** (12 new/rewritten); **537 current** after the post-audit wake-word removal (−52) and Hermes provider refactor (+28) |
 | Tests failed | 0 |
-| Files modified | `README.md`, `docs/ARCHITECTURE_NOTES.md`, `docs/AUDIT_REPORT.md`, `docs/AUDIT_CHECKLIST.md`, `README_ENV.md`, `.env.example`, `.gitignore`, `knowledge/__init__.py`, `knowledge/entity_resolver.py`, `UI/skills.html`, `tests/test_resolve.py` |
-| Files created | `AUDIT_REPORT.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `tests/test_pipeline_compatibility.py` |
-| Files removed | `tests/test_entity_resolver.py` (script, no tests), `docs/AUDIT_SUMMARY.txt` (empty) |
-| Documentation updated/removed | See Documentation Audit table |
-| Architectural mismatches found | None blocking; doc/code mismatches corrected (see above) |
-| Hermes readiness | Safe as a conversational/orchestration layer today; **not** yet a capability-builder (documented plan) |
+| Files modified | Audit pass: `README.md`, `docs/ARCHITECTURE_NOTES.md`, `docs/AUDIT_REPORT.md`, `docs/AUDIT_CHECKLIST.md`, `README_ENV.md`, `.env.example`, `.gitignore`, `knowledge/__init__.py`, `knowledge/entity_resolver.py`, `UI/skills.html`, `tests/test_resolve.py`. Post-audit: `hermes/{models,service,main,routes,orchestrator,tool_planner}.py`, `hermes/config/{settings,loader}.py`, `hermes/providers/{base,manager,local_provider,openrouter_provider,__init__}.py`, `skills/browser_awareness/hermes_inspector.py`, `skills/automation_engine/ai_chain/awareness.py`, `speech/__init__.py`, `skills/speech/main.py`, `events/bus.py`, `start.bat`, `tests/test_fallback.py`, `tests/test_tool_bridge.py`, `CHANGELOG.md` |
+| Files created | `AUDIT_REPORT.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `tests/test_pipeline_compatibility.py`, `hermes/providers/{registry,openai_compatible}.py`, `tests/test_provider_abstraction.py` |
+| Files removed | `tests/test_entity_resolver.py` (script, no tests), `docs/AUDIT_SUMMARY.txt` (empty), wake-word feature (`wakeword.py`, `variable.py`, `wakeword.bat`, `speech/wake_word.py`, `tests/test_wake_word.py`) |
+| Documentation updated/removed | See Documentation Audit table; provider config documented in `README_ENV.md` + `.env.example` |
+| Architectural mismatches found | None blocking; doc/code mismatches corrected (see above); Hermes provider coupling centralized behind adapters (see Hermes Model Compatibility) |
+| Hermes readiness | Safe as a conversational/orchestration layer today; provider/model-agnostic (PASS WITH LIMITATIONS); **not** yet a capability-builder (documented plan) |
 | Overall collaboration readiness | **Ready** — a contributor can onboard via README + CONTRIBUTING; docs now match code |
 
 ## Final Status
@@ -379,3 +410,7 @@ surface is complete, and the test suite is green.
 collaboration-ready. The warnings are *documented future work* (Hermes skill
 authoring, more connectors), not broken boundaries. No critical issue was
 found that would block opening the project.
+
+Post-audit passes (wake-word removal, Hermes provider abstraction) are green:
+**537 tests pass, 0 fail**, ruff clean, and the Hermes model-compatibility
+refactor rates **PASS WITH LIMITATIONS** (see the section above).

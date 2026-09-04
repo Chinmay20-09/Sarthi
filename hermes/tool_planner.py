@@ -19,7 +19,7 @@ import logging
 from collections.abc import Callable
 from typing import Any
 
-from hermes.models import Task
+from hermes.models import ModelRequest, Task
 from hermes.providers.base import ProviderResponse
 from hermes.tool_registry import ToolRegistry
 from hermes.tools.base import ToolResult
@@ -166,36 +166,23 @@ def _extract_tool_call(parsed: dict[str, Any]) -> dict[str, Any] | None:
     return {"tool": tool, "arguments": arguments}
 
 
-def _with_instructions(task: Task, instructions: str) -> Task:
-    """Copy the task, preserving all fields, and attach system instructions."""
-    return Task(
-        prompt=task.prompt,
-        id=task.id,
-        task_type=task.task_type,
-        context=task.context,
-        instructions=instructions,
-        # Preserve prior conversation turns so decision/follow-up calls see
-        # the full session context, not just the current prompt.
-        history=task.history,
-        # Preserve /remember facts so tool-planning calls see them too.
-        memory=task.memory,
-    )
-
-
 class ToolPlanner:
     """
     Runs the bounded Hermes <-> Sarthi tool loop for one task.
 
     Args:
         tool_registry: Registry of tools Hermes may request.
-        generate: Callable that sends a Task to the providers and returns a
-                  ProviderResponse (primary + fallback handled by the caller).
+        generate: Callable that sends a ModelRequest to the providers and
+                  returns a ProviderResponse (primary + fallback handled by
+                  the caller). The planner normalizes its Task into
+                  provider-neutral requests, so providers never see the
+                  orchestration record.
     """
 
     def __init__(
         self,
         tool_registry: ToolRegistry,
-        generate: Callable[[Task], ProviderResponse],
+        generate: Callable[[ModelRequest], ProviderResponse],
         trace: list[dict] | None = None,
     ) -> None:
         self._tool_registry = tool_registry
@@ -219,10 +206,14 @@ class ToolPlanner:
             last tool that executed.
         """
         # Phase 1 — decision: ask the model whether a tool is needed.
-        decision_task = _with_instructions(
-            task, build_decision_instructions(task.prompt, self._tool_registry.list_tools())
+        # The task's content (prompt, history, memory) becomes a
+        # provider-neutral ModelRequest; the decision prompt goes in as
+        # system instructions.
+        request = task.to_request()
+        decision_request = request.with_instructions(
+            build_decision_instructions(task.prompt, self._tool_registry.list_tools())
         )
-        response = self._generate(decision_task)
+        response = self._generate(decision_request)
         self._record(
             step="decision",
             provider=response.provider,
@@ -265,10 +256,10 @@ class ToolPlanner:
                 )
 
             # Phase 2 — feed the result back and get the next decision/answer.
-            followup_task = _with_instructions(
-                task, build_followup_instructions(task.prompt, tool, result)
+            followup_request = request.with_instructions(
+                build_followup_instructions(task.prompt, tool, result)
             )
-            response = self._generate(followup_task)
+            response = self._generate(followup_request)
             self._record(
                 step="response",
                 provider=response.provider,

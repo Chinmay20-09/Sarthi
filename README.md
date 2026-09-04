@@ -210,7 +210,8 @@ sarthi/
 │   ├── orchestrator.py  # HermesOrchestrator (chat + tools)
 │   ├── service.py       # Shared wiring (singletons)
 │   ├── tool_registry.py # Tools Hermes may request
-│   ├── providers/       # OpenRouter primary, Ollama fallback
+│   ├── providers/       # Provider adapters + registry (config-driven)
+│   ├── models.py        # Task + provider-neutral ModelRequest
 │   └── routes.py        # /hermes/* FastAPI routes
 │
 ├── connectors/     # External service integrations

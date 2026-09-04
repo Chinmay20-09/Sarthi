@@ -163,11 +163,14 @@ _local_provider_instance = None
 
 
 def _local_provider():
-    """Cached local Ollama provider (shared client)."""
+    """Cached local Ollama provider (shared client).
+
+    Built through the provider registry so Browser Awareness depends on the
+    configured Hermes provider stack, never on a concrete adapter import.
+    """
     global _local_provider_instance
     if _local_provider_instance is None:
-        from hermes.config.loader import ConfigLoader
-        from hermes.providers.local_provider import LocalHermesProvider
+        from hermes.providers.registry import create_local_provider
 
-        _local_provider_instance = LocalHermesProvider(ConfigLoader().load())
+        _local_provider_instance = create_local_provider()
     return _local_provider_instance

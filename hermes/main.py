@@ -1,9 +1,7 @@
 from .config.loader import ConfigLoader
 from .models import Task
 from .orchestrator import HermesOrchestrator
-from .providers.local_provider import LocalHermesProvider
-from .providers.manager import ProviderManager
-from .providers.openrouter_provider import OpenRouterProvider
+from .providers.registry import build_provider_manager, is_local_only, resolve_provider_name
 from .sandbox import TaskSandbox
 
 
@@ -13,27 +11,20 @@ def main() -> None:
     print("Loading configuration...")
     config = ConfigLoader().load()
 
+    provider_name = resolve_provider_name(config.provider)
+    print(f"Selected provider: {provider_name}")
+
     print("Initializing Provider Manager...")
-    manager = ProviderManager()
+    manager = build_provider_manager(config)
 
-    # Determine if user explicitly requested local-only mode
-    provider_name = (config.provider or "openrouter/free").lower()
-    explicit_local = provider_name in ("local", "local_hermes", "localhermes")
-
-    if explicit_local:
-        # Explicit local mode: use local provider only, no fallback
-        print(f"Selected provider: {provider_name}")
-        print("Initializing Local Hermes...")
-        manager.initialize(LocalHermesProvider(config))
+    local_only = is_local_only(config)
+    if local_only:
+        # Explicit local mode: local provider only, no fallback
         test_task_id = "task_local_000001"
         test_prompt = "Reply with exactly: LOCAL_OLLAMA_PROVIDER_OK"
     else:
-        # Default mode: OpenRouter primary with local fallback
-        print("Selected provider: openrouter")
-        print("Initializing OpenRouter...")
-        manager.initialize(OpenRouterProvider(config))
+        # Remote mode: configured provider primary with local fallback
         print("Initializing Local Hermes as fallback...")
-        manager.set_fallback(LocalHermesProvider(config))
         test_task_id = "task_000001"
         test_prompt = "Introduce yourself as Hermes in one paragraph."
 
@@ -54,7 +45,7 @@ def main() -> None:
     response = orchestrator.process(task)
 
     if response.success:
-        if response.provider == "Ollama" and not explicit_local:
+        if response.provider == "Ollama" and not local_only:
             print("Task completed using local fallback.")
         else:
             print("Task completed successfully.")

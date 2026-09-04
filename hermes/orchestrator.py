@@ -1,6 +1,6 @@
 import time
 
-from .models import Task
+from .models import ModelRequest, Task
 from .providers.base import ProviderResponse
 from .providers.manager import ProviderManager
 from .sandbox import TaskSandbox
@@ -32,6 +32,11 @@ class HermesOrchestrator:
         self._provider_manager = provider_manager
         self._tool_registry = tool_registry
         self._sandbox = sandbox
+
+    @property
+    def provider_manager(self) -> ProviderManager:
+        """The provider manager backing this orchestrator (for diagnostics)."""
+        return self._provider_manager
 
     def process(self, task: Task) -> ProviderResponse:
         """
@@ -101,9 +106,14 @@ class HermesOrchestrator:
 
         return response
 
-    def _generate_with_fallback(self, task: Task) -> ProviderResponse:
-        """Call the primary provider, falling back to the fallback provider."""
-        response = self._provider_manager.generate(task)
+    def _generate_with_fallback(self, task_or_request: Task | ModelRequest) -> ProviderResponse:
+        """Call the primary provider, falling back to the fallback provider.
+
+        Accepts the Task handed in by ``chat()`` or the ModelRequest built by
+        the Tool Planner; the ProviderManager normalizes either into a
+        provider-neutral ModelRequest before any adapter sees it.
+        """
+        response = self._provider_manager.generate(task_or_request)
 
         # If primary succeeds, return immediately
         if response.success:
@@ -115,7 +125,7 @@ class HermesOrchestrator:
         print("Switching to fallback provider...")
 
         try:
-            fallback_response = self._provider_manager.generate_fallback(task)
+            fallback_response = self._provider_manager.generate_fallback(task_or_request)
             return fallback_response
         except Exception:
             # Fallback failed completely (not initialized or errored)

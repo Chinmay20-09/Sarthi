@@ -37,10 +37,44 @@ in the git log.
   hardware telemetry (`utils/telemetry.py`) and `/system/metrics`.
 - **CI pipeline** (`.github/workflows/ci.yml`) — lint, format check, tests,
   smoke test on push/PR.
+- **Hermes provider abstraction** — Hermes core talks to adapters through a
+  small provider interface: `ModelRequest` (provider-neutral request built
+  from a `Task` at the manager boundary) in, `ProviderResponse` out.
+  `ModelCapabilities` declare what an adapter actually honors
+  (structured_output, vision, tool_calling, streaming, context_window).
+  Providers are picked by configuration via `hermes/providers/registry.py`:
+  `ollama`/`local`, `openrouter`, or `openai_compatible`/`openai` (any
+  `/v1`-compatible endpoint — OpenAI, LM Studio, vLLM, ...). Remote
+  providers keep the automatic local Ollama fallback; local mode has none.
+- **OpenAI-compatible adapter** — `OpenAICompatibleProvider` maps
+  `ModelRequest` to `/chat/completions` and maps failures (timeout, HTTP,
+  malformed payloads, refused/null content, missing endpoint) to graceful
+  `ProviderResponse`s; keyless local servers work without an auth header.
+  `OpenRouterProvider` is now a thin subclass (own endpoint/key/headers).
+- **`GET /hermes/status`** — diagnostic endpoint reporting the active
+  provider, model, capabilities, and fallback (no secrets).
 - **Pre-commit hooks** (`.pre-commit-config.yaml`) — no-database-files guard,
   ruff lint/format, smoke test.
 
 ### Changed
+
+- **Provider selection is config-driven** — `hermes/main.py` and
+  `hermes/service.py` no longer choose providers in code; they delegate to
+  the registry. Unknown `HERMES_PROVIDER` values now fall back to the safe
+  local provider with a logged warning (previously anything non-local
+  silently meant OpenRouter).
+- **Browser Awareness / ai_chain decoupled from concrete providers** — the
+  default observation/extraction model is built through the provider
+  registry (`create_local_provider`) instead of importing
+  `LocalHermesProvider` directly; both still accept an injected provider.
+- **Local provider JSON mode** — `ModelRequest.structured_output` maps to
+  Ollama's `format=json` and an OpenAI-compatible
+  `response_format=json_object`; Hermes always parses + validates JSON
+  regardless of the flag.
+- **Wake word removed** — `wakeword.py`, `variable.py`, `wakeword.bat`,
+  `speech/wake_word.py`, the `SPEECH_RECOGNIZED`/wake-word events, the
+  `start.bat` wake-word launch, and `tests/test_wake_word.py` were deleted;
+  `skills/speech` no longer depends on the removed module.
 
 - **Scanner relocated** — application discovery moved from `knowledge/scanners/`
   to the `skills/scanner/` skill; `KnowledgeManager.refresh_applications()`

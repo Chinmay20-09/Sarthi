@@ -3,14 +3,17 @@ Hermes service layer — shared wiring for the orchestrator and sandbox.
 
 Both the HTTP routes (hermes/routes.py) and the Natural Language Processor
 skill build their orchestrator here, so provider configuration lives in
-exactly one place.
+exactly one place. Provider selection is config-driven through
+hermes/providers/registry.py — no concrete provider is imported here.
 
 Public helpers:
-    get_orchestrator() — singleton HermesOrchestrator (OpenRouter primary,
-                         local Ollama fallback, or explicit local-only).
-    get_sandbox()      — the shared TaskSandbox every task is saved to.
-    chat(message)      — plain conversational reply. NO tool planning, NO
-                         tool fetching — the model is asked directly.
+    get_orchestrator()    — singleton HermesOrchestrator wired from config
+                             (local-only, OpenRouter + local fallback, or
+                             OpenAI-compatible + local fallback).
+    get_sandbox()         — the shared TaskSandbox every task is saved to.
+    chat(message)         — plain conversational reply. NO tool planning, NO
+                             tool fetching — the model is asked directly.
+    get_provider_status() — diagnostic snapshot of the active provider stack.
 """
 
 from hermes.config.loader import ConfigLoader
@@ -18,9 +21,7 @@ from hermes.conversation import DEFAULT_SESSION, get_conversation_store
 from hermes.models import Task
 from hermes.orchestrator import HermesOrchestrator
 from hermes.providers.base import ProviderResponse
-from hermes.providers.local_provider import LocalHermesProvider
-from hermes.providers.manager import ProviderManager
-from hermes.providers.openrouter_provider import OpenRouterProvider
+from hermes.providers.registry import build_provider_manager, provider_status
 from hermes.sandbox import TaskSandbox
 from knowledge.memory import build_memory_prompt
 
@@ -37,25 +38,24 @@ def get_sandbox() -> TaskSandbox:
 
 
 def get_orchestrator() -> HermesOrchestrator:
-    """Get the shared HermesOrchestrator, configured once and reused."""
+    """Get the shared HermesOrchestrator, configured once and reused.
+
+    The provider stack (primary + local fallback) is chosen entirely from
+    ``HERMES_PROVIDER`` and friends — changing the model/provider is a
+    configuration change, never a code change.
+    """
     global _orchestrator
     if _orchestrator is None:
         config = ConfigLoader().load()
-        manager = ProviderManager()
-
-        provider_name = (config.provider or "openrouter/free").lower()
-        explicit_local = provider_name in ("local", "local_hermes", "localhermes")
-
-        if explicit_local:
-            # Explicit local mode: local provider only, no fallback
-            manager.initialize(LocalHermesProvider(config))
-        else:
-            # Default mode: OpenRouter primary with local fallback
-            manager.initialize(OpenRouterProvider(config))
-            manager.set_fallback(LocalHermesProvider(config))
-
+        manager = build_provider_manager(config)
         _orchestrator = HermesOrchestrator(manager, sandbox=get_sandbox())
     return _orchestrator
+
+
+def get_provider_status() -> dict:
+    """Diagnostic snapshot: configured provider/model and what is active."""
+    config = ConfigLoader().load()
+    return provider_status(config, manager=get_orchestrator().provider_manager)
 
 
 def chat(message: str, session_id: str | None = None) -> ProviderResponse:

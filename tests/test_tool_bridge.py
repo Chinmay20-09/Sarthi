@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 
 from brain.intent import Intent
-from hermes.models import Task
+from hermes.models import ModelRequest, Task
 from hermes.orchestrator import HermesOrchestrator
 from hermes.providers.base import AIProvider, ProviderResponse
 from hermes.providers.manager import ProviderManager
@@ -367,8 +367,10 @@ def test_tool_call_limit_prevents_infinite_loop():
 # ----------------------------------------------------------------------
 
 
-def test_orchestrator_preserves_task_fields_and_keeps_fallback():
-    """The orchestrator still preserves task fields and runs the planner."""
+def test_orchestrator_sends_normalized_request_and_keeps_fallback():
+    """The orchestrator runs the planner and the provider receives a
+    normalized ModelRequest — prompt preserved, execution metadata (id,
+    task_type, context) stays on the orchestration Task by design."""
     manager = ProviderManager()
     fake = FakeProvider(["Hello there!"])
     manager.initialize(fake)
@@ -381,10 +383,9 @@ def test_orchestrator_preserves_task_fields_and_keeps_fallback():
     assert response.success is True
     assert response.text == "Hello there!"
     received = fake.tasks[0]
-    assert received.id == "task_abc"
+    assert isinstance(received, ModelRequest)
     assert received.prompt == "Hello Hermes"
-    assert received.task_type == "chat"
-    assert received.context == {"k": "v"}
+    assert received.history is None
     assert "Available tools" in received.instructions
 
 

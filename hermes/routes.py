@@ -112,6 +112,24 @@ class HermesSandboxTaskResponse(BaseModel):
     error: str | None = None
 
 
+class HermesStatusResponse(BaseModel):
+    """Diagnostic snapshot of the active provider stack."""
+
+    success: bool
+    # Active (primary) provider name + model, e.g. "Ollama" / "hermes3:8b"
+    provider: str = ""
+    model: str = ""
+    # What the active adapter+model actually supports
+    capabilities: dict = Field(default_factory=dict)
+    # Local fallback provider (None in local-only mode)
+    fallback_provider: str | None = None
+    fallback_model: str | None = None
+    # What was configured (before resolution/aliasing)
+    configured_provider: str = ""
+    configured_model: str = ""
+    error: str | None = None
+
+
 @router.get("/sandbox", response_model=HermesSandboxResponse)
 def hermes_sandbox() -> HermesSandboxResponse:
     """
@@ -169,6 +187,28 @@ def hermes_sandbox_task(task_id: str) -> HermesSandboxTaskResponse:
         return HermesSandboxTaskResponse(success=False, error="Task is unavailable.")
 
 
+@router.get("/status", response_model=HermesStatusResponse)
+def hermes_status() -> HermesStatusResponse:
+    """
+    Report the configured + active provider stack (diagnostics).
+
+    Exposes provider, model and capabilities so the UI can show what model
+    Hermes is talking to, and operators can verify a provider switch took
+    effect — without exposing any secrets (keys never leave the config).
+
+    Returns:
+        HermesStatusResponse with the active provider snapshot, or a
+        graceful error when the provider stack cannot be reported.
+    """
+    try:
+        from hermes.service import get_provider_status
+
+        return HermesStatusResponse(success=True, **get_provider_status())
+    except Exception as e:
+        print(f"[DEBUG] Unexpected error in hermes_status: {e}")
+        return HermesStatusResponse(success=False, error="Provider status is unavailable.")
+
+
 @router.get("/tools", response_model=HermesToolsResponse)
 def hermes_tools() -> HermesToolsResponse:
     """
@@ -195,7 +235,7 @@ def hermes_tools() -> HermesToolsResponse:
 @router.post("/chat", response_model=HermesChatResponse)
 def hermes_chat(request: HermesChatRequest) -> HermesChatResponse:
     """
-    Send a message to the local Hermes model (via Ollama).
+    Send a message to the configured Hermes model (any provider).
 
     Flow:
     1. Accept message from frontend

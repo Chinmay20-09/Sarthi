@@ -44,6 +44,12 @@ class ConfigLoader:
                 "OPENROUTER_HTTP_REFERER", HermesConfig.openrouter_http_referer
             ),
             openrouter_x_title=os.getenv("OPENROUTER_X_TITLE", HermesConfig.openrouter_x_title),
+            openai_compatible_url=os.getenv(
+                "OPENAI_COMPATIBLE_URL", HermesConfig.openai_compatible_url
+            ),
+            openai_compatible_api_key=os.getenv(
+                "OPENAI_COMPATIBLE_API_KEY", HermesConfig.openai_compatible_api_key
+            ),
             local_hermes_url=os.getenv("LOCAL_HERMES_URL", HermesConfig.local_hermes_url),
             local_hermes_api_key=os.getenv(
                 "LOCAL_HERMES_API_KEY", HermesConfig.local_hermes_api_key
