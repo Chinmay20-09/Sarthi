@@ -46,6 +46,7 @@ _ALIASES = {
     "openai-compatible": OPENAI_COMPATIBLE,
 }
 
+
 def resolve_provider_name(provider: str | None) -> str:
     """Map the configured provider string to a canonical name.
 
