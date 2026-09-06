@@ -394,7 +394,7 @@ Canonical references: `.env.example` (copy to `.env`; never commit) and
 
 | Store | Location | Owner | Content |
 |---|---|---|---|
-| SQLite | `database/sarthi.db` | `DatabaseManager` (single connection, WAL) | command_history, knowledge_memory, settings, chat_messages, conversation_messages, connectors |
+| SQLite | `database/sarthi.db` | `DatabaseManager` (single connection, WAL + synchronous=NORMAL, busy_timeout, connection lock) | command_history, knowledge_memory, settings, chat_messages, conversation_messages, connectors |
 | Applications | `knowledge/applications.json` | KnowledgeManager | v2 categorized entities |
 | Websites | `knowledge/websites.json` | KnowledgeManager | v1 entities |
 | Hermes sandbox | `sandbox/` (gitignored) | TaskSandbox | tasks + query index |
@@ -405,11 +405,27 @@ The SQLite file holds personal data and is blocked from commits by a pre-commit
 hook; `sandbox/` and `sandbox_test/` are runtime data (gitignored — see
 CONTRIBUTING for the untracking caveat).
 
+`DatabaseManager` behavior that callers can rely on:
+
+- **Self-healing schema** — on connect it creates every canonical table and
+  index from `database/models.py` (`ALL_TABLES` / `ALL_INDEXES`); callers do
+  not need to run `CREATE TABLE IF NOT EXISTS` first.
+- **`session_id` indexes** on the chat/conversation tables — per-session
+  reads, trims, and resets are index scans, verified by `EXPLAIN QUERY PLAN`
+  tests in `tests/test_database_optimizations.py`.
+- **Thread-safe shared connection** — access is serialized by a lock;
+  FastAPI threadpool workers can write concurrently (5 s busy_timeout).
+- **`db.transaction()`** — groups writes into one atomic commit with
+  rollback on error (`tx.execute` / `tx.fetch_one`); never call the
+  manager's own `fetch_*`/`execute` inside an open transaction — the
+  non-reentrant lock deadlocks. `ConversationStore.add_turn` inserts and
+  trims in one transaction.
+
 ---
 
 ## 13. Testing
 
-`python -m pytest tests/ -q` — **580 tests, 39 files, all passing** (plus 1
+`python -m pytest tests/ -q` — **597 tests, 40 files, all passing** (plus 1
 benign deprecation warning from FastAPI's test client). Lint/format: `ruff
 check .` and `ruff format --check .` are clean. Smoke test: `python
 main-test.py` (9 checks, no LLM call).

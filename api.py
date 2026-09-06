@@ -391,10 +391,8 @@ def list_applications():
 def delete_command_history_entry(cmd_id: int):
     """Delete a single command history entry by id."""
     from database.manager import get_database
-    from database.models import CREATE_COMMAND_HISTORY
 
     db = get_database()
-    db.create_table(CREATE_COMMAND_HISTORY)
     db.execute("DELETE FROM command_history WHERE id = ?", (cmd_id,))
     return {"success": True, "deleted_id": cmd_id}
 
@@ -491,10 +489,8 @@ def search_and_save_website(request: RunRequest):
 def save_setting(request: SettingRequest):
     """Persist a user setting (e.g. github_username) so it survives restarts."""
     from database.manager import get_database
-    from database.models import CREATE_SETTINGS
 
     db = get_database()
-    db.create_table(CREATE_SETTINGS)
     db.execute(
         "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))",
         (request.key, request.value),
@@ -507,10 +503,8 @@ def save_setting(request: SettingRequest):
 def get_setting(key: str):
     """Read a previously saved user setting by key."""
     from database.manager import get_database
-    from database.models import CREATE_SETTINGS
 
     db = get_database()
-    db.create_table(CREATE_SETTINGS)
     row = db.fetch_one("SELECT value FROM settings WHERE key = ?", (key,))
     return {"key": key, "value": row["value"] if row else None}
 
@@ -568,10 +562,8 @@ def get_chat(session_id: str):
     import json
 
     from database.manager import get_database
-    from database.models import CREATE_CHAT_MESSAGES
 
     db = get_database()
-    db.create_table(CREATE_CHAT_MESSAGES)
     rows = db.fetch_all(
         "SELECT id, role, content FROM chat_messages WHERE session_id = ? ORDER BY id ASC",
         (session_id,),
@@ -590,10 +582,8 @@ def add_chat_message(request: ChatMessageRequest):
     import json
 
     from database.manager import get_database
-    from database.models import CREATE_CHAT_MESSAGES
 
     db = get_database()
-    db.create_table(CREATE_CHAT_MESSAGES)
     db.execute(
         "INSERT INTO chat_messages (session_id, role, content, created_at) "
         "VALUES (?, ?, ?, datetime('now'))",
@@ -611,12 +601,9 @@ def reset_chat(session_id: str):
     to remember.
     """
     from database.manager import get_database
-    from database.models import CREATE_CHAT_MESSAGES, CREATE_CONVERSATION_MESSAGES
     from knowledge.memory import get_memory
 
     db = get_database()
-    db.create_table(CREATE_CHAT_MESSAGES)
-    db.create_table(CREATE_CONVERSATION_MESSAGES)
     db.execute("DELETE FROM chat_messages WHERE session_id = ?", (session_id,))
     db.execute("DELETE FROM conversation_messages WHERE session_id = ?", (session_id,))
     remembered = len(get_memory().list_memories())
@@ -662,10 +649,8 @@ def list_connectors():
     """List all external connectors with live status from the registry."""
     from connectors.registry import get_registry
     from database.manager import get_database
-    from database.models import CREATE_CONNECTORS
 
     db = get_database()
-    db.create_table(CREATE_CONNECTORS)
     rows = db.fetch_all("SELECT * FROM connectors ORDER BY created_at DESC")
     registry = get_registry()
 
@@ -704,10 +689,8 @@ def list_connectors():
 def add_connector(request: ConnectorRequest):
     """Add a new external connector."""
     from database.manager import get_database
-    from database.models import CREATE_CONNECTORS
 
     db = get_database()
-    db.create_table(CREATE_CONNECTORS)
     db.execute(
         "INSERT INTO connectors (name, type, service, config, status, created_at, updated_at) "
         "VALUES (?, ?, ?, ?, 'disconnected', datetime('now'), datetime('now'))",
@@ -726,11 +709,8 @@ def add_connector(request: ConnectorRequest):
 def update_connector(connector_id: int, request: ConnectorUpdateRequest):
     """Update an existing connector."""
     from database.manager import get_database
-    from database.models import CREATE_CONNECTORS
 
     db = get_database()
-    db.create_table(CREATE_CONNECTORS)
-
     # Check if connector exists
     existing = db.fetch_one("SELECT * FROM connectors WHERE id = ?", (connector_id,))
     if not existing:
@@ -773,10 +753,8 @@ def update_connector(connector_id: int, request: ConnectorUpdateRequest):
 def delete_connector(connector_id: int):
     """Remove an external connector."""
     from database.manager import get_database
-    from database.models import CREATE_CONNECTORS
 
     db = get_database()
-    db.create_table(CREATE_CONNECTORS)
     existing = db.fetch_one("SELECT * FROM connectors WHERE id = ?", (connector_id,))
     if not existing:
         return {"success": False, "error": f"Connector not found: {connector_id}"}
@@ -788,10 +766,8 @@ def delete_connector(connector_id: int):
 def test_connector(connector_id: int):
     """Test a connector's configuration."""
     from database.manager import get_database
-    from database.models import CREATE_CONNECTORS
 
     db = get_database()
-    db.create_table(CREATE_CONNECTORS)
     row = db.fetch_one("SELECT * FROM connectors WHERE id = ?", (connector_id,))
     if not row:
         return {"success": False, "error": f"Connector not found: {connector_id}"}

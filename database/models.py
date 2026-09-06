@@ -140,10 +140,31 @@ CREATE TABLE IF NOT EXISTS connectors (
 """
 
 # =============================================================================
+# Indexes
+# =============================================================================
+
+# The chat/conversation tables are queried exclusively by session — reading a
+# session's turns (WHERE session_id = ? ORDER BY id), trimming a session's
+# over-cap rows, and deleting a session on chat reset. Without an index every
+# one of those is a full table scan that grows with total history across ALL
+# sessions, not just the active one.
+CREATE_INDEX_CONVERSATION_MESSAGES_SESSION = """
+CREATE INDEX IF NOT EXISTS idx_conversation_messages_session
+ON conversation_messages (session_id)
+"""
+
+CREATE_INDEX_CHAT_MESSAGES_SESSION = """
+CREATE INDEX IF NOT EXISTS idx_chat_messages_session
+ON chat_messages (session_id)
+"""
+
+# =============================================================================
 # Registry: all known table schemas
 # =============================================================================
 
 # When new schemas are added, register them here for migration tracking.
+# DatabaseManager creates every schema here (plus ALL_INDEXES) automatically
+# when it connects, so the canonical schema is always present and self-healing.
 ALL_TABLES: dict[str, str] = {
     "github_projects": CREATE_GITHUB_PROJECTS,
     "github_summary": CREATE_GITHUB_SUMMARY,
@@ -153,4 +174,10 @@ ALL_TABLES: dict[str, str] = {
     "conversation_messages": CREATE_CONVERSATION_MESSAGES,
     "chat_messages": CREATE_CHAT_MESSAGES,
     "connectors": CREATE_CONNECTORS,
+}
+
+# Canonical indexes, also created automatically at connect time.
+ALL_INDEXES: dict[str, str] = {
+    "idx_conversation_messages_session": CREATE_INDEX_CONVERSATION_MESSAGES_SESSION,
+    "idx_chat_messages_session": CREATE_INDEX_CHAT_MESSAGES_SESSION,
 }

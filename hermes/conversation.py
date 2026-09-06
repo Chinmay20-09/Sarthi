@@ -82,18 +82,21 @@ class ConversationStore:
             return
 
         with self._lock:
-            self._db.execute(
-                "INSERT INTO conversation_messages (session_id, role, content, created_at) "
-                "VALUES (?, ?, ?, datetime('now'))",
-                (session_id, role, content),
-            )
-            # Keep only the newest max_messages turns for this session.
-            self._db.execute(
-                "DELETE FROM conversation_messages WHERE session_id = ? AND id NOT IN "
-                "(SELECT id FROM conversation_messages WHERE session_id = ? "
-                "ORDER BY id DESC LIMIT ?)",
-                (session_id, session_id, self._max_messages),
-            )
+            # Insert + trim in one atomic transaction: a single commit instead
+            # of two, and the session can never be observed mid-trim.
+            with self._db.transaction() as tx:
+                tx.execute(
+                    "INSERT INTO conversation_messages (session_id, role, content, created_at) "
+                    "VALUES (?, ?, ?, datetime('now'))",
+                    (session_id, role, content),
+                )
+                # Keep only the newest max_messages turns for this session.
+                tx.execute(
+                    "DELETE FROM conversation_messages WHERE session_id = ? AND id NOT IN "
+                    "(SELECT id FROM conversation_messages WHERE session_id = ? "
+                    "ORDER BY id DESC LIMIT ?)",
+                    (session_id, session_id, self._max_messages),
+                )
 
     def clear(self, session_id: str) -> None:
         """Forget all history for a session (e.g. a 'forget' command)."""

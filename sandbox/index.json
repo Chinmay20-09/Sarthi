@@ -375,6 +375,26 @@
       "tool_used": null,
       "timestamp": "2026-09-06T11:29:02.159681+00:00",
       "duration_ms": 136602.76539999995
+    },
+    {
+      "task_id": "task_f2672c",
+      "prompt": "hello",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-09-06T11:57:43.505678+00:00",
+      "duration_ms": 141120.27529999978
+    },
+    {
+      "task_id": "task_cec321",
+      "prompt": "hello",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-09-06T12:06:50.199010+00:00",
+      "duration_ms": 144490.57469999936
     }
   ],
   "how are you ?": [

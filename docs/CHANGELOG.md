@@ -7,6 +7,26 @@ in the git log.
 
 ## [Unreleased]
 
+### Performance (database, September 6)
+
+- **`session_id` indexes** on `conversation_messages` and `chat_messages` —
+  every chat read/trim/reset filters by session, but both tables were heap
+  scans. Verified via `EXPLAIN QUERY PLAN` tests (regression-protected).
+- **Single connection pragmas** — `synchronous=NORMAL` (the standard WAL
+  pairing; commits no longer fsync per-transaction) and a 5 s
+  `busy_timeout` (threadpool writers wait instead of failing instantly with
+  "database is locked").
+- **Connection lock + atomic `db.transaction()`** — the shared connection is
+  now serialized by a lock (concurrent threadpool writes are safe, not just
+  permitted), and multi-statement writes commit once with rollback on error;
+  `ConversationStore.add_turn` uses it for its insert+trim (2 commits → 1).
+- **Self-healing schema** — `DatabaseManager` creates every canonical table
+  and index from `models.py` (`ALL_TABLES`/`ALL_INDEXES`) at connect, so
+  endpoints and skills no longer run `CREATE TABLE IF NOT EXISTS` DDL on
+  every request (removed from all `api.py` handlers).
+- New tests: `tests/test_database_optimizations.py` (schema bootstrap, index
+  usage, pragmas, transaction commit/rollback, concurrent writers).
+
 ### Fixed (architecture audit, September 6)
 
 - **Order-dependent test** — `TestComposerRetryCandidates` in
