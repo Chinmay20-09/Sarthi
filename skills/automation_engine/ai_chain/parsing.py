@@ -30,12 +30,12 @@ _OPEN_CHAIN_RE = re.compile(
 # Trailing "and send it" / "sendit" / "and send" filler before "to <AI2>".
 _SEND_IT_SUFFIX_RE = re.compile(r"\s+(?:and\s+)?send\s*(?:it)?\s*$", re.IGNORECASE)
 
-_ACTION_PREFIX_RE = re.compile(
-    r"^(please\s+)?(chain|automate|run)\s+", re.IGNORECASE
-)
+_ACTION_PREFIX_RE = re.compile(r"^(please\s+)?(chain|automate|run)\s+", re.IGNORECASE)
 
 
-def parse_chain_command(raw_text: str, default_ai1: str = "chatgpt", default_ai2: str = "gemini") -> ChainRequest:
+def parse_chain_command(
+    raw_text: str, default_ai1: str = "chatgpt", default_ai2: str = "gemini"
+) -> ChainRequest:
     """
     Parse a chain command into a ChainRequest.
 
@@ -110,7 +110,7 @@ def extract_reply(transcript: str, prompt: str, footer_markers: tuple[str, ...] 
     if needle:
         match = _last_fuzzy_match(text, needle)
         if match is not None:
-            text = text[match.end():]
+            text = text[match.end() :]
 
     # Collapse the runaway blank lines copy-paste produces.
     lines = [line.rstrip() for line in text.splitlines()]
@@ -147,7 +147,7 @@ def paste_verify_prefix(prompt: str) -> str:
     text = (prompt or "").strip()
     if len(text) <= PASTE_VERIFY_CHARS:
         return text
-    cut = text[: PASTE_VERIFY_CHARS]
+    cut = text[:PASTE_VERIFY_CHARS]
     break_at = cut.rfind(" ")
     return cut[:break_at] if break_at > 0 else cut
 

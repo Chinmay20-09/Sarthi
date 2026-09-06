@@ -108,9 +108,7 @@ class SafeExecutor:
             )
         logger.info(f"[BROWSER] navigating to {url}")
         self._page.goto(url, timeout=NAVIGATION_TIMEOUT_MS, wait_until="domcontentloaded")
-        return ActionOutcome(
-            ok=True, status="executed", message=f"Opened {url}", detail=url
-        )
+        return ActionOutcome(ok=True, status="executed", message=f"Opened {url}", detail=url)
 
     def _scroll(self, element_id: str, snapshot: PageSnapshot) -> ActionOutcome:
         locator = self._live_locator(element_id, snapshot)
@@ -172,7 +170,9 @@ class SafeExecutor:
         try:
             if not locator.is_visible(timeout=ACTION_TIMEOUT_MS):
                 return None
-            disabled = locator.evaluate("(el) => el.disabled || el.getAttribute('aria-disabled') === 'true'")
+            disabled = locator.evaluate(
+                "(el) => el.disabled || el.getAttribute('aria-disabled') === 'true'"
+            )
             if disabled:
                 return None
         except Exception:

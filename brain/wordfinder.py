@@ -168,9 +168,7 @@ def add_keyword(name: str) -> bool:
     existing = {str(word).strip().lower() for word in data.get("keywords", [])}
     if clean not in existing:
         data.setdefault("keywords", []).append(clean)
-        KEYWORDS_FILE.write_text(
-            json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
-        )
+        KEYWORDS_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
         global _keywords_cache
         _keywords_cache = None
     return True

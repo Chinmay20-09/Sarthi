@@ -394,9 +394,7 @@ def _parse_compound(tokens: list[str], keys: list[str], raw_text: str) -> list[I
     # existing path.
     bare_domain = _extract_bare_domain(tokens)
     if bare_domain is not None and bare_domain not in _DETERMINISTIC_DOMAINS:
-        return [
-            Intent(action="browse", target=bare_domain, confidence=1.0, raw_text=raw_text)
-        ]
+        return [Intent(action="browse", target=bare_domain, confidence=1.0, raw_text=raw_text)]
 
     # The first search/play keyword after "open" drives the second intent.
     action_index = next(

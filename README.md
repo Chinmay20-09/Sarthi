@@ -26,10 +26,15 @@
 - [Web UI](#-web-ui)
 - [Testing](#-testing)
 - [Development](#-development)
-- [Deliverables & Verification](#-deliverables--verification)
 - [Roadmap](#-roadmap)
 - [Contributing](#-contributing)
 - [License](#-license)
+
+> **Docs:** this README covers setup and a high-level tour. The verified,
+> detailed architecture lives in **[ARCHITECTURE.md](ARCHITECTURE.md)**;
+> current status/limitations in **[PROJECT_STATE.md](PROJECT_STATE.md)**;
+> contribution rules in **[CONTRIBUTING.md](CONTRIBUTING.md)**; provider
+> environment variables in **[README_ENV.md](README_ENV.md)**.
 
 ---
 
@@ -174,43 +179,45 @@ curl http://127.0.0.1:8000/knowledge
 sarthi/
 ├── brain/          # Core intelligence pipeline
 │   ├── engine.py       # BrainEngine orchestrator
-│   ├── interpreter.py  # Text → Intent parser
-│   ├── planner.py      # Multi-step plan decomposer
-│   ├── executor.py     # Handler dispatcher
-│   ├── intent.py       # Intent data model
+│   ├── interpreter.py  # Text → Intent(s) parser (compound commands)
+│   ├── planner.py      # Documented pass-through (interpreter owns splitting)
+│   ├── executor.py     # Handler dispatcher (built-ins + skill pool, NLP last)
+│   ├── intent.py       # Intent data model (pipeline contract)
+│   ├── modes.py        # default / conversation mode + test mode
 │   ├── context.py      # Pipeline runtime context
 │   └── response.py     # Standardized response model
 │
 ├── knowledge/      # Entity knowledge base
-│   ├── manager.py      # KnowledgeManager (singleton)
+│   ├── manager.py      # KnowledgeManager (singleton, ONLY public interface)
 │   ├── loader.py       # Pure JSON I/O
-│   ├── entity_resolver.py  # Fuzzy entity matcher
-│   ├── applications.json  # 700+ discovered apps
+│   ├── entity_resolver.py  # Fuzzy entity matcher (dependency injection)
+│   ├── memory.py       # /remember facts + command history (SQLite)
+│   ├── cache.py        # TTL cache
+│   ├── applications.json  # Discovered apps (v2 categories; gitignored)
 │   └── websites.json      # Curated websites
 │
 ├── database/       # Persistent storage
-│   ├── manager.py      # DatabaseManager (SQLite)
-│   ├── models.py       # Table schemas
-│   └── cache/
-│       └── browser_cache.py # BrowserCache (browser session)
+│   ├── manager.py      # DatabaseManager (SQLite, single connection)
+│   └── models.py       # Table schemas
 │
-├── skills/         # Pluggable capabilities
+├── skills/         # Pluggable capabilities (one folder + manifest.json each)
 │   ├── base.py         # BaseSkill ABC
-│   ├── registry.py     # Skill discovery (auto-loads skills/)
+│   ├── registry.py     # Skill discovery (single mechanism)
 │   ├── app_launcher/   # Launch installed applications
-│   ├── browser/        # Open/search known websites
-│   ├── browser_awareness/ # Inspect arbitrary websites (Playwright)
+│   ├── browser/        # Open/search known websites + /browser/* routes
+│   ├── browser_awareness/ # Inspect arbitrary websites (Playwright, validated)
 │   ├── scanner/        # Application discovery engine
 │   ├── project_tracker/# GitHub integration
-│   ├── automation_engine/# AI-chain automation
-│   ├── natural_language_processor/ # Conversational fallback (Hermes)
+│   ├── automation_engine/# AI-chain laptop automation (ai_chain/ v1.5)
+│   ├── natural_language_processor/ # Conversational fallback (Hermes, last)
 │   └── ...             # speech, user_config, personal_context
 │
 ├── hermes/         # Conversational layer + tool bridge
-│   ├── orchestrator.py  # HermesOrchestrator (chat + tools)
+│   ├── orchestrator.py  # HermesOrchestrator (chat + bounded tool loop)
 │   ├── service.py       # Shared wiring (singletons)
-│   ├── tool_registry.py # Tools Hermes may request
+│   ├── tool_registry.py # Tools Hermes may request (allow-list)
 │   ├── providers/       # Provider adapters + registry (config-driven)
+│   ├── config/          # HermesConfig loader (.env)
 │   ├── models.py        # Task + provider-neutral ModelRequest
 │   └── routes.py        # /hermes/* FastAPI routes
 │
@@ -219,7 +226,7 @@ sarthi/
 │   ├── registry.py     # Connector discovery
 │   └── google_calendar/# OAuth2 Google Calendar connector
 │
-├── speech/         # Audio processing
+├── speech/         # Audio processing (push-to-talk, no wake word)
 │   ├── recorder.py     # Microphone recording
 │   └── speech_to_text.py # Whisper transcription (lazy model)
 │
@@ -228,22 +235,23 @@ sarthi/
 │   ├── voice.py        # Spoken announcements (automation contract)
 │   └── telemetry.py    # Hardware telemetry
 │
-├── UI/             # Web interface
+├── UI/             # Web interface (served by the API at /ui)
 │   ├── components/     # Shared sidebar + footer
 │   ├── components.js   # Component loader (declares the API origin)
 │   ├── dashboard.html  # Main HUD
-│   ├── chat.html       # Chat / memory / sandbox UI
+│   ├── chat.html       # Chat / memory / sandbox viewer / test runner
 │   ├── skills.html     # Skill repository
-│   ├── memory.html     # Neural context engine
-│   ├── knowledge.html  # Knowledge database + connectors
-│   ├── history.html    # Command timeline
-│   └── settings.html   # System settings
+│   ├── memory.html     # Knowledge + memory + history
+│   ├── knowledge.html  # Connectors
+│   ├── history.html    # Timeline (static mockup)
+│   └── settings.html   # Settings (static mockup)
 │
-├── api.py          # FastAPI server
-├── main.py         # CLI entry point
-├── start.bat       # Dev / windowless launcher for API + UI
-├── config.py       # Central configuration
-└── tests/          # 550+ pytest unit tests
+├── api.py          # FastAPI server (API + static UI, one process)
+├── main.py         # CLI entry point (voice)
+├── main-test.py    # Smoke test
+├── start.bat       # Dev / windowless launcher for the API
+├── config.py       # Central configuration (paths, ports, Whisper)
+└── tests/          # Pytest suite (580 tests)
 ```
 
 ### Knowledge System
@@ -322,7 +330,7 @@ class BaseSkill(ABC):
 | `browser` | 1.1.0 | Open/search known websites (deterministic) |
 | `scanner` | 1.1.0 | Application discovery engine |
 | `natural_language_processor` | 1.1.0 | Conversational fallback (Hermes chat) |
-| `speech` | 1.1.0 | Wake-word detection + Whisper |
+| `speech` | 1.1.0 | Push-to-talk voice input (mic + Whisper) |
 | `user_config` | 1.1.0 | User settings (github username, etc.) |
 | `personal_context` | 1.0.0 | Personal context (never changed since creation) |
 | `browser_awareness` | 1.0.0 | Inspect arbitrary websites (new in this release) |
@@ -526,9 +534,23 @@ The Entity Resolver consumes all types automatically.
 | `GET` | `/health` | Health check |
 | `POST` | `/command` | Process text: `{"text": "open chrome"}` |
 | `POST` | `/listen` | Process voice (records + transcribes via Whisper) |
+| `GET`/`POST` | `/mode` | Get/switch chat mode (default \| conversation) |
+| `GET`/`POST` | `/test-mode` | Dry-run mode for skills |
 | `GET` | `/knowledge` | Knowledge base statistics |
 | `GET` | `/applications` | List all discovered applications |
-| `GET` | `/skills` | List installed skills |
+| `GET`/`POST` | `/applications/*` | Categories, favourites, categorize, run |
+| `POST` | `/websites/search-and-save` | Browser-search fallback + remember site |
+| `GET` | `/memory`, `/command-history`, `/chat` | Memory, history, transcripts |
+| `POST`/`GET` | `/settings` | User settings (key/value) |
+| `GET` | `/skills`, `/skills/{id}` | List/inspect skills (+ enable/disable) |
+| `POST` | `/hermes/chat` | Hermes chat (tool bridge enabled) |
+| `GET` | `/hermes/tools`, `/hermes/sandbox`, `/hermes/status` | Tool list, query index, provider diagnostics |
+| `*` | `/browser/*` | Browser extension bridge |
+| `*` | `/connectors/*` | Connector CRUD + Google Calendar OAuth2 |
+| `GET` | `/system/metrics`, `/events/history` | Hardware telemetry, event log |
+| `GET`/`POST` | `/test/prompts`, `/test/run` | Prompt-suite test runner |
+
+The full request/response shapes are documented in **ARCHITECTURE.md → API/UI**.
 
 ### Example Response
 
@@ -580,7 +602,7 @@ python -m pytest tests/test_interpreter.py -v
 python -m pytest tests/ --cov=.
 ```
 
-**550+ tests** across 39 test files. Key coverage:
+**580 tests** across 39 test files. Key coverage:
 
 | Test File | Coverage |
 |---|---|
@@ -601,7 +623,7 @@ python -m pytest tests/ --cov=.
 
 ```
 python -m pytest tests/ -q
-# 550+ passed
+# 580 passed
 ```
 
 ---
@@ -633,7 +655,7 @@ mypy .
 - [x] Centralized KnowledgeManager (singleton)
 - [x] Clean separation: Loader / Manager / Scanner
 - [x] All tests passing
-- [x] Comprehensive type hints (100%)
+- [x] Type hints (mypy advisory/progressive — not 100%)
 - [x] Backward compatible — no breaking changes
 
 ### Performance Benchmarks
@@ -671,7 +693,7 @@ mypy .
 |---|---|
 | Type coverage | Advisory (mypy progressive mode) |
 | Error handling | Comprehensive |
-| Test suite | 550+ passing tests |
+| Test suite | 580 passing tests |
 | Performance | Optimized |
 | Maintainability | High |
 
@@ -685,12 +707,14 @@ mypy .
 | 4 | Database package (SQLite, models, cache) | ✅ Complete |
 | 5 | Centralized logging setup | ✅ Complete |
 | 6 | UI consolidation (shared components) | ✅ Complete |
-| 7 | Unit tests (550+ tests) | ✅ Complete |
+| 7 | Unit tests (580 tests) | ✅ Complete |
 | 8 | Automation engine cleanup | ✅ Complete |
 | 9 | Linting, formatting | ✅ Complete |
 | 10 | Clean architecture refactoring (Knowledge System) | ✅ Complete |
-| **11** | **Documentation** | **⬅️ This file** |
-| 12+ | Memory, vision, multi-agent, CI/CD | 🔮 Future |
+| 11 | Hermes provider abstraction (local / OpenRouter / OpenAI-compatible) | ✅ Complete |
+| 12 | Wake-word removal; single-port serving (API + UI on :8000) | ✅ Complete |
+| **13** | **Canonical docs (ARCHITECTURE.md, PROJECT_STATE.md)** | **⬅️ This pass** |
+| 14+ | Hermes skill authoring, vision, more connectors | 🔮 Future |
 
 ---
 
@@ -698,7 +722,7 @@ mypy .
 
 **Implemented:**
 - **Memory** — Persistent conversation history, /remember facts, settings (SQLite)
-- **CI/CD** — GitHub Actions (`tests/ci.yml`): lint, format, tests, smoke test
+- **CI/CD** — GitHub Actions (`.github/workflows/ci.yml`): lint, format, tests, smoke test
 - **Connectors** — Google Calendar (OAuth2); Gmail/email/IoT planned via `connectors/`
 - **Hermes integration** — Conversational fallback, tool bridge, sandbox execution records
 - **Browser Awareness** — Playwright-based inspection of arbitrary websites
@@ -708,7 +732,8 @@ mypy .
 - **Multi-agent** — Collaborative AI agents for complex tasks
 - **Plugin marketplace** — External skill discovery and loading
 - **More entity types** — Devices, contacts, plugins (no code changes needed)
-- **Hermes skill authoring** — validated creation/registration of new skills by Hermes (see `CONTRIBUTING.md` boundary)
+- **Hermes skill authoring** — validated creation/registration of new skills by Hermes (see `CONTRIBUTING.md` boundary; **planned, not implemented**)
+- **Gmail / IoT connectors** — registry scaffolding exists in `connectors/`
 
 ---
 
@@ -729,7 +754,7 @@ Quick start:
 
 ## 📄 License
 
-MIT — see [LICENSE](LICENSE) for details.
+MIT — intended licensing; a LICENSE file is not yet present in the repository.
 
 ---
 

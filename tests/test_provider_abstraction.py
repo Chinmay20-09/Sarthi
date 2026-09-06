@@ -96,7 +96,9 @@ def test_adapters_implement_the_provider_interface():
         LocalHermesProvider(HermesConfig(provider="ollama", model="m", local_model="hermes3:8b")),
         OpenRouterProvider(HermesConfig(provider="openrouter", model="m")),
         OpenAICompatibleProvider(
-            HermesConfig(provider="openai_compatible", model="m", openai_compatible_url="https://x/v1")
+            HermesConfig(
+                provider="openai_compatible", model="m", openai_compatible_url="https://x/v1"
+            )
         ),
     ]
     for provider in providers:
@@ -110,7 +112,11 @@ def test_capabilities_declare_only_what_adapters_honor():
     """No fabricated capabilities: vision/tool-calling/streaming stay off."""
     ollama = LocalHermesProvider(HermesConfig(provider="ollama", model="m"))
     assert ollama.capabilities() == ModelCapabilities(
-        tool_calling=False, structured_output=True, vision=False, streaming=False, context_window=None
+        tool_calling=False,
+        structured_output=True,
+        vision=False,
+        streaming=False,
+        context_window=None,
     )
 
     remote = OpenAICompatibleProvider(
@@ -538,9 +544,7 @@ def test_browser_awareness_builds_provider_through_registry(monkeypatch):
     from skills.browser_awareness import hermes_inspector
 
     sentinel = object()
-    monkeypatch.setattr(
-        "hermes.providers.registry.create_local_provider", lambda: sentinel
-    )
+    monkeypatch.setattr("hermes.providers.registry.create_local_provider", lambda: sentinel)
     hermes_inspector._local_provider_instance = None
 
     assert hermes_inspector._local_provider() is sentinel

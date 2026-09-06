@@ -15,17 +15,19 @@ knowledge/        Entity knowledge base. KnowledgeManager (singleton) is the ONL
                   public interface; loader.py is internal JSON I/O.
 skills/           Pluggable capabilities. One folder per skill with manifest.json.
                   skills/registry.py is the ONLY discovery mechanism.
-hermes/           Conversational layer: providers (OpenRouter + Ollama), tool
-                  bridge, sandbox execution records, /hermes/* API routes.
+hermes/           Conversational layer: providers (local Ollama / OpenRouter /
+                  OpenAI-compatible), tool bridge, sandbox execution records,
+                  /hermes/* API routes.
 connectors/       External service integrations (Google Calendar today).
 database/         SQLite access. DatabaseManager is the only connection owner;
                   all table schemas live in database/models.py.
-events/           EventBus — decoupled publish/subscribe.speech/            Audio: recorder, Whisper transcription.
+events/           EventBus — decoupled publish/subscribe.
+speech/           Audio: recorder, Whisper transcription (push-to-talk).
 utils/            Shared helpers (logger, voice announcements, telemetry).
 UI/               Static web interface served by api.py (/ui).
 api.py            FastAPI server — the ONLY API boundary for the UI.
-config.py         Central configuration.
-tests/            Pytest suite (550+ tests). Run with `python -m pytest tests/`.
+config.py         Central configuration (app paths/ports; Hermes uses .env).
+tests/            Pytest suite (580 tests). Run with `python -m pytest tests/`.
 ```
 
 ## Development Setup
@@ -55,6 +57,10 @@ Pre-commit hooks (ruff, smoke test, no-database-files guard) are configured
 in `.pre-commit-config.yaml`; the same checks run in CI (`.github/workflows/ci.yml`).
 
 ## Architecture Overview
+
+The canonical, code-verified architecture document is **`ARCHITECTURE.md`** —
+read it for the pipeline, Hermes/provider abstraction, Browser Awareness,
+configuration and persistence. The short version:
 
 ```
 UI (static pages) ──> api.py (FastAPI) ──> BrainEngine.process(text)
@@ -91,6 +97,8 @@ they cannot fulfill return `handled: True` so later fallbacks don't override the
 | `knowledge/` | Entity data + resolution | `knowledge/manager.py` schema (applications.json v2 categories) |
 | `skills/registry.py` | Skill discovery | `skills/base.py` interface |
 | `hermes/` | Conversational layer + tool bridge | `hermes/tool_registry.py` allow-list |
+| `hermes/providers/` | Provider adapters + registry | `registry.py` selection/fallback semantics |
+| `skills/browser_awareness/` | Validated web inspection | `schemas.py` validation gate, `executor.py` allow-list |
 | `connectors/` | External integrations | `connectors/base.py` interface |
 | `database/models.py` | All table schemas | schema changes need a migration note |
 
@@ -110,6 +118,20 @@ they cannot fulfill return `handled: True` so later fallbacks don't override the
    the day it was created — bump **both** `manifest.json` and the
    `BaseSkill.version` attribute in `main.py`.
 4. Add tests under `tests/test_<skill_id>.py`.
+
+### Adding a Provider (Hermes)
+
+1. Create `hermes/providers/<name>.py` — a subclass of `AIProvider`
+   (`hermes/providers/base.py`): map `ModelRequest` → the provider's wire
+   format and the response → `ProviderResponse`; override `capabilities()`
+   with only what you actually implement.
+2. Register it in `hermes/providers/registry.py` (`create_primary` + aliases).
+3. Document the env vars in `.env.example` and `README_ENV.md`.
+4. Add tests modeled on `tests/test_provider_abstraction.py` (no live API
+   needed — assert on the normalized `ModelRequest`).
+
+That is the entire integration: no Hermes core, Brain, skill, or API changes.
+Hermes core must never import a concrete adapter — only the registry may.
 
 ### Adding a Connector
 
@@ -191,9 +213,13 @@ Rules:
   scanner, not the output (it is gitignored and machine-specific).
 - `database/sarthi.db` and any `*.db*` files — personal data, never
   committed (a pre-commit hook blocks them).
+- `sandbox/`, `sandbox_test/` — Hermes runtime records (gitignored; the
+  tracked copies predate the ignore rule — they get untracked, not edited).
 - `hermes/tool_registry.py` allow-list — adding a tool here grants Hermes
   a new capability; review it like a security change.
 - `brain/executor.py` dispatch order — the NLP fallback must stay last.
+- `skills/browser_awareness/executor.py` selector allow-list and
+  `schemas.py` validation gate — these are the browser safety boundary.
 
 ## Getting Help
 

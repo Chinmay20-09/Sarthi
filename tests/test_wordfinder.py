@@ -18,38 +18,40 @@ from brain.wordfinder import (
 class TestFindTargetKeyword:
     def test_single_word_prefix(self):
         """A known keyword at the start of the target words is returned."""
-        assert find_target_keyword(
-            ["chatgpt", "and", "get", "prompt"], frozenset({"chatgpt"})
-        ) == ("chatgpt", 1)
+        assert find_target_keyword(["chatgpt", "and", "get", "prompt"], frozenset({"chatgpt"})) == (
+            "chatgpt",
+            1,
+        )
 
     def test_longest_match_wins(self):
         """Multi-word keywords beat their single-word prefixes."""
-        assert find_target_keyword(
-            ["chat", "gpt", "logo"], frozenset({"chat gpt", "chat"})
-        ) == ("chat gpt", 2)
+        assert find_target_keyword(["chat", "gpt", "logo"], frozenset({"chat gpt", "chat"})) == (
+            "chat gpt",
+            2,
+        )
 
     def test_no_match_returns_none(self):
         """Unrecognised targets are left untouched."""
-        assert find_target_keyword(
-            ["visual", "studio", "code"], frozenset({"chatgpt"})
-        ) is None
+        assert find_target_keyword(["visual", "studio", "code"], frozenset({"chatgpt"})) is None
 
     def test_multiword_keyword_must_be_a_prefix(self):
         """'file explorer' matches only when it starts the target words."""
         assert find_target_keyword(
             ["file", "explorer", "settings"], frozenset({"file explorer"})
         ) == ("file explorer", 2)
-        assert find_target_keyword(
-            ["settings", "file", "explorer"], frozenset({"file explorer"})
-        ) is None
+        assert (
+            find_target_keyword(["settings", "file", "explorer"], frozenset({"file explorer"}))
+            is None
+        )
 
     def test_keyword_longer_than_words_does_not_match(self):
         assert find_target_keyword(["chatgpt"], frozenset({"chat gpt"})) is None
 
     def test_punctuation_on_word_is_ignored(self):
-        assert find_target_keyword(
-            ["chatgpt,", "make", "logo"], frozenset({"chatgpt"})
-        ) == ("chatgpt", 1)
+        assert find_target_keyword(["chatgpt,", "make", "logo"], frozenset({"chatgpt"})) == (
+            "chatgpt",
+            1,
+        )
 
 
 class TestKeywordDb:
@@ -67,9 +69,7 @@ class TestKeywordDb:
         from brain import wordfinder
 
         user_file = tmp_path / "keywords.json"
-        user_file.write_text(
-            json.dumps({"keywords": ["telegram", "whatsapp"]}), encoding="utf-8"
-        )
+        user_file.write_text(json.dumps({"keywords": ["telegram", "whatsapp"]}), encoding="utf-8")
         monkeypatch.setattr(wordfinder, "KEYWORDS_FILE", user_file)
         monkeypatch.setattr(wordfinder, "_keywords_cache", None)
 
@@ -133,9 +133,10 @@ class TestLearnedAppKeywords:
         """A learned app name stops the 'open ...' target like any keyword."""
         fake = _FakeKnowledgeManager([{"name": "Telegram", "aliases": []}])
         keywords = get_keywords(manager=fake)
-        assert find_target_keyword(
-            ["telegram", "and", "get", "messages"], keywords
-        ) == ("telegram", 1)
+        assert find_target_keyword(["telegram", "and", "get", "messages"], keywords) == (
+            "telegram",
+            1,
+        )
 
     def test_broken_knowledge_is_graceful(self):
         """A failing knowledge layer contributes nothing, never crashes."""

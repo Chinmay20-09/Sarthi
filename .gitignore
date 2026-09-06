@@ -155,6 +155,8 @@ results/
 # ==========================================
 
 skills/automation_engine/ai_chain/calibration.json
+# Persistent automation Chrome profile (logins — personal data)
+skills/automation_engine/ai_chain/.chrome-profile/
 
 # ==========================================
 # User-editable interpreter keywords (wordfinder)

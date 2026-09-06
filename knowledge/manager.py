@@ -560,11 +560,13 @@ class KnowledgeManager:
                 break
 
         if not found:
-            websites.append({
-                "name": clean_name,
-                "url": url,
-                "aliases": new_aliases,
-            })
+            websites.append(
+                {
+                    "name": clean_name,
+                    "url": url,
+                    "aliases": new_aliases,
+                }
+            )
 
         return self.save_websites(websites)
 

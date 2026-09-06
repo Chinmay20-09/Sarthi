@@ -24,8 +24,10 @@ from brain.modes import get_test_mode
 from utils.logger import get_logger
 from utils.voice import announce
 
+from . import handoff
 from .calibration import get_downloads_dir, resolve_site
 from .control import AbortError, ScreenController
+from .dom import reset_dom_reader
 from .models import ChainOutcome, ChainRequest, SiteSpec, StepOutcome
 from .sites import WebAiDriver
 from .storage import ChainRun
@@ -37,9 +39,11 @@ HANDS_OFF_MESSAGE = """
  ⚠  AI CHAIN — HANDS-OFF MODE
  -------------------------------------------------------------------
  Sarthi is about to take control of your keyboard and mouse to drive
- ChatGPT and Gemini for you.
+ the AI sites for you (in its own automation Chrome window).
 
  ▶ DO NOT touch your keyboard or mouse while it works.
+ ▶ First run only: log in to each site once in the automation window;
+   the session is remembered for later runs.
  ▶ To abort at any moment:
       • press  Ctrl+Alt+X
       • or slam the mouse into any screen corner (failsafe)
@@ -88,9 +92,7 @@ def run_ai_chain(
     try:
         spec1, spec2 = resolve_site(request.ai1), resolve_site(request.ai2)
     except ValueError as exc:
-        outcome = ChainOutcome(
-            request=request, success=False, status="failed", message=str(exc)
-        )
+        outcome = ChainOutcome(request=request, success=False, status="failed", message=str(exc))
         if execute:
             _save_to_sandbox(request, outcome)
         return outcome
@@ -117,6 +119,7 @@ def run_ai_chain(
 
     run = ChainRun(request.query, root=results_root)
     run.write_text("01_query.txt", request.query)
+    handoff.reset()  # the backend starts clean with every run
     steps: list[StepOutcome] = []
 
     try:
@@ -125,16 +128,26 @@ def run_ai_chain(
         steps.append(step1)
         if not step1.success:
             return _finish_and_record(
-                request, steps, run, "failed",
+                request,
+                steps,
+                run,
+                "failed",
                 f"AI1 ({spec1.label}) failed: {step1.error}",
             )
 
-        # Step 2 — paste AI1's reply into AI2 as the prompt.
-        step2 = _drive(ctrl, run, spec2, step1.response, index=2)
+        # Step 2 — send AI1's reply to AI2 as the prompt. The prompt is
+        # sourced FROM the backend hand-off (the saved copy), not from the
+        # clipboard or the in-memory step result — the clipboard is scratch
+        # space the verification copies keep overwriting.
+        backend_prompt = handoff.load("step1_response") or step1.response
+        step2 = _drive(ctrl, run, spec2, backend_prompt, index=2)
         steps.append(step2)
         if not step2.success:
             return _finish_and_record(
-                request, steps, run, "failed",
+                request,
+                steps,
+                run,
+                "failed",
                 f"AI2 ({spec2.label}) failed: {step2.error}",
             )
 
@@ -146,10 +159,7 @@ def run_ai_chain(
                 step2.artifacts.append(kept)
                 harvested.append(str(kept))
 
-        message = (
-            f"Chain completed: {spec1.label} -> {spec2.label}. "
-            f"Run folder: {run.dir}"
-        )
+        message = f"Chain completed: {spec1.label} -> {spec2.label}. Run folder: {run.dir}"
         if harvested:
             message += f" | image: {harvested[0]}"
         return _finish_and_record(request, steps, run, "completed", message)
@@ -161,6 +171,9 @@ def run_ai_chain(
         return _finish_and_record(request, steps, run, "failed", f"Chain failed: {exc}")
     finally:
         ctrl.release()
+        # Drop the v1.5 CDP attachment (if any) so the browser session is
+        # released and the next run re-checks for a debug port.
+        reset_dom_reader()
         announce(VOICE_DONE)
         print("Hands-off mode ended — you can use your keyboard and mouse again.")
 
@@ -180,14 +193,14 @@ def _drive(
     """Drive one AI site: send the prompt, capture and save the reply."""
     started = time.perf_counter()
     outcome = StepOutcome(index=index, site_key=spec.key, site_label=spec.label, prompt=prompt)
+    handoff.save(f"step{index}_prompt", prompt)  # backend copy for paste retries
     try:
-        response = WebAiDriver(ctrl).ask(spec, prompt)
+        response = WebAiDriver(ctrl).ask(spec, prompt, prompt_key=f"step{index}_prompt")
         outcome.response = response
         if response.strip():
-            artifact = run.write_text(
-                f"0{index}_step{index}_{spec.key}_response.txt", response
-            )
+            artifact = run.write_text(f"0{index}_step{index}_{spec.key}_response.txt", response)
             outcome.artifacts.append(artifact)
+            handoff.save(f"step{index}_response", response)
         else:
             outcome.error = "AI returned an empty reply"
     except AbortError as exc:
@@ -213,10 +226,15 @@ def _plan_only(request: ChainRequest, spec1: SiteSpec, spec2: SiteSpec) -> Chain
     """Dry-run: describe exactly what a real run would do, touch nothing."""
     steps = [
         StepOutcome(index=1, site_key=spec1.key, site_label=spec1.label, prompt=request.query),
-        StepOutcome(index=2, site_key=spec2.key, site_label=spec2.label, prompt=f"<reply from {spec1.label}>"),
+        StepOutcome(
+            index=2,
+            site_key=spec2.key,
+            site_label=spec2.label,
+            prompt=f"<reply from {spec1.label}>",
+        ),
     ]
     plan = [
-        f"1. Open {spec1.label} and send: \"{request.query}\"",
+        f'1. Open {spec1.label} and send: "{request.query}"',
         f"2. Open {spec2.label} and paste AI1's reply as the prompt",
         "3. Save every response to the run folder",
     ]
@@ -309,9 +327,6 @@ def _save_to_sandbox(request: ChainRequest, outcome: ChainOutcome) -> None:
             duration_ms=sum(step.duration_ms for step in outcome.steps),
             trace=trace,
         )
-        logger.info(
-            f"ai_chain run recorded in sandbox: {request.query!r} "
-            f"({outcome.status})"
-        )
+        logger.info(f"ai_chain run recorded in sandbox: {request.query!r} ({outcome.status})")
     except Exception:
         logger.exception("Could not save ai_chain run to sandbox")

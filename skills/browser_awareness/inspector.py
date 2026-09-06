@@ -162,7 +162,6 @@ class PlaywrightInspector:
             raw_elements=raw.get("elements", []),
         )
         logger.info(
-            f"[BROWSER] inspected {snapshot.url}: "
-            f"{len(snapshot.elements)} interactive elements"
+            f"[BROWSER] inspected {snapshot.url}: {len(snapshot.elements)} interactive elements"
         )
         return snapshot

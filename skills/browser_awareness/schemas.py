@@ -76,6 +76,7 @@ class PageSnapshot(BaseModel):
 # Hermes observation model (must be produced as strict JSON)
 # ---------------------------------------------------------------------------
 
+
 class RecommendedAction(BaseModel):
     """One action Hermes recommends the Brain may execute."""
 
@@ -101,6 +102,7 @@ class InspectionResult(BaseModel):
 # Executor output
 # ---------------------------------------------------------------------------
 
+
 class ActionOutcome(BaseModel):
     ok: bool
     status: Literal["executed", "needs_confirmation", "blocked", "invalid", "error"]
@@ -120,9 +122,7 @@ class BrowserTaskResult(BaseModel):
     final_understanding: str = ""
 
 
-def validate_inspection(
-    inspection: InspectionResult, snapshot: PageSnapshot
-) -> list[str]:
+def validate_inspection(inspection: InspectionResult, snapshot: PageSnapshot) -> list[str]:
     """Pure validation of a Hermes recommendation against the page snapshot.
 
     Returns a list of human-readable problems; an empty list means the
@@ -158,14 +158,20 @@ def validate_inspection(
 
     if not element.visible:
         problems.append(f"Element '{action.element_id}' is hidden.")
-    if not element.enabled and action.type in ("click", "type", "select", "check", "uncheck", "submit"):
+    if not element.enabled and action.type in (
+        "click",
+        "type",
+        "select",
+        "check",
+        "uncheck",
+        "submit",
+    ):
         problems.append(f"Element '{action.element_id}' is disabled.")
 
     allowed = ACTION_KIND_RULES.get(action.type, ())
     if allowed and element.kind not in allowed:
         problems.append(
-            f"Cannot {action.type} on a {element.kind} element "
-            f"('{action.element_id}')."
+            f"Cannot {action.type} on a {element.kind} element ('{action.element_id}')."
         )
 
     if action.type in ("type", "select", "check", "uncheck") and not action.value:

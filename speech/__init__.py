@@ -8,4 +8,4 @@ Components:
 Public API:
     record_audio() -> str      — Record and save audio file
     transcribe(path) -> str    — Transcribe audio to text
-"""
+"""

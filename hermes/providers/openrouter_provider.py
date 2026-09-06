@@ -1,4 +1,3 @@
-
 from hermes.config.settings import HermesConfig
 
 from .openai_compatible import OpenAICompatibleProvider

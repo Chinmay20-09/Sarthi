@@ -78,6 +78,120 @@ DEFAULT_SITES: dict[str, SiteSpec] = {
         ),
         loading_markers=("Stop", "Generating", "Creating"),
     ),
+    "claude": SiteSpec(
+        key="claude",
+        label="Claude",
+        url="https://claude.ai/new",
+        title_keyword="Claude",
+        composer=(0.5, 0.94),
+        read_point=(0.5, 0.3),
+        footer_markers=("Claude can make mistakes. Please double-check responses",),
+        login_markers=(
+            "Log in",
+            "Sign in",
+            "Continue with",
+            "Email address",
+            "Work email",
+        ),
+        landing_markers=(
+            "What would you like help with",
+            "Start a new conversation",
+            "New conversation",
+        ),
+        loading_markers=("Stop", "Thinking", "Generating"),
+    ),
+    "perplexity": SiteSpec(
+        key="perplexity",
+        label="Perplexity",
+        url="https://www.perplexity.ai/",
+        title_keyword="Perplexity",
+        composer=(0.5, 0.95),
+        read_point=(0.5, 0.3),
+        footer_markers=(
+            "Ask follow-up",
+            "Follow-up",
+            "Sources",
+        ),
+        login_markers=(
+            "Log in",
+            "Sign up",
+            "Continue with",
+            "Get started",
+        ),
+        landing_markers=(
+            "What do you want to know",
+            "Ask anything",
+            "New Thread",
+        ),
+        loading_markers=("Stop generating", "Searching", "Thinking"),
+    ),
+    "grok": SiteSpec(
+        key="grok",
+        label="Grok",
+        url="https://grok.com/",
+        title_keyword="Grok",
+        composer=(0.5, 0.95),
+        read_point=(0.5, 0.3),
+        image_capable=True,
+        image_download_point=None,
+        footer_markers=("Grok can make mistakes",),
+        login_markers=(
+            "Log in",
+            "Sign up",
+            "Continue with",
+        ),
+        landing_markers=(
+            "What do you want to know",
+            "Ask Grok anything",
+            "New chat",
+        ),
+        loading_markers=("Stop generating", "Thinking", "Generating"),
+    ),
+    "deepseek": SiteSpec(
+        key="deepseek",
+        label="DeepSeek",
+        url="https://chat.deepseek.com/",
+        title_keyword="DeepSeek",
+        composer=(0.5, 0.95),
+        read_point=(0.5, 0.3),
+        footer_markers=(
+            "DeepSeek can make mistakes",
+            "Content is for reference only",
+        ),
+        login_markers=(
+            "Log in",
+            "Sign in",
+            "Register",
+        ),
+        landing_markers=(
+            "What can I help you with",
+            "New chat",
+        ),
+        loading_markers=("Stop responding", "Thinking"),
+    ),
+    "copilot": SiteSpec(
+        key="copilot",
+        label="Copilot",
+        url="https://copilot.microsoft.com/",
+        title_keyword="Copilot",
+        composer=(0.5, 0.95),
+        read_point=(0.5, 0.3),
+        image_capable=True,
+        image_download_point=None,
+        footer_markers=("Copilot can make mistakes",),
+        login_markers=(
+            "Sign in",
+            "Log in",
+            "Microsoft account",
+            "Continue with",
+        ),
+        landing_markers=(
+            "What do you want to do",
+            "Ask me anything",
+            "New chat",
+        ),
+        loading_markers=("Stop generating", "Thinking", "Generating"),
+    ),
 }
 
 # Aliases the user might say when naming an AI.
@@ -89,9 +203,40 @@ SITE_ALIASES: dict[str, str] = {
     "open ai chat": "chatgpt",
     "gemini": "gemini",
     "google gemini": "gemini",
+    "claude": "claude",
+    "claude ai": "claude",
+    "anthropic": "claude",
+    "perplexity": "perplexity",
+    "grok": "grok",
+    "x ai": "grok",
+    "deepseek": "deepseek",
+    "copilot": "copilot",
+    "bing ai": "copilot",
 }
 
 DEFAULT_DOWNLOADS_DIR = "~/Downloads"
+
+# Dedicated browser profile the robot drives (v1.5). Persistent, so the
+# user logs in to each AI site ONCE and every later run is already
+# authenticated — and because the profile dir is explicit, Chrome honours
+# the remote-debugging flag, which is what makes v1.5 DOM locating work.
+# Some machines silently refuse the debug flag on the default profile, so
+# the robot never relies on the user's own browser window.
+DEFAULT_PROFILE_DIR = PACKAGE_DIR / ".chrome-profile"
+PROFILE_DIR_ENV = "AI_CHAIN_PROFILE_DIR"
+PROFILE_SWITCH_ENV = "AI_CHAIN_AUTOMATION_PROFILE"
+
+
+def get_automation_profile_dir() -> Path:
+    """Where the robot's Chrome profile lives (env-overridable)."""
+    raw = os.getenv(PROFILE_DIR_ENV, "").strip()
+    return Path(raw).expanduser() if raw else DEFAULT_PROFILE_DIR
+
+
+def automation_profile_enabled() -> bool:
+    """Master switch: AI_CHAIN_AUTOMATION_PROFILE=0 uses the default browser."""
+    return os.getenv(PROFILE_SWITCH_ENV, "").strip() != "0"
+
 
 # User-editable overrides (created by calibrate.py on first run).
 CALIBRATION_FILE = PACKAGE_DIR / "calibration.json"

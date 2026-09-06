@@ -1,5 +1,10 @@
 # Sarthi Architecture - Post-Audit Notes
 
+> ℹ️ **Superseded.** The canonical architecture document is now
+> [`ARCHITECTURE.md`](../ARCHITECTURE.md) at the repo root. This file remains
+> as a valid migration/reference record (canonical imports, removed modules);
+> its test counts and skill lists reflect an earlier date.
+
 ## System Overview
 
 Sarthi is a Desktop AI Assistant built with a layered architecture:

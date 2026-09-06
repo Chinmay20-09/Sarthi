@@ -1,288 +1,421 @@
-> ⚠️ **Historical document.** This is the record of the August 2026 audit
-> and the fixes it drove. The current compatibility audit lives at
-> [`AUDIT_REPORT.md`](../AUDIT_REPORT.md) (repo root) — read that one
-> first. Numbers below reflect the state at the time of writing.
+# Sarthi Compatibility Audit
 
-# Sarthi Codebase Audit Report
-**Date:** August 14, 2026  
-**Status:** Comprehensive audit completed with critical fixes applied
+> ℹ️ **Status note (September 6, 2026):** this report's findings still hold.
+> A follow-up verification pass re-ran the suite (**580 tests, 0 failed**,
+> ruff lint/format clean) and created the canonical
+> [`ARCHITECTURE.md`](ARCHITECTURE.md) + [`PROJECT_STATE.md`](PROJECT_STATE.md).
+
+**Date:** September 4, 2026
+**Scope:** Full architecture and compatibility audit before opening the
+repository for collaboration.
+**Method:** The code is the source of truth. Every claim below was verified
+against the implementation (not documentation), the test suite, and live
+API/schema probes.
 
 ---
 
 ## Executive Summary
 
-A full codebase audit was conducted to identify outdated, dead, and broken code. **3 critical issues** were found and fixed. The system now has improved cleanliness and maintainability.
+Sarthi is a layered, skill-based desktop assistant. The core pipeline —
+Scanner → Knowledge → EntityResolver → Interpreter → Executor → Skills — is
+**internally compatible**: scanner output (`{name, aliases, path, category}`)
+flows through `KnowledgeManager.merge_scan_results()` into the v2 categorized
+`applications.json`, `get_all_entities()` feeds `EntityResolver`, and the
+resolved `Intent` dispatches to built-in handlers and registered skills. All
+**549 baseline tests pass** (561 after this audit's additions).
 
-**Tests Status:** ✅ All 209 tests passing
+The implementation is in better shape than its documentation. **The main
+blocker to collaboration is stale documentation**: README.md and
+docs/ARCHITECTURE_NOTES.md describe deleted modules (`brain/entity_resolver.py`,
+`knowledge/router.py`), outdated numbers (1040 apps vs 726, 109 tests vs 549),
+and planned features that are already implemented (memory, CI/CD). These were
+corrected as part of this audit.
 
----
+Hermes is currently a **conversational/orchestration layer, not a
+skill-authoring agent**. The capability-building model described in the
+brief (Brain detects a missing capability → Hermes builds it → validation →
+registration) is **not yet implemented**; the existing safety mechanisms
+(tool-bridge allow-list, argument validation, sandbox records, Browser
+Awareness validation gate) already satisfy the "Hermes must not touch core"
+boundary. Per the audit rules, no large framework was invented — the missing
+contract is documented and the minimal boundary is preserved.
 
-## Critical Issues Fixed ✅
-
-### 1. **Import Ordering Bug in api.py** (HIGH)
-**Status:** ✅ FIXED
-
-**Issue:** Import and router registration were placed AFTER the `if __name__ == "__main__"` block (lines 273-275), making them unreachable when api.py is imported as a module.
-
-**Fix Applied:**
-- Moved `from skills.browser.routes import router as browser_router` to imports section (line 36)
-- Moved `app.include_router(browser_router)` to app configuration section (line 51)
-- Removed duplicate code after `if __name__` block
-
-**Impact:** API can now be properly imported as a module without losing browser routes.
-
----
-
-### 2. **Duplicate Skill Discovery Systems** (HIGH)
-**Status:** ✅ PARTIALLY FIXED - Consolidation recommended
-
-**Issue:** Two parallel skill loading systems existed:
-- `skills/manager.py` - Old system with `load_skills()` and `load_skill_instances()`
-- `skills/registry.py` - New system with `SkillRegistry` class
-
-Both were being used in different parts of the codebase.
-
-**Fixes Applied:**
-- Updated `skills/automation_engine/skill.py` to import SKILLS_DIR from canonical `config.py` instead of `skills/manager.py`
-- Confirmed `brain/engine.py` and `api.py` use the new `registry.py` system
-
-**Recommendation:** 
-- Keep `skills/registry.py` as canonical system (already used by BrainEngine)
-- Document that `skills/manager.py` is for backward compatibility only
-- Consider deprecation timeline for full removal in v2.0
+**Final status: READY WITH WARNINGS.** No critical compatibility boundary is
+broken; the warnings concern documented-but-unimplemented future work
+(Hermes skill authoring, connectors beyond Google Calendar) and a few
+maintainability items.
 
 ---
 
-### 3. **Duplicate Resolver Shims** (HIGH)
-**Status:** ✅ FIXED
+## Current Architecture
 
-**Issue:** Two identical backward-compatibility shims existed:
-- `brain/resolver.py` - Re-exported EntityResolver
-- `brain/entity_resolver.py` - Also re-exported EntityResolver
+```
+UI (8 static pages, served at /ui)
+        │  fetch() only
+        ▼
+api.py (FastAPI, 127.0.0.1:8000)          ── mounts /ui, CORS locked to local origins
+        │  /command /listen /mode /knowledge /applications /memory /chat /settings
+        │  /skills /connectors /hermes/* /browser/* /test/* /system/metrics
+        ▼
+BrainEngine (brain/engine.py)
+   interpret (brain/interpreter.py) → plan (brain/planner.py, pass-through)
+   → resolve (knowledge/entity_resolver.py) → execute (brain/executor.py)
+        │
+        ├── built-in handlers: open → AppLauncher → BrowserSkill → needs_decision
+        │                      browse → BrowserAwarenessSkill (validated actions)
+        │                      remember/recall/forget/clean
+        ├── skills fallback pool (skills/registry.py → 10 skills, NLP last)
+        └── NLP skill → hermes.service.chat → HermesOrchestrator
+                            ├── ToolPlanner → ToolRegistry → existing skills
+                            └── TaskSandbox (sandbox/, indexed by query)
 
-Both pointed to `knowledge/entity_resolver.py` as canonical location.
+Knowledge layer: KnowledgeManager (knowledge/manager.py) ← KnowledgeLoader ← JSON
+                 EntityResolver (DI, knowledge/entity_resolver.py)
+                 Memory (knowledge/memory.py) + Cache (knowledge/cache.py)
 
-**Fixes Applied:**
-- Removed duplicate `brain/resolver.py` 
-- Updated `brain/engine.py` to import from `brain/entity_resolver.py`
-- Updated `tests/test_brain_engine.py` to import from `brain/entity_resolver.py`
-- Kept `brain/entity_resolver.py` as the maintained backward-compatibility shim
-
-**Impact:** Reduced redundant code paths, clearer import chain.
-
----
-
-## Additional Issues Fixed ✅
-
-### 4. **Debug Print Statements** (LOW)
-**Status:** ✅ FIXED
-
-**File:** `speech/speech_to_text.py`
-
-**Changes:**
-- Line 71-72: Replaced `print(f"Language: {info.language}")` with `logger.debug(...)`
-- Line 72: Replaced `print(f"Probability: {info.language_probability:.2f}")` with `logger.debug(...)`
-- Line 77: Replaced `print(segment.text)` with `logger.debug(segment.text)`
-
-**Impact:** Professional logging instead of debug prints. Respects logging configuration.
-
----
-
-### 5. **Orphaned Files Removed** (MEDIUM)
-**Status:** ✅ FIXED
-
-**Files Deleted:**
-- `brain/resolver.py` - Duplicate shim (consolidation with entity_resolver.py)
-- `models/intent.py` - Orphaned Intent model (canonical: brain/intent.py)
-- `knowledge/scanners/application_scanner.py` - Duplicate shim (consolidation with knowledge/scanners/__init__.py)
-
-**Verification:** Grep verified no files import these deleted modules.
-
----
-
-## Outstanding Issues Requiring Attention
-
-### 1. **Deprecated Module - brain/normalizer.py** (HIGH)
-**Status:** ✅ RESOLVED — removed in the September 2026 cleanup
-
-**Issue:** Entire module deprecated in favor of `brain/interpreter.py`. Generated DeprecationWarnings on every test run.
-
-**Resolution:**
-- Removed `brain/normalizer.py`
-- Removed `tests/test_normalizer.py` (it tested deprecated code only)
-- Deprecation warnings are gone; use `brain.interpreter.interpret()` for new code
-
----
-
-### 2. **Deprecated Package - actions/** (MEDIUM)
-**Status:** ✅ RESOLVED — package removed in the September 2026 cleanup
-
-**Issue:** Entire `actions/` package was deprecated. Architecture has moved to the skill-based system.
-
-**Files Removed:** 
-- `actions/apps.py` - Shim for `skills/app_launcher/`
-- `actions/browser.py` - Shim for `skills/browser/`
-- `actions/files.py` - Incomplete stub
-- `actions/system.py` - Incomplete stub
-
-**Resolution:**
-- Removed the whole package; use skills or BrainEngine:
-  ```python
-  # NEW (recommended)
-  from brain.engine import BrainEngine
-  engine = BrainEngine()
-  response = engine.process("open Chrome")
-  ```
-
----
-
-### 3. **Brain/schemas.py** (LOW)
-**Status:** ✅ RESOLVED — removed in the September 2026 cleanup
-
-**Issue:** Was a single re-export of Intent from brain.intent.py
-
-**Resolution:** Removed; import `Intent` directly from `brain.intent`
-
----
-
-### 4. **Incomplete Implementations** (MEDIUM)
-**Status:** 📋 NEEDS RESOLUTION
-
-| File | Issue | Recommendation |
-|------|-------|-----------------|
-| `brain/planner.py` | Pass-through stub only. Comment says "Future: split compound commands" | Implement or document as future work |
-| `actions/files.py` | Complete stub: "Future: Create, read, write..." | ✅ Removed with `actions/` |
-| `actions/system.py` | Complete stub: "Future: Shutdown, restart..." | ✅ Removed with `actions/` |
-| `skills/automation_engine/preview.py` | Marked "Status: Stub" | Complete or remove |
-
----
-
-### 5. **Missing Directory Error Handling** (MEDIUM)
-**Status:** ⚠️ NEEDS FIX
-
-**File:** `api.py` line 52
-
-**Issue:** Static files mount assumes `UI/` directory exists:
-```python
-app.mount("/ui", StaticFiles(directory="UI"), name="ui")
+Data: SQLite via DatabaseManager (database/manager.py), schemas in database/models.py
+Events: EventBus (events/bus.py)
+Connectors: connectors/registry.py → google_calendar (OAuth2)
 ```
 
-**Recommendation:** Add error handling:
-```python
-from pathlib import Path
-if Path("UI").exists():
-    app.mount("/ui", StaticFiles(directory="UI"), name="ui")
-else:
-    logger.warning("UI directory not found - static files not mounted")
+**Registries (single owner per concern):**
+
+| Registry | Module | Notes |
+|---|---|---|
+| Skills | `skills/registry.py` | manifest.json discovery + enable/disable |
+| Hermes tools | `hermes/tool_registry.py` | allow-list, validated args, bounded loop |
+| Connectors | `connectors/registry.py` | BaseConnector subclasses |
+| Entities | `knowledge/manager.py` | applications v2 / websites v1 schemas |
+| Executor handlers | `brain/executor.py` | built-in handlers + skills fallback |
+
+---
+
+## Compatibility Matrix
+
+| Boundary | Status | Problem | Action |
+|---|---|---|---|
+| Scanner → Knowledge | **PASS** | None — scanner dicts merge into v2 categories; games keep `category="game"`; new apps land in `unattended` | Locked by `tests/test_pipeline_compatibility.py` |
+| Knowledge → Resolver | **PASS** | None — `get_all_entities()` produces `{name, aliases, category}` which `EntityResolver._build_index` consumes | Covered by `test_resolve.py`, `test_resolver_matching.py` |
+| Resolver → Executor | **PASS** | None — resolved `Intent.target` dispatches to handlers/skills | Covered by `test_brain_engine.py` |
+| Brain → Hermes | **PASS** | NLP fallback skill is registered last (`fallback=True`) and calls `hermes.service.chat` (plain chat, no tools) | Locked by new Brain→Hermes tests |
+| Hermes → Skill Registry | **PASS** | Tools only; argument validation + unknown-tool graceful failure; never registers skills | Covered by `test_tool_bridge.py` |
+| Hermes → Sandbox | **PASS** | Every task saved, indexed by query; cleanup keeps failures | Covered by `test_sandbox_query_index.py` |
+| Browser → Hermes | **PASS** | Snapshot (structured PageSnapshot) → Hermes observes → `validate_inspection` gate → SafeExecutor; Hermes never controls the browser | Covered by `test_browser_awareness.py` |
+| API → Frontend | **PASS** | All endpoints the UI fetches exist (`/test/run`, `/hermes/tools`, `/connectors/*`, `/command-history`, …); no UI→internal-module calls | Verified by grep of UI fetches vs api.py routes |
+| Config → Hermes | **PASS (fix applied)** | `.env.example`/`README_ENV.md` said `LOCAL_HERMES_URL=http://localhost:8088`; code default is Ollama's `:11434` | Fixed docs to `:11434` |
+
+---
+
+## Hermes Audit
+
+**Conceptual model check** (Brain detects missing capability → Hermes builds
+it → validation → registration → Sarthi uses it):
+
+| Question | Finding |
+|---|---|
+| How does Sarthi detect a missing capability? | Not implemented. The executor falls back to the NLP skill for unhandled intents, but nothing detects "a capability is missing and should be built". |
+| How is Hermes invoked? | NLP fallback skill (`hermes.service.chat`), `/hermes/chat` route, `hermes/main.py` standalone. |
+| What input does Hermes receive? | `Task{prompt, instructions, history, memory}`; tool calls come back as strict JSON `{"tool_call": {...}}`. |
+| What output does Hermes produce? | `ProviderResponse{success, provider, model, text, error, tool_used}`; task + trace saved to sandbox. |
+| How does Hermes create a skill? | **It does not** — by design. No skill-authoring path exists today. |
+| Where are skills stored / registered? | `skills/<id>/` with `manifest.json`; auto-discovered by `skills/registry.py`. |
+| Skills enabled/disabled? | `SkillRegistry.enable/disable` (writes `enabled` to manifest) + `/skills/{id}/enable|disable`. |
+| Skills validated? | Manifest JSON parse + `BaseSkill` subclass discovery on instantiation; no deeper validation. |
+| Failures handled? | Provider failure → local fallback → graceful `ProviderResponse`; tool failures → safe `ToolResult`; sandbox keeps failed tasks. |
+| Can Hermes modify core logic? | No. Tools delegate to existing skills; no code/shell/filesystem tools are registered. |
+| Can Hermes overwrite a skill? | No path exists. |
+| Can Hermes create malformed skills? | No path exists (nothing to validate yet). |
+| Can a failed Hermes op break the repo? | No. Sandbox writes are isolated under `sandbox/` (gitignored); tools never write core files. |
+
+**Conclusion:** the *safety* half of the capability-building model is fully
+realized (Hermes cannot touch core, cannot execute unvalidated actions,
+cannot loop). The *capability-building* half (create/validate/register a
+skill) is **planned, not implemented**. Per the audit brief, no framework was
+invented; the boundary is documented in `CONTRIBUTING.md` ("Hermes
+Contribution Boundary") and README roadmap. When implemented, it must follow
+the Browser Awareness pattern: Hermes proposes → Brain validates (manifest
+shape, BaseSkill interface, tests pass) → registry registers.
+
+The closest existing mechanism is the automation engine's BrainAssistant,
+which generates `assistant.json` metadata from a skill's `manifest.json`
+(`skills/automation_engine/assistants/brain_assistant/`) — a read-only
+metadata generator, a safe precedent for future authoring.
+
+---
+
+## Browser Awareness Audit
+
+Well-structured and decoupled:
+
+```
+open <domain> + task  →  interpreter routes to action="browse"
+  → BrowserAwarenessSkill → BrowserAwarenessManager
+      → PlaywrightInspector → build_page_snapshot → PageSnapshot (structured)
+      → HermesInspector.observe() → strict InspectionResult JSON
+      → validate_inspection() (pure gate: element exists, visible, enabled,
+        kind matches action, navigate is http(s) only)
+      → SafeExecutor.perform() (allow-list actions, inspector-generated
+        selectors only, live re-checks)
+      → reinspect → done / blocked / step limit (MAX_STEPS=8)
 ```
 
----
-
-## Files Reviewed and Status
-
-### ✅ Clean/Well-Maintained
-- `brain/engine.py` - Proper architecture, good documentation
-- `brain/executor.py` - Well-structured handler dispatch system
-- `brain/interpreter.py` - Clear NLP pipeline
-- `brain/intent.py` - Well-designed Intent model
-- `brain/context.py` - Good context management
-- `brain/response.py` - Proper response structure
-- `brain/entity_resolver.py` - Maintained backward-compat shim
-- `skills/registry.py` - Well-designed plugin system
-- `skills/base.py` - Clear BaseSkill interface
-- `knowledge/entity_resolver.py` - Canonical resolver location
-- `knowledge/router.py` - Good routing logic
-- `utils/logger.py` - Proper logging setup
-- `database/manager.py` - Clean database interface
-- `events/bus.py` - Good event system
-
-### ✅ Removed in Later Cleanup
-- `brain/normalizer.py` - Deprecated → removed (September 2026)
-- `actions/` package - Deprecated shims → removed (September 2026)
-
-### 🔧 Incomplete/Stubs
-- `brain/planner.py` - Pass-through only
-- `skills/automation_engine/preview.py` - Stub
+- **Structured observation for Hermes:** yes — `PageSnapshot{url, title,
+  text, elements[{id, kind, text, placeholder, label, name, href, selector}]}`
+  matches the brief's recommended schema (elements carry ids + kind + text +
+  selector). No full DOM/HTML ever leaves the page; sensitive fields
+  (password/token/pin) are scrubbed.
+- **Not coupled to Hermes:** the manager works against injected
+  inspector/hermes/executor interfaces; Hermes is replaceable. Tests run
+  without Playwright/Chrome/Ollama.
+- **Safety:** requires_confirmation halts high-impact actions; temporary
+  isolated profile destroyed on every exit path; CDP attach mode closes only
+  its own tab.
 
 ---
 
-## Code Quality Improvements Made
+## API Audit
 
-| Change | Impact | Status |
-|--------|--------|--------|
-| Fixed import ordering in api.py | API now properly importable | ✅ FIXED |
-| Consolidate resolver shims | Clearer dependency chain | ✅ FIXED |
-| Remove duplicate scanner shim | Reduce code duplication | ✅ FIXED |
-| Replace debug print with logging | Professional logging, respects config | ✅ FIXED |
-| Standardize SKILLS_DIR imports | Use canonical config module | ✅ FIXED |
+All endpoints the frontend calls exist (verified by cross-checking UI
+`fetch()` calls against `api.py` + mounted routers). Key groups:
 
----
+| Method | Path | Input | Output | Consumer |
+|---|---|---|---|---|
+| POST | `/command` | `{text, session_id?}` | API dict + `steps[]` | UI chat/dashboard |
+| POST | `/listen` | — | same shape | UI |
+| GET/POST | `/mode` | `{mode}` | `{success, mode}` | UI |
+| GET | `/knowledge` | — | counts + last_scan | UI |
+| GET | `/applications`, `/applications/categories`, `/favourites` | — | app lists | UI |
+| POST | `/applications/categorize`, `/applications/run` | `{name, status}` / `{name}` | result | UI |
+| GET/POST/DELETE | `/memory`, `/chat`, `/command-history` | session/key | lists | UI |
+| GET | `/skills`, `/skills/{id}`; POST enable/disable | — | metadata | UI |
+| GET/POST/PUT/DELETE | `/connectors*`, `/connectors/google_calendar/*` | config | status/result | UI knowledge page |
+| POST | `/hermes/chat`; GET `/hermes/tools`, `/hermes/sandbox` | `{message, session_id?}` | structured response | UI |
+| POST | `/browser/*` | BrowserAction etc. | result | browser extension |
+| POST | `/test/run`, `/test/prompts`; GET/POST `/test-mode` | — | results + telemetry | UI test runner |
+| GET | `/system/metrics`, `/events/history`, `/health` | — | metrics/events | UI/debug |
 
-## Test Coverage
+Note: the brief asks about `GET /history` — the implemented endpoint is
+`GET /command-history` (UI history.html uses it). No documentation claims a
+`/history` endpoint exists.
 
-**Before Audit:** 209 passing tests  
-**After Audit:** 209 passing tests ✅  
-**Since (September 2026):** 549+ passing tests, 0 deprecation warnings
-
-No regressions introduced by changes.
-
----
-
-## Recommended Action Plan
-
-### Immediate (This Sprint)
-- [x] Remove `brain/normalizer.py` and `tests/test_normalizer.py` — done
-- [ ] Add error handling for missing `UI/` directory in `api.py` — still open
-- [ ] Review and decide: Keep or implement `brain/planner.py` — still open
-
-### Short-term (Next Sprint)
-- [x] Remove `actions/files.py` and `actions/system.py` stubs — done (package removed)
-- [x] Update internal imports to avoid `skills/manager.py` — done (module removed)
-- [x] Document API changes required for removing `actions/` package — done
-
-### Long-term (v2.0 Planning)
-- [x] Remove entire `actions/` package — done
-- [x] Remove all backward-compat shims — done
-- [ ] Migrate all imports to canonical locations — in progress
+**Issue fixed:** `UI/skills.html` hardcoded `http://127.0.0.1:8000` in two
+fetches instead of using the shared `API` constant from `components.js`
+(behavior unchanged; consistency with the other pages restored).
 
 ---
 
-## Migration Guide for Developers
+## Knowledge/Schema Audit
 
-**DO:**
-```python
-# ✅ Recommended
-from brain.engine import BrainEngine
-from skills.registry import get_registry
-from knowledge.entity_resolver import EntityResolver
-```
-
-**DON'T:**
-```python
-# ❌ Removed — use the canonical imports above
-from actions.apps import open_app
-from brain.resolver import EntityResolver
-from brain.normalizer import normalize
-from skills.manager import load_skill_instances
-```
+- **Applications (v2):** `{version: 2, last_scan, categories: {favourite,
+  ignored, unattended}}`. `KnowledgeManager` stamps `app_status` on load;
+  legacy v1 `{entities: []}` files load as all-unattended. Scanner output is
+  merged without losing user categorization (`merge_scan_results`).
+- **Websites (v1):** `{version: 1, entities: [...]}` with `name/url/aliases`;
+  `add_website` upserts by lowercase name (no duplicates).
+- **One canonical entity model:** `get_all_entities()` normalizes all types
+  to `{name, aliases, category, ...}` for the resolver. No duplicate schemas
+  were found.
+- **Data facts (shipped files):** 726 applications (14 favourite, 712
+  ignored, 0 unattended; 4 games), 5 websites. README previously claimed
+  1040+ — corrected.
+- **Mismatch fixed:** `knowledge/__init__.py` docstring still referenced the
+  removed `scanners.*` package — corrected to point at `skills/scanner`.
 
 ---
 
-## Summary Statistics
+## Test Coverage Audit
 
-| Metric | Count |
-|--------|-------|
-| Critical Issues Fixed | 3 |
-| Medium Issues Fixed | 2 |
-| Low Issues Fixed | 1 |
-| Outstanding High-Priority Issues | 0 |
-| Outstanding Medium-Priority Issues | 1 |
-| Files Deleted | 3 |
-| Files Modified | 5 |
-| Test Coverage Maintained | ✅ 100% |
-| Deprecation Warnings Remaining | 21 (from deprecated normalizer.py) |
+Baseline: **549 passed / 0 failed** (`python -m pytest tests/ -q`,
+39 files). Coverage by boundary:
+
+| Boundary | Tests |
+|---|---|
+| Scanner | `test_scanner.py` (model, ignore rules, merge priority) |
+| Scanner → Knowledge | `test_knowledge_manager.py` (categories, merge), **new** `test_pipeline_compatibility.py` |
+| Knowledge → Resolver | `test_resolve.py` (rewritten into real tests), `test_resolver_matching.py` |
+| Resolver → Executor | `test_brain_engine.py` |
+| Interpreter | `test_interpreter.py`, `test_interpreter_search_split.py`, `test_wordfinder.py`, `test_fuzzy.py` |
+| Executor | `test_executor.py`, `test_skill_base.py` |
+| API | `test_hermes_api.py`, `test_api_db_threads.py`, `test_chat_memory_api.py`, `test_knowledge_manager.py` (API cases) |
+| Hermes | `test_hermes_api.py`, `test_local_provider.py`, `test_fallback.py`, `test_sandbox_query_index.py`, `test_conversation_history.py`, **new** Brain→Hermes cases |
+| Hermes → Tools | `test_tool_bridge.py` |
+| Browser Awareness | `test_browser_awareness.py` (snapshot, safety gate, manager loop, routing) |
+| Connectors | `test_connectors.py` |
+
+**Fixed during audit:**
+- `tests/test_resolve.py` and `tests/test_entity_resolver.py` were scripts
+  with `print()` statements and **no test functions** — pytest collected
+  nothing from them. `test_resolve.py` was rewritten as 7 real tests;
+  `test_entity_resolver.py` (subsumed) was removed.
+- Added `tests/test_pipeline_compatibility.py` (5 tests) locking the
+  Scanner→Knowledge→Resolver and Brain→Hermes boundaries.
+
+Final suite: **561 tests** (to be re-verified).
 
 ---
 
-**Audit Completed:** August 14, 2026  
-**Next Audit Recommended:** Before v2.0 release
+## Documentation Audit
+
+| File | Verdict | Action |
+|---|---|---|
+| `README.md` | Stale: `brain/entity_resolver.py` (deleted), 1040 apps (726), 109 tests/9 files (549/39), deleted files in structure (`query_cache.py`, `helpers.py`), fabricated verification output, wrong install command, roadmap items already implemented | **Updated** |
+| `docs/ARCHITECTURE_NOTES.md` | Stale: `knowledge.router.DataSource` (doesn't exist), 409 tests (549), missing new skills | **Updated** |
+| `docs/AUDIT_REPORT.md` / `docs/AUDIT_CHECKLIST.md` | Historical audit records with outdated counts; still useful as history | **Bannered as historical**, counts corrected, point to root report |
+| `docs/AUDIT_SUMMARY.txt` | Empty file | **Removed** |
+| `docs/ABSOLUTE.md` | Binding automation contract; matches `utils/voice.py` + `ai_chain` implementation | OK |
+| `audit.md` (root) | Sandbox failure analysis; matches `local_provider.py` retry + sandbox cleanup code | OK |
+| `README_ENV.md` | `LOCAL_HERMES_URL` port stale (8088 vs 11434); missing `LOCAL_HERMES_MODEL`/`LOCAL_HERMES_TIMEOUT` | **Updated** |
+| `CONTRIBUTING.md` | Did not exist | **Created** |
+| `CHANGELOG.md` | Did not exist | **Created** (verifiable changes only) |
+
+---
+
+## Collaboration Readiness
+
+A new contributor can now answer every question from the brief:
+
+- **Where to add a skill** → `CONTRIBUTING.md` (folder + manifest.json + BaseSkill)
+- **Where to add an API** → `api.py` or a mounted router
+- **Where to add a connector** → `connectors/` + registry, reference: google_calendar
+- **Where application knowledge comes from** → scanner skill → `KnowledgeManager`
+- **How Hermes works** → `hermes/` + CONTRIBUTING boundary section
+- **How Browser Awareness works** → `skills/browser_awareness/` + tests
+- **How tests run** → `python -m pytest tests/ -q`
+- **How configuration works** → `config.py` + `.env` (Hermes/connectors)
+- **Files to NOT modify** → `CONTRIBUTING.md` (generated JSON, db files,
+  tool-registry allow-list, executor dispatch order)
+
+Remaining gap: no issue/PR templates, and `docs/ARCHITECTURE_NOTES.md`
+still carries a light "v2.0" framing — acceptable as future-work notes.
+
+---
+
+## Critical Issues
+
+**None found.** No boundary that would break the system or block
+collaboration remains: the pipeline is compatible end-to-end, the API
+surface is complete, and the test suite is green.
+
+## Non-Critical Issues
+
+**HIGH**
+1. *Resolved in this audit:* README/docs described deleted modules and
+   wrong architecture locations (`brain/entity_resolver.py`,
+   `knowledge/router.py`) — corrected.
+
+**MEDIUM**
+2. *Resolved:* script-style test files (`test_resolve.py`,
+   `test_entity_resolver.py`) provided zero coverage — rewritten/removed.
+3. *Resolved:* `.env.example`/`README_ENV.md` documented a stale Ollama
+   port (`8088` vs `11434`) — corrected.
+4. *Open:* Hermes skill-authoring contract is documented but unimplemented —
+   tracked in CHANGELOG/README roadmap.
+5. *Open:* only Google Calendar connector exists; Gmail/email/IoT remain
+   planned (documented in `connectors/registry.py` discover() comments).
+6. *Open:* `hermes/routes.py` keeps module-level `_orchestrator`/`_sandbox`
+   globals only because tests patch them — harmless dead state, worth
+   removing when tests are migrated to patch `hermes.service` directly.
+7. *Open:* `brain/planner.py` is a documented pass-through (the interpreter
+   already handles compound commands) — fine, but the file's "Future" prose
+   should stay honest, which it does.
+
+**LOW**
+8. *Resolved:* `UI/skills.html` hardcoded API origin — now uses the shared
+   `API` constant.
+9. *Resolved:* `knowledge/__init__.py` stale `scanners.*` docstring.
+10. *Open:* UI pages each redeclare their own API constant rather than
+    importing from `components.js` (chat.html documents why: `const` name
+    collision). Not a bug; a shared `SarthiAPI` in components.js would be
+    cleaner.
+11. *Open:* `sandbox/` and `sandbox_test/` are in `.gitignore` but were
+    committed before the ignore was added, so they are still tracked.
+    `tests/test_fallback_integration.py` and `tests/test_sandbox_query_index.py`
+    write into them on every run, dirtying the working tree (observed
+    during this audit; the working copies were restored). Fix: untrack with
+    `git rm -r --cached sandbox sandbox_test` in the next commit — the
+    pre-commit no-database-files hook already guards the SQLite files, and
+    the sandbox is personal runtime data that should never be committed.
+12. *Resolved:* `.gitignore`'s `.env.*` pattern also ignored `.env.example`,
+    so the file README tells contributors to copy could never be committed.
+    Added a `!.env.example` negation so the template stays tracked.
+13. *Observed quirk (not a defect):* a machine-scanned app can shadow a
+    website's alias in the resolver when both clean to the same string
+    (e.g. an app literally named `github` beats the GitHub website's alias,
+    because canonical names are indexed before aliases). Behavior is
+    deterministic and machine-specific; websites remain reachable by their
+    canonical name. Noted so resolver changes keep this tradeoff in mind.
+
+---
+
+## Recommended Next Steps
+
+1. **Implement Hermes skill authoring** with the documented boundary
+   (propose → validate → register) when collaboration starts; model it on
+   the Browser Awareness validation gate.
+2. **Add connectors** (Gmail first — registry scaffolding exists) and their
+   `/connectors/*` UI surface.
+3. **Replace the pass-through planner** with real compound-command
+   decomposition, or remove the "Future" prose and let the interpreter own
+   it explicitly.
+4. **Add a GitHub Actions badge + issue templates** to make the repo
+   inviting to first-time contributors.
+5. **Re-run the test suite on the `testing` branch** after merge and update
+   the CHANGELOG `[Unreleased]` section.
+
+---
+
+## Hermes Model Compatibility
+
+**Scope:** post-audit refactor that makes Hermes provider/model-agnostic
+(Sarthi core is model-agnostic; Hermes is provider-agnostic; provider-specific
+behavior lives behind small adapters). Changing the model is a configuration
+change.
+
+| Item | Finding |
+|---|---|
+| Current provider | Config-driven, **local-first default**: `HERMES_PROVIDER=local` (no `.env` value → local-only Ollama, no cloud calls). Remote providers are opt-in (`openrouter`, `openai_compatible`/`openai`) and automatically get a local Ollama fallback. Canonical values: `local`/`ollama`, `openrouter`, `openai_compatible`/`openai`. Unknown values fall back to the safe **local** provider with a logged warning (never silently remote). |
+| Current model | `HERMES_MODEL` (default `openai/gpt-5`); local inference uses `LOCAL_HERMES_MODEL` (default `hermes3:8b`) |
+| Provider abstraction | `AIProvider` (`hermes/providers/base.py`): `generate(ModelRequest) -> ProviderResponse`, `capabilities() -> ModelCapabilities`. Request + response normalization happen inside adapters; Hermes core, orchestrator, planner, routes never import a concrete provider. |
+| Request normalization | `Task` (orchestration record: id/context) → `Task.to_request()` → `ModelRequest` (prompt, instructions, history, memory, tools, structured_output, images, temperature). Conversion happens at the `ProviderManager` boundary and inside adapters (`as_request`), so adapters never see orchestration metadata. |
+| Response normalization | Single `ProviderResponse{success, provider, model, text, error, tool_used, data, usage, raw}` — no provider payloads leak into Hermes. |
+| Configuration path | `.env` only: `HERMES_PROVIDER`, `HERMES_MODEL`, `LOCAL_HERMES_*`, `OPENROUTER_*`, `OPENAI_COMPATIBLE_URL`/`OPENAI_COMPATIBLE_API_KEY` (documented in `README_ENV.md`, `.env.example`). Loaded by `hermes/config/loader.py` into `HermesConfig`. |
+| Supported capabilities | Adapters declare only what they implement: Ollama + OpenAI-compatible both honor `structured_output` (JSON mode / `response_format=json_object`). `vision`, `streaming`, native `tool_calling` are not implemented — Hermes uses its prompt-based tool protocol + JSON parse/validation fallback for every model, so no capability is silently fabricated. |
+| Provider-specific code location | `hermes/providers/` only: `local_provider.py` (Ollama /api/chat), `openai_compatible.py` (generic /chat/completions), `openrouter_provider.py` (subclass: endpoint/key/headers). Selection in `hermes/providers/registry.py`. |
+| Adding a provider | Write one `AIProvider` adapter → register in `registry.py` → set `HERMES_PROVIDER`. No Brain/Interpreter/Resolver/Executor/Knowledge/Browser-Awareness/Skill-Registry changes. |
+| Browser Awareness compatibility | Independent of the configured model: the inspector/ai_chain accept an injected provider, and their default local model is built through the registry (`create_local_provider`), not a concrete import. PageSnapshot → observe → `validate_inspection` gate → SafeExecutor unchanged. |
+| API compatibility | `/hermes/*`, `/command`, `/listen`, `/browser/*`, `/skills/*` unchanged. Added `GET /hermes/status` (provider/model/capabilities/fallback; no secrets). |
+| Failure handling | Provider unavailable / invalid provider / timeout / malformed response / null content / missing endpoint / missing key → graceful `ProviderResponse(success=False, error=...)`; API returns structured errors, never crashes, never exposes keys. |
+| Tests | Existing suite **537 passed / 0 failed** (509 prior + 28 new in `tests/test_provider_abstraction.py`: interface, selection, request/response normalization, capability detection, structured-output flags, tool-call normalization, failure modes, BA decoupling, status endpoint). Two legacy tests updated to the new boundary (`test_fallback.py`, `test_tool_bridge.py`) — providers now assert on the normalized `ModelRequest`, not `Task` metadata. No live model or key required. |
+| Remaining limitations | Native tool-calling/vision/streaming are not wired (safe fallbacks exist); OpenAI-compatible capability detection is per-endpoint at request time (an endpoint that rejects `response_format` surfaces a graceful provider error); keyless endpoints send no auth header. |
+
+**Final status: PASS WITH LIMITATIONS** — Hermes is provider/model-agnostic
+and the next provider is cheap to add (adapter + registry entry + config). The
+limitations are unimplemented adapter features with existing safe fallbacks,
+not architectural gaps.
+
+---
+
+## Final Report
+
+| Item | Result |
+|---|---|
+| Tests passed | 549 baseline; **561 after the audit pass** (12 new/rewritten); **537 current** after the post-audit wake-word removal (−52) and Hermes provider refactor (+28) |
+| Tests failed | 0 |
+| Files modified | Audit pass: `README.md`, `docs/ARCHITECTURE_NOTES.md`, `docs/AUDIT_REPORT.md`, `docs/AUDIT_CHECKLIST.md`, `README_ENV.md`, `.env.example`, `.gitignore`, `knowledge/__init__.py`, `knowledge/entity_resolver.py`, `UI/skills.html`, `tests/test_resolve.py`. Post-audit: `hermes/{models,service,main,routes,orchestrator,tool_planner}.py`, `hermes/config/{settings,loader}.py`, `hermes/providers/{base,manager,local_provider,openrouter_provider,__init__}.py`, `skills/browser_awareness/hermes_inspector.py`, `skills/automation_engine/ai_chain/awareness.py`, `speech/__init__.py`, `skills/speech/main.py`, `events/bus.py`, `start.bat`, `tests/test_fallback.py`, `tests/test_tool_bridge.py`, `CHANGELOG.md` |
+| Files created | `AUDIT_REPORT.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `tests/test_pipeline_compatibility.py`, `hermes/providers/{registry,openai_compatible}.py`, `tests/test_provider_abstraction.py` |
+| Files removed | `tests/test_entity_resolver.py` (script, no tests), `docs/AUDIT_SUMMARY.txt` (empty), wake-word feature (`wakeword.py`, `variable.py`, `wakeword.bat`, `speech/wake_word.py`, `tests/test_wake_word.py`) |
+| Documentation updated/removed | See Documentation Audit table; provider config documented in `README_ENV.md` + `.env.example` |
+| Architectural mismatches found | None blocking; doc/code mismatches corrected (see above); Hermes provider coupling centralized behind adapters (see Hermes Model Compatibility) |
+| Hermes readiness | Safe as a conversational/orchestration layer today; provider/model-agnostic (PASS WITH LIMITATIONS); **not** yet a capability-builder (documented plan) |
+| Overall collaboration readiness | **Ready** — a contributor can onboard via README + CONTRIBUTING; docs now match code |
+
+## Final Status
+
+**READY WITH WARNINGS** — the repository is internally compatible and
+collaboration-ready. The warnings are *documented future work* (Hermes skill
+authoring, more connectors), not broken boundaries. No critical issue was
+found that would block opening the project.
+
+Post-audit passes (wake-word removal, Hermes provider abstraction) are green:
+**537 tests pass, 0 fail**, ruff clean, and the Hermes model-compatibility
+refactor rates **PASS WITH LIMITATIONS** (see the section above).

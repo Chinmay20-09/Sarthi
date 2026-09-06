@@ -58,14 +58,12 @@ app = FastAPI(title="Sarthi API")
 # Sarthi runs on 127.0.0.1 and holds personal data (memories, chat
 # transcripts, settings). A wildcard allowlist would let ANY website the
 # user visits read GET /memory, /chat, /settings and even POST /command
-# (open apps, remember facts, ...). Only the local UI may call the API
-# cross-origin: the UI served by this API itself on :8000 (same origin,
-# unaffected by CORS) and the static UI server on :5500 (dev + background).
+# (open apps, remember facts, ...). The dashboard is served by this API
+# itself on :8000; the two variants below cover the same origin reached
+# via localhost vs 127.0.0.1 (different origins to the browser).
 LOCAL_UI_ORIGINS = [
     "http://127.0.0.1:8000",
     "http://localhost:8000",
-    "http://127.0.0.1:5500",
-    "http://localhost:5500",
 ]
 
 app.add_middleware(
@@ -1647,7 +1645,25 @@ def toggle_test_mode(request: ModeRequest):
 
 
 if __name__ == "__main__":
+    import argparse
+
     import uvicorn
 
+    # reload=True spawns the server through uvicorn 0.51's multiprocessing
+    # reloader — a detached spawn worker. Closing the "Sarthi API" window
+    # kills the reloader but NOT the worker, which keeps listening on port
+    # 8000: a zombie that the next start.bat run collides with (its health
+    # check hits the stale instance instead of the fresh one). The default
+    # is therefore a single process that dies with the window; pass
+    # --reload only when you want hot-reload while editing (and accept the
+    # orphaned worker on window close).
+    parser = argparse.ArgumentParser(description="Sarthi API server")
+    parser.add_argument(
+        "--reload",
+        action="store_true",
+        help="enable uvicorn hot-reload (spawns a worker process)",
+    )
+    args, _unknown = parser.parse_known_args()
+
     bus.publish("system_startup", {}, source="api")
-    uvicorn.run("api:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("api:app", host="127.0.0.1", port=8000, reload=args.reload)

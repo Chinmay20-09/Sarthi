@@ -32,9 +32,7 @@ from .manager import BrowserAwarenessManager
 logger = get_logger(__name__)
 
 # A bare domain or full URL ("example.com", "www.example.com/pricing").
-_URL_RE = re.compile(
-    r"(?i)(?:https?://)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:[/:][^\s]*)?"
-)
+_URL_RE = re.compile(r"(?i)(?:https?://)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:[/:][^\s]*)?")
 
 # Leading connectors/fillers that may precede the objective clause.
 _OBJECTIVE_LEAD_RE = re.compile(r"^(?:and\s+|then\s+|to\s+|please\s+)*", re.IGNORECASE)
@@ -137,7 +135,7 @@ def parse_browse_request(text: str) -> tuple[str, str]:
         return "", ""
 
     url = _normalise_url(match.group(0).strip())
-    suffix = cleaned[match.end():].strip()
+    suffix = cleaned[match.end() :].strip()
     objective = _OBJECTIVE_LEAD_RE.sub("", suffix).strip(" ,.!?;:").strip()
     return url, objective
 

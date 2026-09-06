@@ -26,8 +26,17 @@ from skills.browser_awareness.schemas import (
 )
 
 
-def _element(kind="button", text="Pricing", selector="a:nth-of-type(2)",
-             visible=True, enabled=True, name="", placeholder="", label="", href=""):
+def _element(
+    kind="button",
+    text="Pricing",
+    selector="a:nth-of-type(2)",
+    visible=True,
+    enabled=True,
+    name="",
+    placeholder="",
+    label="",
+    href="",
+):
     return ElementInfo(
         id="el_1",
         kind=kind,
@@ -55,8 +64,20 @@ class TestSnapshotBuilding:
     def test_hidden_and_disabled_elements_are_dropped(self):
         raw = [
             {"kind": "button", "text": "ok", "selector": "#a", "visible": True, "enabled": True},
-            {"kind": "button", "text": "ghost", "selector": "#b", "visible": False, "enabled": True},
-            {"kind": "button", "text": "locked", "selector": "#c", "visible": True, "enabled": False},
+            {
+                "kind": "button",
+                "text": "ghost",
+                "selector": "#b",
+                "visible": False,
+                "enabled": True,
+            },
+            {
+                "kind": "button",
+                "text": "locked",
+                "selector": "#c",
+                "visible": True,
+                "enabled": False,
+            },
             {"kind": "link", "text": "no selector", "visible": True, "enabled": True},
         ]
         snapshot = build_page_snapshot("https://x.io", "X", "body", raw)
@@ -64,7 +85,13 @@ class TestSnapshotBuilding:
 
     def test_element_cap_is_enforced(self):
         raw = [
-            {"kind": "link", "text": f"l{i}", "selector": f"#id{i}", "visible": True, "enabled": True}
+            {
+                "kind": "link",
+                "text": f"l{i}",
+                "selector": f"#id{i}",
+                "visible": True,
+                "enabled": True,
+            }
             for i in range(60)
         ]
         snapshot = build_page_snapshot("https://x.io", "X", "body", raw, max_elements=10)
@@ -93,17 +120,39 @@ class TestSnapshotBuilding:
 
     def test_duplicate_selectors_are_dropped(self):
         raw = [
-            {"kind": "button", "text": "first", "selector": "#dup", "visible": True, "enabled": True},
-            {"kind": "button", "text": "second", "selector": "#dup", "visible": True, "enabled": True},
+            {
+                "kind": "button",
+                "text": "first",
+                "selector": "#dup",
+                "visible": True,
+                "enabled": True,
+            },
+            {
+                "kind": "button",
+                "text": "second",
+                "selector": "#dup",
+                "visible": True,
+                "enabled": True,
+            },
         ]
         snapshot = build_page_snapshot("https://x.io", "X", "", raw)
         assert len(snapshot.elements) == 1
 
     def test_hermes_block_lists_element_ids_and_kinds(self):
         snapshot = build_page_snapshot(
-            "https://example.com", "Example", "Welcome",
-            [{"kind": "link", "text": "Pricing", "href": "/pricing",
-              "selector": "#pricing", "visible": True, "enabled": True}],
+            "https://example.com",
+            "Example",
+            "Welcome",
+            [
+                {
+                    "kind": "link",
+                    "text": "Pricing",
+                    "href": "/pricing",
+                    "selector": "#pricing",
+                    "visible": True,
+                    "enabled": True,
+                }
+            ],
         )
         block = snapshot_for_hermes(snapshot)
         assert "[link]" in block and "id=el_1" in block and "Pricing" in block
@@ -121,10 +170,12 @@ class _FakeProvider:
         from hermes.providers.base import ProviderResponse
 
         if self._error:
-            return ProviderResponse(success=False, provider="Ollama",
-                                    model="hermes3:8b", text="", error=self._error)
-        return ProviderResponse(success=True, provider="Ollama",
-                                model="hermes3:8b", text=self._text)
+            return ProviderResponse(
+                success=False, provider="Ollama", model="hermes3:8b", text="", error=self._error
+            )
+        return ProviderResponse(
+            success=True, provider="Ollama", model="hermes3:8b", text=self._text
+        )
 
 
 class TestHermesInspector:
@@ -134,9 +185,11 @@ class TestHermesInspector:
         return HermesInspector(provider=provider)
 
     def test_valid_observation_parsed(self):
-        payload = ('{"status": "continue", "understanding": "Pricing link visible.", '
-                   '"action": {"type": "click", "element_id": "el_1", '
-                   '"rationale": "opens pricing"}}')
+        payload = (
+            '{"status": "continue", "understanding": "Pricing link visible.", '
+            '"action": {"type": "click", "element_id": "el_1", '
+            '"rationale": "opens pricing"}}'
+        )
         provider = _FakeProvider(text=payload)
         result = self._inspector(provider).observe("find pricing", _snapshot())
         assert result.status == "continue"
@@ -145,7 +198,9 @@ class TestHermesInspector:
         assert result.action.element_id == "el_1"
 
     def test_json_in_fences_parsed(self):
-        provider = _FakeProvider(text='```json\n{"status": "done", "understanding": "on pricing"}\n```')
+        provider = _FakeProvider(
+            text='```json\n{"status": "done", "understanding": "on pricing"}\n```'
+        )
         result = self._inspector(provider).observe("find pricing", _snapshot())
         assert result.status == "done"
         assert result.action is None
@@ -210,11 +265,14 @@ class TestSafetyGate:
         assert any("hidden" in p for p in validate_inspection(inspection, snapshot))
 
     def test_navigate_requires_http(self):
-        bad = InspectionResult(status="continue",
-                               action=RecommendedAction(type="navigate", url="file:///etc/passwd"))
+        bad = InspectionResult(
+            status="continue", action=RecommendedAction(type="navigate", url="file:///etc/passwd")
+        )
         assert validate_inspection(bad, _snapshot())
-        good = InspectionResult(status="continue",
-                                action=RecommendedAction(type="navigate", url="https://example.com/pricing"))
+        good = InspectionResult(
+            status="continue",
+            action=RecommendedAction(type="navigate", url="https://example.com/pricing"),
+        )
         assert validate_inspection(good, _snapshot()) == []
 
     def test_done_needs_no_action(self):
@@ -326,7 +384,9 @@ class TestManagerLoop:
             [_click_action(), InspectionResult(status="done", understanding="Found it.")]
         )
         manager = self._manager(
-            session, snapshot, hermes,
+            session,
+            snapshot,
+            hermes,
             [ActionOutcome(ok=True, status="executed", message="Clicked el_1.")],
         )
 
@@ -354,7 +414,9 @@ class TestManagerLoop:
         inspection.action.requires_confirmation = True
         hermes = _ScriptedHermes([inspection])
         manager = self._manager(
-            session, _snapshot(), hermes,
+            session,
+            _snapshot(),
+            hermes,
             [ActionOutcome(ok=False, status="needs_confirmation", message="confirm?")],
         )
 
@@ -386,7 +448,9 @@ class TestManagerLoop:
         session = _FakeSession()
         hermes = _ScriptedHermes([_click_action()] * 20)
         manager = self._manager(
-            session, _snapshot(), hermes,
+            session,
+            _snapshot(),
+            hermes,
             [ActionOutcome(ok=True, status="executed", message="ok")] * 20,
         )
         result = manager.run("https://example.com", "task", max_steps=3)
@@ -404,7 +468,9 @@ class TestManagerLoop:
             [_click_action(), InspectionResult(status="done", understanding="Found it.")]
         )
         manager = self._manager(
-            session, snapshot, hermes,
+            session,
+            snapshot,
+            hermes,
             [ActionOutcome(ok=True, status="executed", message="Clicked el_1.")],
             announce=True,
         )
@@ -512,13 +578,18 @@ class TestBrainBrowseHandler:
                     "result": {"message": "Found the pricing page."},
                 }
 
-        monkeypatch.setattr("skills.browser_awareness.main.BrowserAwarenessSkill", FakeAwarenessSkill)
+        monkeypatch.setattr(
+            "skills.browser_awareness.main.BrowserAwarenessSkill", FakeAwarenessSkill
+        )
         from brain.executor import BrainExecutor
 
         executor = BrainExecutor()
         result = executor.execute(
-            Intent(action="browse", target="example.com",
-                   raw_text="open example.com and find the pricing page")
+            Intent(
+                action="browse",
+                target="example.com",
+                raw_text="open example.com and find the pricing page",
+            )
         )
         assert result["success"] is True
         assert result["status"] == "completed"

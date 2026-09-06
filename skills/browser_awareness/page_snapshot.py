@@ -71,7 +71,13 @@ def build_page_snapshot(
 
 def snapshot_for_hermes(snapshot: PageSnapshot) -> str:
     """Render a PageSnapshot as the compact text block sent to Hermes."""
-    lines = ["PAGE", f"URL: {snapshot.url}", f"TITLE: {snapshot.title}", "TEXT:", snapshot.text or "(no visible text)"]
+    lines = [
+        "PAGE",
+        f"URL: {snapshot.url}",
+        f"TITLE: {snapshot.title}",
+        "TEXT:",
+        snapshot.text or "(no visible text)",
+    ]
     lines.append("")
     lines.append("INTERACTIVE ELEMENTS:")
     if not snapshot.elements:
@@ -99,9 +105,7 @@ def snapshot_for_hermes(snapshot: PageSnapshot) -> str:
 
 def _compact_text(text: str, max_chars: int) -> tuple[str, bool]:
     """Normalize whitespace and cap visible page text (keep it readable)."""
-    compact = "\n".join(
-        line.strip() for line in text.splitlines() if line.strip()
-    )
+    compact = "\n".join(line.strip() for line in text.splitlines() if line.strip())
     truncated = len(compact) > max_chars
     if truncated:
         compact = compact[:max_chars].rstrip() + "\n…"
@@ -145,7 +149,9 @@ def _clean_element(index: int, raw: dict, seen_selectors: set[str]) -> ElementIn
 
     return ElementInfo(
         id=f"el_{index + 1}",
-        kind=kind if kind in ("link", "button", "input", "textarea", "select", "checkbox", "radio", "nav") else "other",
+        kind=kind
+        if kind in ("link", "button", "input", "textarea", "select", "checkbox", "radio", "nav")
+        else "other",
         text=text,
         placeholder=placeholder,
         label=label,

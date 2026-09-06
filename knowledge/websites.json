@@ -1,36 +1,58 @@
 {
+  "version": 1,
+  "last_scan": "2026-09-05T15:37:57.502049",
   "entities": [
     {
-      "url": "https://google.com",
-      "name": "Google",
-      "aliases": ["google", "search"],
-      "category": "search"
+      "name": "chatgpt",
+      "url": "https://www.google.com/search?q=chatgpt",
+      "aliases": [
+        "chatgpt"
+      ]
     },
     {
       "url": "https://github.com",
       "name": "GitHub",
-      "aliases": ["github", "git hub"],
+      "aliases": [
+        "github",
+        "git hub"
+      ],
+      "category": "development"
+    },
+    {
+      "url": "https://mail.google.com",
+      "name": "Gmail",
+      "aliases": [
+        "gmail",
+        "email",
+        "mail"
+      ],
+      "category": "email"
+    },
+    {
+      "url": "https://google.com",
+      "name": "Google",
+      "aliases": [
+        "google",
+        "search"
+      ],
+      "category": "search"
+    },
+    {
+      "url": "https://stackoverflow.com",
+      "name": "Stack Overflow",
+      "aliases": [
+        "stack overflow",
+        "stackoverflow"
+      ],
       "category": "development"
     },
     {
       "url": "https://youtube.com",
       "name": "YouTube",
-      "aliases": ["youtube"],
+      "aliases": [
+        "youtube"
+      ],
       "category": "video"
-    },
-    {
-      "url": "https://mail.google.com",
-      "name": "Gmail",
-      "aliases": ["gmail", "email", "mail"],
-      "category": "email"
-    },
-    {
-      "url": "https://stackoverflow.com",
-      "name": "Stack Overflow",
-      "aliases": ["stack overflow", "stackoverflow"],
-      "category": "development"
     }
-  ],
-  "version": 1,
-  "last_scan": "2026-07-07T00:00:00Z"
+  ]
 }

@@ -123,8 +123,7 @@ def _parse_observation(text: str) -> InspectionResult:
         logger.warning("[HERMES] observation was not valid JSON")
         return InspectionResult(
             status="blocked",
-            message="The awareness model returned an unreadable answer — "
-            "nothing was executed.",
+            message="The awareness model returned an unreadable answer — nothing was executed.",
         )
     try:
         return InspectionResult.model_validate(raw)
@@ -132,8 +131,7 @@ def _parse_observation(text: str) -> InspectionResult:
         logger.warning("[HERMES] observation failed schema validation: %s", exc)
         return InspectionResult(
             status="blocked",
-            message="The awareness model returned a malformed plan — "
-            "nothing was executed.",
+            message="The awareness model returned a malformed plan — nothing was executed.",
         )
 
 

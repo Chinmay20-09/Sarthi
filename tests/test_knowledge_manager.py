@@ -294,9 +294,10 @@ class TestAddWebsite:
 
     def test_add_new_website(self, manager):
         """A brand-new site is appended with name, url and aliases."""
-        assert manager.add_website(
-            "Stack Overflow", "https://stackoverflow.com", aliases=["so"]
-        ) is True
+        assert (
+            manager.add_website("Stack Overflow", "https://stackoverflow.com", aliases=["so"])
+            is True
+        )
         site = manager.find_website("Stack Overflow")
         assert site is not None
         assert site["url"] == "https://stackoverflow.com"

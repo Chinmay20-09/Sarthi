@@ -122,8 +122,7 @@ def _clean_model_reply(text: str) -> str:
         # The model echoed the marker but also returned something — keep
         # the non-marker lines.
         reply = "\n".join(
-            line for line in reply.splitlines()
-            if line.strip().lower() != NO_REPLY_MARKER
+            line for line in reply.splitlines() if line.strip().lower() != NO_REPLY_MARKER
         ).strip()
     return reply
 

@@ -46,20 +46,131 @@ not need to watch the screen to know when hands-off mode ends.
 - Chrome (or your default browser) where you are **logged in** to
   [chatgpt.com](https://chatgpt.com) and
   [gemini.google.com](https://gemini.google.com).
-- Do not run anything full-screen over the browser while it works.
+- Do not run anything full-screen over the browser while it works.## How it reads replies (no OCR)
 
-## How it reads replies (no OCR)
+v1.5, the module reads the page **HTML** first: it attaches read-only to
+the running Chrome (DevTools protocol) and **regexes the page's HTML**
+for the exact strings that mark the affordances it needs — `Copy`,
+`Send`/composer, `Download` — then clicks the real spot (see *v1.5 —
+DOM-aware locating* below). Where the site registers one (see *Browser
+awareness registry* below), it clicks the message's **Copy** button so
+the clipboard holds ONLY the reply — no Ctrl+A of the whole website on
+every poll. Otherwise it clicks into the chat area, presses `Ctrl+A` /
+`Ctrl+C`, and takes the text after the last occurrence of the prompt it
+sent. It polls until the copied text stops changing, which means the AI
+finished streaming. For Gemini image generation it gives the image its
+full time budget, then clicks the download affordance and harvests the
+newest file from your Downloads folder.
 
-The module reads AI responses the way an RPA bot does: it clicks into
-the chat area, presses `Ctrl+A` / `Ctrl+C`, and takes the text after the
-last occurrence of the prompt it sent. It polls until the copied page
-stops changing, which means the AI finished streaming. For Gemini image
-generation it gives the image its full time budget, then clicks the
-download affordance and harvests the newest file from your Downloads
-folder.
+Because there is no screen OCR or vision yet, fallback reads are
+**coordinate and clipboard based** — which is why calibration exists.
 
-Because there is no screen OCR or vision yet, everything is **coordinate
-and clipboard based** — which is why calibration exists.
+### Browser awareness registry (`registry.py`)
+
+Per-site knowledge of *actions* the robot can perform — today: how to
+copy the assistant's reply. Each site ships a `CopyAffordance`:
+
+```python
+{
+  "method": "button",
+  "label": "Copy",
+  "point": [0.88, 0.87],
+  "scan_region": [0.60, 0.72, 0.96, 0.92],
+  "retries": 9
+}
+```
+
+- `label` names the affordance semantically (what a future vision/OCR
+  locator would search for);
+- `point` is the primary locator — the window-fraction click point of
+  the button (defaults are estimates; calibrate for your monitor);
+- `scan_region` is the fallback: when the point misses, the driver
+  clicks a small grid across this box (window fractions `x0, y0, x1, y1`
+  around the last message), nearest cells first, and takes the first
+  click that puts text on the clipboard — a Copy button is the only
+  thing that does that;
+- `retries` caps the total click attempts (point + scan cells) before
+  falling back to the page copy.
+
+When the button copy comes back empty the driver falls back to the
+Ctrl+A/Ctrl+C page copy, so unregistered sites and UI changes degrade
+gracefully instead of breaking. Override any affordance in
+`calibration.json` without touching code:
+
+```json
+{
+  "actions": {
+    "chatgpt": {
+      "copy": {"method": "button", "label": "Copy", "point": [0.9, 0.85], "retries": 8}
+    }
+  }
+}
+```
+
+The scan region can also be set per site with
+`AI_CHAIN_<SITE>_COPY_SCAN_REGION="0.6,0.72,0.96,0.92"` (or
+`AI_CHAIN_<SITE>_COPY_POINT="0.9,0.85"` for the point).
+
+### v1.5 — DOM-aware locating (`dom.py`, regex over the page HTML)
+
+Instead of clicking estimated points and hoping, v1.5 **reads the page's
+HTML** and regexes it for the words that identify the affordance
+("copy", "type", "download" and friends) — exactly what a vision
+system would search the screen for, but in the markup:
+
+- the assistant message's **Copy** button: `aria-label="Copy"`,
+  `data-testid="...copy..."`;
+- the **composer** you type into: `id="prompt-textarea"` (ChatGPT),
+  `aria-label="Enter a prompt here"` (Gemini), `id="chat-input"`
+  (DeepSeek), `placeholder="Ask anything..."` (Perplexity),
+  `contenteditable="true"` (Claude) — with a generic
+  `contenteditable="true"` fallback on every site;
+- Gemini / Grok / Copilot's image **Download** button:
+  `aria-label="Download"`.
+
+When Chrome is running with a DevTools debugging port, the driver
+attaches read-only (it never navigates, types or clicks through CDP —
+the mouse is still the same PyAutoGUI robot, so hands-off mode,
+Ctrl+Alt+X and the failsafe behave identically) and pulls the live HTML
+with one `evaluate`: `document.documentElement.outerHTML` plus the
+found element's bounding box. The regex match becomes a precise
+window-fraction click point instead of an estimate.
+
+**Enabling:** start Chrome with a debugging port (the whole point is
+attaching to the browser you are already logged into):
+
+```bash
+chrome.exe --remote-debugging-port=9222
+```
+
+or set the URL in the environment. When the port is unreachable — or
+Playwright is not installed — nothing breaks: every locator returns
+`None` and the driver silently uses the v1.0 point+scan+Ctrl+A path.
+
+Per-site regex matchers live in `registry.py` (`DEFAULT_DOM_PROFILES`);
+override them via `calibration.json` under `actions.<site>.dom` without
+touching code:
+
+```json
+{
+  "actions": {
+    "chatgpt": {
+      "dom": {
+        "copy": [
+          {"tag": "button", "attribute": "aria-label", "value_pattern": "^copy$"}
+        ]
+      }
+    }
+  }
+}
+```
+
+Environment switches:
+
+- `AI_CHAIN_CDP_URL` — DevTools endpoint (default `http://127.0.0.1:9222`)
+- `AI_CHAIN_DOM=0` — master switch: disable all DOM locating
+- `AI_CHAIN_<SITE>_DOM_<ACTION>=0` — disable one action per site
+  (`COPY`, `COMPOSER`, `DOWNLOAD`); e.g. `AI_CHAIN_GEMINI_DOM_COPY=0`
 
 ### Browser awareness (screen state + local Hermes model)
 
@@ -96,9 +207,12 @@ python -m skills.automation_engine.ai_chain.calibrate --site chatgpt --point com
 python -m skills.automation_engine.ai_chain.calibrate --site gemini --point image_download_point --record
 ```
 
-Points: `composer`, `read_point`, `image_download_point` (Gemini only).
-Stored in `calibration.json` (git-ignored). Skipping calibration is
-fine — the module falls back to estimated positions.
+Points: `composer`, `read_point`, `copy_point`, `image_download_point`
+(Gemini only). `copy_point` is the "Copy" button of the newest
+assistant message — recording it makes reads copy just the reply
+instead of the whole page. Stored in `calibration.json` (git-ignored).
+Skipping calibration is fine — the module falls back to estimated
+positions.
 
 **Tuning screen awareness:** each site ships word lists that tell the
 screen classifier apart a login wall from a new-chat landing from a
@@ -128,6 +242,17 @@ Automation-engine only, e.g. through the Brain / API:
 
 In Sarthi **test mode** the command is planned but nothing is touched.
 The default pair when "from … to …" is missing is `chatgpt` → `gemini`.
+
+## Supported sites
+
+ChatGPT, Gemini, Claude, Perplexity, Grok, DeepSeek and Microsoft Copilot
+all ship v1.5 DOM matchers (and a v1.0 Copy-button point + scan fallback).
+Sites without a registered profile still work — the driver falls back to
+the Ctrl+A/Ctrl+C page copy. Alias the names you actually say:
+
+```bash
+python -m brain.wordfinder add claude anthropic perplexity grok deepseek copilot
+```
 
 ## Keywords
 

@@ -1,6 +1,8 @@
 Environment variables for Hermes integration
 
 Create a .env from .env.example and fill in secrets. Do NOT commit .env to source control.
+See also `ARCHITECTURE.md` (§ Provider Architecture) for how selection and
+fallback work.
 
 Variables:
 - HERMES_PROVIDER: which provider Hermes uses. Supported values:

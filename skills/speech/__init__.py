@@ -1,8 +1,9 @@
 """
 Speech recognition skill for Sarthi.
 
-Provides wake-word detection and Whisper-based transcription
-as a proper BaseSkill.
+Provides push-to-talk microphone recording and Whisper-based
+transcription as a proper BaseSkill (triggered via POST /listen —
+there is no always-on wake word).
 
 Usage:
     from skills.speech import SpeechSkill

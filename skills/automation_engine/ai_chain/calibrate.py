@@ -22,6 +22,9 @@ Known points:
     composer             — the message input box (where prompts are pasted)
     read_point           — a click spot inside the chat (not the composer),
                            used before Select-All + Copy
+    copy_point           — the "Copy" button of the newest assistant
+                           message (browser-awareness registry). Clicking
+                           it copies just the reply, not the whole page.
     image_download_point — the download button of the newest generated
                            image in Gemini (skip to use the auto-estimate)
 """
@@ -39,7 +42,7 @@ from .calibration import (
 )
 from .control import ScreenController
 
-POINTS = ("composer", "read_point", "image_download_point")
+POINTS = ("composer", "read_point", "copy_point", "image_download_point")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -76,10 +79,33 @@ def _print_status() -> None:
         print(f"    url                 = {current.url}")
         print(f"    composer            = {_fmt(current.composer)}")
         print(f"    read_point          = {_fmt(current.read_point)}")
+        print(f"    copy_point          = {_fmt(_copy_point_for(key))}")
+        print(f"    copy_scan_region    = {_fmt_region(_scan_region_for(key))}")
         print(f"    image_download_point= {_fmt(current.image_download_point)}")
     print("\nTo record a point run, e.g.:")
     print("  python -m skills.automation_engine.ai_chain.calibrate \\")
     print("      --site gemini --point image_download_point --record")
+
+
+def _copy_point_for(site_key: str):
+    """The Copy button point from the browser-awareness registry."""
+    from .registry import get_copy_point
+
+    return get_copy_point(site_key)
+
+
+def _scan_region_for(site_key: str):
+    """The Copy button scan region from the browser-awareness registry."""
+    from .registry import get_scan_region
+
+    return get_scan_region(site_key)
+
+
+def _fmt_region(region) -> str:
+    if region is None:
+        return "auto (around copy_point)"
+    x0, y0, x1, y1 = region
+    return f"({x0:.2f}, {y0:.2f})-({x1:.2f}, {y1:.2f})"
 
 
 def _record(site: str, point: str) -> int:

@@ -23,10 +23,17 @@ against the live browser window rectangle.
 
 from __future__ import annotations
 
+import os
+import subprocess
 import time
+import urllib.request
+from pathlib import Path
 from typing import Any
 
 from utils.logger import get_logger
+
+from .calibration import automation_profile_enabled, get_automation_profile_dir
+from .dom import cdp_port, cdp_url
 
 logger = get_logger(__name__)
 
@@ -35,6 +42,62 @@ logger = get_logger(__name__)
 # the page loads, so the window search must be much more generous than
 # the page-load wait. Polling returns as soon as the window is found.
 WINDOW_FIND_TIMEOUT = 30.0
+
+# Common Chrome/Edge installs (Edge speaks the same DevTools protocol).
+_BROWSER_CANDIDATES = (
+    r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+    r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+    r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe",
+    r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+    r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+)
+
+
+def find_chrome_exe() -> str | None:
+    """A Chromium-family executable for the automation profile.
+
+    ``AI_CHAIN_CHROME_PATH`` wins when set; otherwise the usual Windows
+    install paths are probed (Chrome first, Edge as a fallback).
+    """
+    override = os.getenv("AI_CHAIN_CHROME_PATH", "").strip()
+    if override and Path(override).exists():
+        return override
+    for candidate in _BROWSER_CANDIDATES:
+        path = Path(os.path.expandvars(candidate))
+        if path.exists():
+            return str(path)
+    return None
+
+
+def _chrome_launch_command(chrome: str, url: str, port: int, profile_dir: Path) -> list[str]:
+    """The automation Chrome command line (pure — unit-testable).
+
+    ``--user-data-dir`` must be explicit: some Chrome installs silently
+    ignore ``--remote-debugging-port`` for the default profile, which is
+    exactly what broke v1.5 DOM locating in live runs.
+    """
+    return [
+        chrome,
+        f"--remote-debugging-port={port}",
+        f"--user-data-dir={profile_dir}",
+        "--no-first-run",
+        "--no-default-browser-check",
+        url,
+    ]
+
+
+def _wait_for_cdp(endpoint: str, timeout: float) -> bool:
+    """Poll the DevTools HTTP endpoint until it answers (or timeout)."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            with urllib.request.urlopen(f"{endpoint}/json/version", timeout=1.5) as response:
+                if response.status == 200:
+                    return True
+        except Exception:
+            pass
+        time.sleep(0.5)
+    return False
 
 
 class AbortError(RuntimeError):
@@ -109,13 +172,25 @@ class ScreenController:
     # ------------------------------------------------------------------
 
     def open_site(self, url: str, title_keyword: str, wait: float) -> None:
-        """Open a URL in the default browser and bring its window forward."""
+        """
+        Open a URL in the robot's own Chrome and bring its window forward.
+
+        v1.5 launches a dedicated automation Chrome (persistent profile +
+        remote-debugging port) instead of the user's default browser, so
+        DOM locating works on every run and logins persist. Falls back to
+        the default browser when Chrome cannot be found or launching is
+        disabled (``AI_CHAIN_AUTOMATION_PROFILE=0``).
+        """
         if self.dry_run:
             logger.info(f"[DRY RUN] would open {url}")
             return
-        import webbrowser
+        launched = False
+        if automation_profile_enabled():
+            launched = self._open_in_automation_chrome(url)
+        if not launched:
+            import webbrowser
 
-        webbrowser.open(url)
+            webbrowser.open(url)
         logger.info(
             f"Waiting for a browser window titled like '{title_keyword}' "
             f"(up to {WINDOW_FIND_TIMEOUT:.0f}s)..."
@@ -125,10 +200,48 @@ class ScreenController:
             raise RuntimeError(
                 f"Could not find a browser window titled like '{title_keyword}' "
                 f"within {WINDOW_FIND_TIMEOUT:.0f}s. Make sure the site is open "
-                "in your default browser and logged in."
+                "and logged in."
             )
         self._activate_window(hwnd)
         time.sleep(min(wait, 2.0))
+
+    def _open_in_automation_chrome(self, url: str) -> bool:
+        """Launch (or reuse) the robot's Chrome with the debug port.
+
+        Returns True when a browser window was opened (even when the CDP
+        endpoint never came up — the window still works, just without
+        v1.5 DOM locating). Returns False only when we could not launch
+        anything and the caller should use the default browser.
+        """
+        chrome = find_chrome_exe()
+        if chrome is None:
+            logger.warning(
+                "No Chrome/Edge executable found for the automation profile "
+                "— opening the default browser instead (v1.5 DOM locating off)."
+            )
+            return False
+        profile = get_automation_profile_dir()
+        try:
+            profile.mkdir(parents=True, exist_ok=True)
+            cmd = _chrome_launch_command(chrome, url, cdp_port(), profile)
+            subprocess.Popen(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                stdin=subprocess.DEVNULL,
+            )
+        except Exception as exc:
+            logger.warning(f"Could not launch automation Chrome ({exc}) — using default browser.")
+            return False
+
+        if _wait_for_cdp(cdp_url(), timeout=30.0):
+            logger.info(f"[dom] automation Chrome ready at {cdp_url()} (profile: {profile})")
+        else:
+            logger.warning(
+                "Automation Chrome opened but the DevTools endpoint did not come up "
+                "within 30s — v1.5 DOM locating will be off for this run."
+            )
+        return True
 
     def focus_address_bar_and_go(self, url: str) -> None:
         """Ctrl+L → type URL → Enter (used when the tab already exists)."""
@@ -150,7 +263,9 @@ class ScreenController:
         win32gui = _require("win32gui")
         return win32gui.GetWindowRect(hwnd)
 
-    def fraction_point(self, rect: tuple[int, int, int, int], fx: float, fy: float) -> tuple[int, int]:
+    def fraction_point(
+        self, rect: tuple[int, int, int, int], fx: float, fy: float
+    ) -> tuple[int, int]:
         """Convert window fractions into absolute screen coordinates."""
         left, top, right, bottom = rect
         x = int(left + (right - left) * fx)
@@ -215,6 +330,24 @@ class ScreenController:
         time.sleep(0.2)
         pyautogui.hotkey("ctrl", "c")
         time.sleep(0.2)
+        return pyperclip.paste() or ""
+
+    def copy_with_button(self, x: int, y: int) -> str:
+        """Click a Copy button (registered per site) and return the clipboard.
+
+        Unlike ``select_all_and_copy`` this grabs ONLY what the button
+        copies — the assistant's reply — instead of Ctrl+A'ing the whole
+        page. Returns "" when the click missed (no button there), so the
+        caller can fall back to the keyboard page copy.
+        """
+        self.check_abort()
+        if self.dry_run:
+            return "[dry-run transcript]"
+        pyautogui = _require("pyautogui")
+        pyperclip = _require("pyperclip")
+        pyperclip.copy("")  # clear so stale clipboard never looks like a read
+        pyautogui.click(x, y)
+        time.sleep(0.3)  # let the UI put the message text on the clipboard
         return pyperclip.paste() or ""
 
     # ------------------------------------------------------------------
