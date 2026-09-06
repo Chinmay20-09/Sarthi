@@ -31,10 +31,10 @@
 - [License](#-license)
 
 > **Docs:** this README covers setup and a high-level tour. The verified,
-> detailed architecture lives in **[ARCHITECTURE.md](ARCHITECTURE.md)**;
-> current status/limitations in **[PROJECT_STATE.md](PROJECT_STATE.md)**;
-> contribution rules in **[CONTRIBUTING.md](CONTRIBUTING.md)**; provider
-> environment variables in **[README_ENV.md](README_ENV.md)**.
+> detailed architecture lives in **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**;
+> current status/limitations in **[docs/PROJECT_STATE.md](docs/PROJECT_STATE.md)**;
+> contribution rules in **[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)**; provider
+> environment variables in **[docs/README_ENV.md](docs/README_ENV.md)**.
 
 ---
 
@@ -243,8 +243,8 @@ sarthi/
 │   ├── skills.html     # Skill repository
 │   ├── memory.html     # Knowledge + memory + history
 │   ├── knowledge.html  # Connectors
-│   ├── history.html    # Timeline (static mockup)
-│   └── settings.html   # Settings (static mockup)
+│   ├── history.html    # Command timeline (live /command-history)
+│   └── settings.html   # Settings (live metrics + connectors; cosmetic toggles)
 │
 ├── api.py          # FastAPI server (API + static UI, one process)
 ├── main.py         # CLI entry point (voice)
@@ -550,7 +550,7 @@ The Entity Resolver consumes all types automatically.
 | `GET` | `/system/metrics`, `/events/history` | Hardware telemetry, event log |
 | `GET`/`POST` | `/test/prompts`, `/test/run` | Prompt-suite test runner |
 
-The full request/response shapes are documented in **ARCHITECTURE.md → API/UI**.
+The full request/response shapes are documented in **docs/ARCHITECTURE.md → API/UI**.
 
 ### Example Response
 
@@ -732,14 +732,14 @@ mypy .
 - **Multi-agent** — Collaborative AI agents for complex tasks
 - **Plugin marketplace** — External skill discovery and loading
 - **More entity types** — Devices, contacts, plugins (no code changes needed)
-- **Hermes skill authoring** — validated creation/registration of new skills by Hermes (see `CONTRIBUTING.md` boundary; **planned, not implemented**)
+- **Hermes skill authoring** — validated creation/registration of new skills by Hermes (see `docs/CONTRIBUTING.md` boundary; **planned, not implemented**)
 - **Gmail / IoT connectors** — registry scaffolding exists in `connectors/`
 
 ---
 
 ## 🧑‍💻 Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) — it covers project structure, module
+See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) — it covers project structure, module
 ownership, the Hermes contribution boundary, and how to add a skill or a
 connector without touching core.
 

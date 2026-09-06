@@ -48,7 +48,8 @@ Hermes is the conversational layer for everything else.
 - No native tool-calling/vision/streaming in providers (prompt protocol covers
   tools; everything else is deliberately unwired).
 - Hermes skill authoring: planned, not implemented.
-- `history.html` / `settings.html` UI pages are static mockups.
+- `settings.html` Voice & Personality / Privacy toggles are visual previews
+  (no backing settings); history and the rest of the UI are wired.
 - Mode/test-mode state resets on restart (process-local).
 - Windows-only features: scanner, app launching, ai_chain.
 
@@ -58,10 +59,10 @@ Hermes is the conversational layer for everything else.
    `git rm -r --cached sandbox sandbox_test`.
 2. Implement Hermes skill authoring behind the propose → validate → register
    gate (model it on Browser Awareness validation).
-3. Add connectors (Gmail first) and remove the mockup status of the settings
-   page or wire it.
+3. Add connectors (Gmail first) and back the settings page's Voice &
+   Personality / Privacy toggles with real settings.
 4. Optionally retire `brain/planner.py` (or implement real decomposition) and
    the test-compat globals in `hermes/routes.py`.
 
-The detailed, verified architecture lives in `ARCHITECTURE.md`; contribution
-rules in `CONTRIBUTING.md`.
+The detailed, verified architecture lives in `docs/ARCHITECTURE.md`; contribution
+rules in `docs/CONTRIBUTING.md`.

@@ -13,9 +13,6 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
         rel="stylesheet" />
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-        rel="stylesheet" />
     <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
@@ -57,18 +54,17 @@
                         "surface": "#131313",
                         "secondary": "#c8c6c5",
                         "on-secondary-container": "#b7b5b4",
-                        "tertiary-fixed": "#ffdcc3",
+                        "tertiary-fixed-dim": "#ffb77d",
                         "on-primary-fixed-variant": "#004e5d",
-                        "surface-container-high": "#2a2a2a",
-                        "on-tertiary": "#4d2600",
-                        "on-secondary": "#313030",
-                        "primary-fixed": "#aeecff",
-                        "surface-bright": "#3a3939",
-                        "on-tertiary-container": "#7f4300",
+                        "tertiary-fixed": "#ffdcc3",
                         "on-surface": "#e5e2e1",
                         "surface-container": "#201f1f",
                         "error": "#ffb4ab",
-                        "tertiary-fixed-dim": "#ffb77d"
+                        "surface-bright": "#3a3939",
+                        "surface-container-high": "#2a2a2a",
+                        "on-tertiary": "#4d2600",
+                        "on-secondary": "#313030",
+                        "primary-fixed": "#aeecff"
                     },
                     "borderRadius": {
                         "DEFAULT": "0.25rem",
@@ -230,17 +226,11 @@
                         placeholder="Search parameters..." type="text" />
                     <span class="material-symbols-outlined absolute right-4 top-2 text-on-surface-variant">search</span>
                 </div>
-                <div class="flex gap-4">
-                    <button
-                        class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">notifications</button>
-                    <button
-                        class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">account_circle</button>
-                </div>
             </div>
         </header>
         <!-- Settings Grid Container -->
         <div class="px-margin-desktop grid grid-cols-12 gap-gutter">
-            <!-- System Diagnostics (Bento Large) -->
+            <!-- System Diagnostics (Bento Large) — LIVE via GET /system/metrics -->
             <section class="col-span-12 glass-panel rounded-xl p-8 relative overflow-hidden group">
                 <div class="scanline"></div>
                 <div class="flex justify-between items-start mb-8 relative z-10">
@@ -250,12 +240,12 @@
                     </div>
                     <div class="flex gap-4">
                         <div class="px-4 py-2 bg-white/5 rounded-lg border border-white/5 text-center">
-                            <p class="font-label-caps text-[10px] text-on-surface-variant">UPTIME</p>
-                            <p class="font-data-mono text-primary">142:24:08</p>
+                            <p class="font-label-caps text-[10px] text-on-surface-variant">API</p>
+                            <p id="diag-api-status" class="font-data-mono text-primary">—</p>
                         </div>
                         <div class="px-4 py-2 bg-white/5 rounded-lg border border-white/5 text-center">
-                            <p class="font-label-caps text-[10px] text-on-surface-variant">LATENCY</p>
-                            <p class="font-data-mono text-primary">12ms</p>
+                            <p class="font-label-caps text-[10px] text-on-surface-variant">GPU</p>
+                            <p id="diag-gpu-name" class="font-data-mono text-primary">—</p>
                         </div>
                     </div>
                 </div>
@@ -264,77 +254,57 @@
                     <div class="space-y-4">
                         <div class="flex justify-between items-end">
                             <span class="font-label-caps text-on-surface-variant">NEURAL CORE</span>
-                            <span class="font-data-mono text-primary">42%</span>
+                            <span id="diag-cpu-value" class="font-data-mono text-primary">—</span>
                         </div>
                         <div class="h-1 bg-white/5 rounded-full overflow-hidden">
-                            <div class="h-full bg-primary-container shadow-[0_0_8px_#00d9ff]" style="width: 42%"></div>
+                            <div id="diag-cpu-bar" class="h-full bg-primary-container shadow-[0_0_8px_#00d9ff]" style="width: 0%"></div>
                         </div>
-                        <div class="flex gap-1">
-                            <div class="h-4 w-1 bg-primary-container"></div>
-                            <div class="h-4 w-1 bg-primary-container"></div>
-                            <div class="h-4 w-1 bg-primary-container"></div>
-                            <div class="h-4 w-1 bg-white/10"></div>
-                            <div class="h-4 w-1 bg-white/10"></div>
-                            <div class="h-4 w-1 bg-white/10"></div>
+                        <div class="flex justify-between text-[10px] font-label-caps text-on-surface-variant">
+                            <span id="diag-cpu-detail">CPU</span>
                         </div>
                     </div>
                     <!-- RAM -->
                     <div class="space-y-4">
                         <div class="flex justify-between items-end">
                             <span class="font-label-caps text-on-surface-variant">MEMORY BANK</span>
-                            <span class="font-data-mono text-primary">68%</span>
+                            <span id="diag-ram-value" class="font-data-mono text-primary">—</span>
                         </div>
                         <div class="h-1 bg-white/5 rounded-full overflow-hidden">
-                            <div class="h-full bg-primary-container shadow-[0_0_8px_#00d9ff]" style="width: 68%"></div>
+                            <div id="diag-ram-bar" class="h-full bg-primary-container shadow-[0_0_8px_#00d9ff]" style="width: 0%"></div>
                         </div>
-                        <div class="flex gap-1">
-                            <div class="h-4 w-1 bg-primary-container"></div>
-                            <div class="h-4 w-1 bg-primary-container"></div>
-                            <div class="h-4 w-1 bg-primary-container"></div>
-                            <div class="h-4 w-1 bg-primary-container"></div>
-                            <div class="h-4 w-1 bg-white/10"></div>
-                            <div class="h-4 w-1 bg-white/10"></div>
+                        <div class="flex justify-between text-[10px] font-label-caps text-on-surface-variant">
+                            <span id="diag-ram-detail">RAM</span>
                         </div>
                     </div>
                     <!-- STORAGE -->
                     <div class="space-y-4">
                         <div class="flex justify-between items-end">
                             <span class="font-label-caps text-on-surface-variant">SYNAPSE DISK</span>
-                            <span class="font-data-mono text-primary">21%</span>
+                            <span id="diag-disk-value" class="font-data-mono text-primary">—</span>
                         </div>
                         <div class="h-1 bg-white/5 rounded-full overflow-hidden">
-                            <div class="h-full bg-primary-container shadow-[0_0_8px_#00d9ff]" style="width: 21%"></div>
+                            <div id="diag-disk-bar" class="h-full bg-primary-container shadow-[0_0_8px_#00d9ff]" style="width: 0%"></div>
                         </div>
-                        <div class="flex gap-1">
-                            <div class="h-4 w-1 bg-primary-container"></div>
-                            <div class="h-4 w-1 bg-white/10"></div>
-                            <div class="h-4 w-1 bg-white/10"></div>
-                            <div class="h-4 w-1 bg-white/10"></div>
-                            <div class="h-4 w-1 bg-white/10"></div>
-                            <div class="h-4 w-1 bg-white/10"></div>
+                        <div class="flex justify-between text-[10px] font-label-caps text-on-surface-variant">
+                            <span id="diag-disk-detail">Primary disk</span>
                         </div>
                     </div>
-                    <!-- NETWORK -->
+                    <!-- TEMPERATURE -->
                     <div class="space-y-4">
                         <div class="flex justify-between items-end">
-                            <span class="font-label-caps text-on-surface-variant">BANDWIDTH</span>
-                            <span class="font-data-mono text-primary">890 MB/S</span>
+                            <span class="font-label-caps text-on-surface-variant">THERMALS</span>
+                            <span id="diag-temp-value" class="font-data-mono text-primary">—</span>
                         </div>
                         <div class="h-1 bg-white/5 rounded-full overflow-hidden">
-                            <div class="h-full bg-primary-container shadow-[0_0_8px_#00d9ff]" style="width: 85%"></div>
+                            <div id="diag-temp-bar" class="h-full bg-primary-container shadow-[0_0_8px_#00d9ff]" style="width: 0%"></div>
                         </div>
-                        <div class="flex gap-1 items-end h-4">
-                            <div class="w-1 h-1 bg-primary"></div>
-                            <div class="w-1 h-3 bg-primary"></div>
-                            <div class="w-1 h-2 bg-primary"></div>
-                            <div class="w-1 h-4 bg-primary"></div>
-                            <div class="w-1 h-3 bg-primary"></div>
-                            <div class="w-1 h-1 bg-primary"></div>
+                        <div class="flex justify-between text-[10px] font-label-caps text-on-surface-variant">
+                            <span id="diag-temp-detail">CPU / GPU</span>
                         </div>
                     </div>
                 </div>
             </section>
-            <!-- Voice & Personality -->
+            <!-- Voice & Personality — visual preview only (no backing settings exist yet) -->
             <section class="col-span-12 lg:col-span-6 glass-panel rounded-xl p-8 space-y-8">
                 <div>
                     <h3 class="font-label-caps text-label-caps text-primary mb-2">VOICE &amp; PERSONALITY</h3>
@@ -376,9 +346,12 @@
                             </div>
                         </div>
                     </div>
+                    <p class="text-[10px] font-label-caps text-on-surface-variant/60 pt-2 border-t border-white/5">
+                        Visual preview — these options are not backed by Sarthi settings yet.
+                    </p>
                 </div>
             </section>
-            <!-- Privacy & Security -->
+            <!-- Privacy & Security — visual preview only (no backing settings exist yet) -->
             <section class="col-span-12 lg:col-span-6 glass-panel rounded-xl p-8 space-y-8">
                 <div>
                     <h3 class="font-label-caps text-label-caps text-error mb-2">PRIVACY &amp; SECURITY</h3>
@@ -401,17 +374,16 @@
                         <div class="nothing-toggle" onclick="this.classList.toggle('active')"></div>
                     </div>
                     <div class="pt-4 border-t border-white/5 space-y-4">
-                        <button
+                        <button id="clear-history-btn"
                             class="w-full py-3 border border-white/10 hover:bg-white/5 transition-all rounded-lg flex items-center justify-center gap-2 font-body-sm">
                             <span class="material-symbols-outlined text-sm">history</span>
                             Clear Interaction Logs
                         </button>
-                        <button
-                            class="w-full py-3 border border-error/20 text-error hover:bg-error/5 transition-all rounded-lg flex items-center justify-center gap-2 font-body-sm">
-                            <span class="material-symbols-outlined text-sm">delete_forever</span>
-                            Wipe Local Cache
-                        </button>
+                        <p id="clear-history-status" class="text-xs text-on-surface-variant hidden"></p>
                     </div>
+                    <p class="text-[10px] font-label-caps text-on-surface-variant/60">
+                        Visual preview — the toggles above are not backed by Sarthi settings yet.
+                    </p>
                 </div>
             </section>
             <!-- UI Customization -->
@@ -465,39 +437,22 @@
                     </div>
                 </div>
             </section>
-            <!-- System Integration -->
+            <!-- System Integration — LIVE connector statuses via GET /connectors -->
             <section class="col-span-12 lg:col-span-4 glass-panel rounded-xl p-8 flex flex-col justify-between">
                 <div>
                     <h3 class="font-label-caps text-label-caps text-primary mb-2">SYSTEM INTEGRATION</h3>
                     <p class="text-on-surface-variant font-body-sm mb-6">Connected services and hardware.</p>
-                    <div class="space-y-4">
-                        <div class="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5">
-                            <div class="flex items-center gap-3">
-                                <span class="material-symbols-outlined text-primary">cloud</span>
-                                <span class="font-body-sm">Cloud Bridge</span>
-                            </div>
-                            <span class="font-label-caps text-[10px] text-primary">ACTIVE</span>
-                        </div>
-                        <div class="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5">
-                            <div class="flex items-center gap-3">
-                                <span class="material-symbols-outlined text-on-surface-variant">home_iot_device</span>
-                                <span class="font-body-sm">IoT Control</span>
-                            </div>
-                            <span class="font-label-caps text-[10px] text-on-surface-variant">PENDING</span>
-                        </div>
-                        <div class="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5">
-                            <div class="flex items-center gap-3">
-                                <span class="material-symbols-outlined text-on-surface-variant">mail</span>
-                                <span class="font-body-sm">Neural Mail</span>
-                            </div>
-                            <span class="font-label-caps text-[10px] text-on-surface-variant">DISABLED</span>
-                        </div>
+                    <div id="connector-list" class="space-y-4">
+                        <div class="font-label-caps text-[10px] text-on-surface-variant">Loading connectors…</div>
                     </div>
                 </div>
-                <button
-                    class="w-full mt-8 py-3 bg-primary-container text-on-primary-container font-bold rounded-lg hover:brightness-110 transition-all active:scale-[0.98]">
-                    Sync All Services
-                </button>
+                <div class="mt-8 space-y-3">
+                    <p id="connector-status-note" class="text-[10px] font-label-caps text-on-surface-variant hidden"></p>
+                    <button id="sync-connectors-btn"
+                        class="w-full py-3 bg-primary-container text-on-primary-container font-bold rounded-lg hover:brightness-110 transition-all active:scale-[0.98]">
+                        Refresh Services
+                    </button>
+                </div>
             </section>
         </div>
     </main>
@@ -506,7 +461,205 @@
     <script src="components.js"></script>
     <script>
         function initializePage() {
-            // Sliders
+            // NOTE: the API origin is the shared `API` constant from components.js
+            // (do not redeclare `const API` here — it would throw a redeclaration error).
+
+            // ----------------------------------------------------------------
+            // Real-time diagnostics (GET /system/metrics)
+            // ----------------------------------------------------------------
+            function setText(id, value) {
+                const el = document.getElementById(id);
+                if (el) el.textContent = value;
+            }
+            function setBar(id, pct) {
+                const el = document.getElementById(id);
+                if (el) el.style.width = Math.max(0, Math.min(100, pct)) + "%";
+            }
+            function fmtGB(n) {
+                n = Number(n);
+                return isNaN(n) ? "—" : (n >= 10 ? n.toFixed(0) : n.toFixed(1)) + " GB";
+            }
+
+            async function loadMetrics() {
+                const apiEl = document.getElementById("diag-api-status");
+                try {
+                    const res = await fetch(API + "/system/metrics");
+                    const data = await res.json();
+                    if (!data.success) throw new Error("metrics unavailable");
+                    apiEl.textContent = "LIVE";
+                    apiEl.className = "font-data-mono text-primary";
+
+                    const cpu = data.cpu || {};
+                    const cpuPct = Number(cpu.percent) || 0;
+                    setText("diag-cpu-value", cpuPct.toFixed(0) + "%");
+                    setBar("diag-cpu-bar", cpuPct);
+                    const cores = cpu.count ? cpu.count + " cores" : "CPU";
+                    const cpuTemp = cpu.temperature && cpu.temperature.current != null
+                        ? " · " + cpu.temperature.current + "°C" : "";
+                    setText("diag-cpu-detail", cores + cpuTemp);
+
+                    const ram = data.ram || {};
+                    const ramPct = Number(ram.percent) || 0;
+                    setText("diag-ram-value", ramPct.toFixed(0) + "%");
+                    setBar("diag-ram-bar", ramPct);
+                    setText("diag-ram-detail", fmtGB(ram.used_gb) + " / " + fmtGB(ram.total_gb));
+
+                    // The API reports every mounted partition; show the primary one
+                    // (largest total) and label it honestly as the main drive.
+                    const disks = Array.isArray(data.disks) ? data.disks : [];
+                    if (disks.length) {
+                        const primary = disks.reduce((a, b) =>
+                            (Number(b.total_gb) || 0) > (Number(a.total_gb) || 0) ? b : a);
+                        const dPct = Number(primary.percent) || 0;
+                        setText("diag-disk-value", dPct.toFixed(0) + "%");
+                        setBar("diag-disk-bar", dPct);
+                        setText("diag-disk-detail",
+                            (primary.mountpoint || "Disk") + " · " + fmtGB(primary.free_gb) + " free");
+                    } else {
+                        setText("diag-disk-value", "—");
+                        setBar("diag-disk-bar", 0);
+                        setText("diag-disk-detail", "No disks reported");
+                    }
+
+                    const gpu = data.gpu;
+                    setText("diag-gpu-name", gpu && gpu.name ? gpu.name : "Not detected");
+                    const cpuTempC = cpu.temperature && cpu.temperature.current != null ? Number(cpu.temperature.current) : null;
+                    // Thermals panel: CPU sensor when available, otherwise n/a.
+                    // (GPU temp is not part of /system/metrics; see the test runner.)
+                    if (cpuTempC != null) {
+                        setText("diag-temp-value", cpuTempC.toFixed(0) + "°C");
+                        // Rough scale for the bar: 30–90°C mapped to 0–100%.
+                        setBar("diag-temp-bar", ((cpuTempC - 30) / 60) * 100);
+                        setText("diag-temp-detail", "CPU · " + (cpu.temperature.sensor || ""));
+                    } else {
+                        setText("diag-temp-value", "n/a");
+                        setBar("diag-temp-bar", 0);
+                        setText("diag-temp-detail", "No sensors on this platform");
+                    }
+                    hideApiError();
+                } catch (err) {
+                    apiEl.textContent = "OFFLINE";
+                    apiEl.className = "font-data-mono text-error";
+                    showApiError("Could not connect to Sarthi API at " + API + " — is the server running?");
+                }
+            }
+
+            // ----------------------------------------------------------------
+            // Connectors (GET /connectors)
+            // ----------------------------------------------------------------
+            function connectorRow(conn) {
+                const connected = conn.status === "connected";
+                const pending = conn.status === "connecting" || conn.status === "disconnected";
+                const statusText = connected ? "ACTIVE" : (pending ? "PENDING" : conn.status.toUpperCase());
+                const statusClass = connected ? "text-primary" : (pending ? "text-on-surface-variant" : "text-error");
+                const icon = conn.icon || "extension";
+                const name = conn.name || conn.service || "Connector";
+                const toolCount = Array.isArray(conn.tools) ? conn.tools.length : 0;
+                return `
+                <div class="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined ${connected ? "text-primary" : "text-on-surface-variant"}">${esc(icon)}</span>
+                        <span class="font-body-sm">${esc(name)}</span>
+                    </div>
+                    <span class="font-label-caps text-[10px] ${statusClass}">${esc(statusText)}${toolCount ? " · " + toolCount + " tool" + (toolCount > 1 ? "s" : "") : ""}</span>
+                </div>`;
+            }
+
+            async function loadConnectors() {
+                const list = document.getElementById("connector-list");
+                const note = document.getElementById("connector-status-note");
+                try {
+                    const res = await fetch(API + "/connectors");
+                    const data = await res.json();
+                    if (!data.success) throw new Error("connectors unavailable");
+                    const connectors = data.connectors || [];
+                    if (!connectors.length) {
+                        list.innerHTML = `
+                        <div class="p-3 rounded-lg border border-white/10 text-on-surface-variant font-body-sm">
+                            No connectors configured yet. Add one on the Knowledge page.
+                        </div>`;
+                        note.classList.add("hidden");
+                        return;
+                    }
+                    list.innerHTML = connectors.map(connectorRow).join("");
+                    const live = connectors.filter((c) => c.status === "connected").length;
+                    note.textContent = live + " of " + connectors.length + " configured connector(s) connected. Manage them on the Knowledge page.";
+                    note.classList.remove("hidden");
+                    hideApiError();
+                } catch (err) {
+                    list.innerHTML = `
+                    <div class="p-3 rounded-lg border border-error/30 text-error font-body-sm">
+                        Could not load connectors.
+                    </div>`;
+                    showApiError("Could not connect to Sarthi API at " + API + " — is the server running?");
+                }
+            }
+
+            document.getElementById("sync-connectors-btn").addEventListener("click", loadConnectors);
+
+            // ----------------------------------------------------------------
+            // Clear interaction logs (DELETE /command-history entries one by one)
+            // ----------------------------------------------------------------
+            const clearBtn = document.getElementById("clear-history-btn");
+            const clearStatus = document.getElementById("clear-history-status");
+            clearBtn.addEventListener("click", async () => {
+                if (!confirm("Delete all recorded command history? This cannot be undone.")) return;
+                clearBtn.disabled = true;
+                clearStatus.textContent = "Clearing…";
+                clearStatus.classList.remove("hidden", "text-error");
+                clearStatus.classList.add("text-on-surface-variant");
+                try {
+                    const res = await fetch(API + "/command-history");
+                    const data = await res.json();
+                    const entries = (data.history || []);
+                    let deleted = 0;
+                    for (const e of entries) {
+                        try {
+                            const r = await fetch(API + "/command-history/" + encodeURIComponent(e.id), { method: "DELETE" });
+                            const d = await r.json();
+                            if (d.success) deleted++;
+                        } catch { /* keep going */ }
+                    }
+                    clearStatus.textContent = "Cleared " + deleted + " of " + entries.length + " entries.";
+                } catch {
+                    clearStatus.textContent = "Could not reach the API.";
+                    clearStatus.classList.add("text-error");
+                } finally {
+                    clearBtn.disabled = false;
+                    setTimeout(() => clearStatus.classList.add("hidden"), 5000);
+                }
+            });
+
+            // ----------------------------------------------------------------
+            // Shared API error banner (kept from the old layout)
+            // ----------------------------------------------------------------
+            let apiOnline = true;
+            function showApiError(msg) {
+                if (apiOnline) {
+                    apiOnline = false;
+                    // Reuse the chat page's pattern: a fixed banner at the top.
+                    let banner = document.getElementById("api-error-banner");
+                    if (!banner) {
+                        banner = document.createElement("div");
+                        banner.id = "api-error-banner";
+                        banner.className = "fixed top-0 left-64 right-0 z-50 p-3 bg-error/10 border-b border-error/30 text-error font-body-sm text-center";
+                        document.body.prepend(banner);
+                    }
+                    banner.textContent = msg;
+                    banner.classList.remove("hidden");
+                }
+            }
+            function hideApiError() {
+                if (!apiOnline) {
+                    apiOnline = true;
+                    const banner = document.getElementById("api-error-banner");
+                    if (banner) banner.classList.add("hidden");
+                }
+            }
+
+            // ----------------------------------------------------------------
+            // Sliders + mouse glow (existing page behavior)
+            // ----------------------------------------------------------------
             document.querySelectorAll('.nothing-slider').forEach(slider => {
                 slider.addEventListener('input', (e) => {
                     const container = e.target.closest('.space-y-4');
@@ -520,7 +673,6 @@
                 });
             });
 
-            // Mouse glow effect
             document.addEventListener('mousemove', (e) => {
                 const panels = document.querySelectorAll('.glass-panel');
                 panels.forEach(panel => {
@@ -534,6 +686,12 @@
                     }
                 });
             });
+
+            // Initial load + polling
+            loadMetrics();
+            loadConnectors();
+            setInterval(loadMetrics, 3000);
+            setInterval(loadConnectors, 30000);
         }
     </script>
 </body>

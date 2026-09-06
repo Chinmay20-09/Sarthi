@@ -366,8 +366,10 @@ UI can badge who handled a request. Conversation mode ("conversation mode" /
 an existing endpoint; the UI never imports backend modules. Each page declares
 its own API-origin constant (`components.js` exports `API`; `chat.html` uses
 `SarthiAPI` to avoid a `const` collision) — a known cosmetic duplication, not a
-defect. `history.html` and `settings.html` are currently static mockups (no API
-calls).
+defect. Wired pages: dashboard, chat, skills, memory, knowledge, **history**
+(live `/command-history` timeline with search + delete) and **settings**
+(live `/system/metrics` diagnostics, `/connectors` statuses; the Voice/Privacy
+toggles are explicitly labeled visual previews without backing settings).
 
 ---
 
@@ -455,7 +457,10 @@ Explicit, verified:
    management exists.
 5. **One connector** (Google Calendar); the generic connector "test" endpoint
    does not validate credentials.
-6. **UI mockups:** `history.html` and `settings.html` are static (no API wiring).
+6. **UI gaps:** the Voice & Personality / Privacy & Security toggles on
+   `settings.html` (and the UI-customization section) are visual previews —
+   no backing settings exist; diagnostics and connector statuses on that page
+   are live.
 7. **Resolver quirk:** a machine-scanned app can shadow a website alias when
    both clean to the same string (canonical names indexed before aliases).
    Deterministic; websites remain reachable by canonical name.
