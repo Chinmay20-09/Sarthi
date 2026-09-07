@@ -759,6 +759,16 @@
       "tool_used": null,
       "timestamp": "2026-09-06T12:06:53.263748+00:00",
       "duration_ms": 0.4258999997546198
+    },
+    {
+      "task_id": "fallback_test_001",
+      "prompt": "This task will trigger fallback",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-09-07T18:10:30.075299+00:00",
+      "duration_ms": 0.13970000009067007
     }
   ]
 }

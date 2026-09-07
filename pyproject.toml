@@ -36,8 +36,14 @@ automation = [
 
 # Browser Awareness: DOM-level inspection of arbitrary websites through
 # the installed Chrome (channel="chrome" — no bundled browser download).
-# Lazily imported — the core app and the test suite work without it.
+# Selenium (+ Selenium Manager's auto-fetched chromedriver) is the primary
+# browser stack; Playwright stays as the fallback backend. BeautifulSoup
+# parses the page HTML for both Browser Awareness and the ai_chain DOM
+# reader. Lazily imported — the core app and the test suite work without
+# any of them.
 browser = [
+    "selenium>=4.20",
+    "beautifulsoup4>=4.12",
     "playwright>=1.40",
 ]
 

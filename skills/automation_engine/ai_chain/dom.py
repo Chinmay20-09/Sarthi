@@ -11,9 +11,10 @@ verified only by whether it put text on the clipboard. That works, but it
 is blind: after a UI change the estimates drift and the robot clicks
 around the screen hoping to hit a button.
 
-v1.5 flips it around. It attaches to the user's already-running Chrome
-over the DevTools Protocol (read-only), pulls the page's HTML, and
-**regexes it** for the affordance — exactly the strings a human would
+v1.6 flips it around. It attaches to the user's already-running Chrome
+(read-only — **Selenium** over the DevTools port, Playwright as the
+fallback backend), pulls the page's HTML, and **parses it with
+BeautifulSoup** for the affordance — exactly the elements a human would
 look for: ``aria-label="Copy"``, ``id="prompt-textarea"``,
 ``aria-label="Enter a prompt here"``, ``aria-label="Download"``, ...
 The matched element's bounding box is converted into a window-fraction
@@ -21,19 +22,31 @@ point and handed to the existing ScreenController, so the click is
 verified by the clipboard exactly as before — only now it starts at the
 *right* place instead of an estimate.
 
-Why read-only + regex instead of clicking through CDP
------------------------------------------------------
+Why read-only + parsing instead of clicking through CDP
+-------------------------------------------------------
 - The module's safety model stays untouched: hands-off mode, the
   Ctrl+Alt+X abort hotkey and the mouse-corner failsafe are all
   PyAutoGUI/ScreenController primitives, and the click path is
   identical.
 - Unit tests keep running against the stub controller with zero browser
-  dependencies (Playwright is imported lazily, same convention as
-  ``browser_awareness``).
-- If the attach fails, or a regex finds nothing (closed shadow roots,
+  dependencies (Selenium/Playwright/bs4 are all imported lazily, same
+  convention as ``browser_awareness``).
+- If the attach fails, or no affordance is found (closed shadow roots,
   iframes, a UI redesign), every locator returns ``None`` and the driver
   falls back to the v1.0 point + scan grid + Ctrl+A page copy. Nothing
-  breaks — v1.5 just stops guessing first.
+  breaks — v1.6 just stops guessing first.
+
+Backends & parsing
+------------------
+- ``AI_CHAIN_DOM_BACKEND`` picks the attachment backend: ``auto``
+  (default — Selenium first, then Playwright), ``selenium`` or
+  ``playwright``. Selenium attaches to the running automation Chrome via
+  the ``debuggerAddress`` capability — no second browser, no quit.
+- BeautifulSoup (``bs4``) parses the snapshot HTML when installed; the
+  v1.5 attribute-regex runs otherwise. Both produce the same
+  document-order attribute list for well-formed markup — the parser is
+  only more robust (unquoted attribute values, nested tags, noise in
+  inline scripts that merely *looks* like markup).
 """
 
 from __future__ import annotations
@@ -42,10 +55,13 @@ import os
 import re
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from utils.logger import get_logger
+
+if TYPE_CHECKING:  # lazy at runtime — Selenium is optional
+    from .selenium_dom import SeleniumDomReader
 
 logger = get_logger(__name__)
 
@@ -153,14 +169,54 @@ def find_affordances(html: str, matcher: Any) -> list[str]:
     module dependency-free): ``tag`` ('' = any element), ``attribute``
     ('' = no attribute check) and ``value_pattern`` (regex, checked
     case-insensitively against the attribute value).
+
+    BeautifulSoup does the parsing when ``bs4`` is installed (real HTML
+    parsing — no false hits from markup-shaped strings inside inline
+    scripts, unquoted attribute values are fine); the v1.5 raw-HTML
+    regex runs as the fallback so the module works without bs4 too.
     """
     tag = getattr(matcher, "tag", "") or ""
     attribute = getattr(matcher, "attribute", "") or ""
     pattern = getattr(matcher, "value_pattern", "") or ""
     if not attribute or not pattern:
         return []
+    if _bs4_available():
+        return _find_affordances_bs4(html or "", tag, attribute, pattern)
+    return _find_affordances_regex(html or "", tag, attribute, pattern)
+
+
+@lru_cache(maxsize=1)
+def _bs4_available() -> bool:
+    """Whether BeautifulSoup can be imported (cached — imports are slow)."""
+    try:
+        import bs4  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+def _find_affordances_bs4(html: str, tag: str, attribute: str, pattern: str) -> list[str]:
+    """BeautifulSoup version of ``find_affordances`` (document order)."""
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(html, "html.parser")
     values: list[str] = []
-    for match in _tag_attr_regex(tag, attribute).finditer(html or ""):
+    for element in soup.find_all(tag) if tag else soup.find_all(True):
+        value = element.get(attribute)
+        if value is None:
+            continue
+        if isinstance(value, list):  # multi-valued attributes (class, ...)
+            value = " ".join(value)
+        if re.search(pattern, str(value), re.IGNORECASE):
+            values.append(str(value))
+    return values
+
+
+def _find_affordances_regex(html: str, tag: str, attribute: str, pattern: str) -> list[str]:
+    """v1.5 raw-HTML regex (the no-bs4 fallback for ``find_affordances``)."""
+    values: list[str] = []
+    for match in _tag_attr_regex(tag, attribute).finditer(html):
         value = match.group(2) if match.group(2) is not None else match.group(3)
         if value is not None and re.search(pattern, value, re.IGNORECASE):
             values.append(value)
@@ -485,18 +541,33 @@ class DomReader:
 # Tried-once singleton
 # ----------------------------------------------------------------------
 
-_reader: DomReader | None = None
+_reader: DomReader | SeleniumDomReader | None = None
 _reader_tried = False
 
+# Selenium is the primary attachment stack; Playwright is the fallback.
+# AI_CHAIN_DOM_BACKEND: auto (default) | selenium | playwright.
+DOM_BACKEND_ENV = "AI_CHAIN_DOM_BACKEND"
 
-def get_dom_reader(endpoint: str | None = None) -> DomReader | None:
+
+def dom_backend() -> str:
+    """The selected attachment backend (validated; anything else = auto)."""
+    raw = os.getenv(DOM_BACKEND_ENV, "").strip().lower()
+    return raw if raw in ("auto", "selenium", "playwright") else "auto"
+
+
+def get_dom_reader(endpoint: str | None = None) -> DomReader | SeleniumDomReader | None:
     """Attach to Chrome once; return the reader (or None, cached).
 
     Caching the failure matters: the driver polls every few seconds and
     must not keep retrying a dead CDP endpoint on every poll. Returns
-    None quietly when the master switch is off, Playwright is missing,
-    or Chrome is not exposing the debug port — the caller falls back to
-    the v1.0 locating.
+    None quietly when the master switch is off, no backend is usable, or
+    Chrome is not exposing the debug port — the caller falls back to the
+    v1.0 locating.
+
+    Backend order (``AI_CHAIN_DOM_BACKEND``): ``auto`` tries Selenium
+    first (its chromedriver comes from Selenium Manager) and Playwright
+    only when that fails; ``selenium`` / ``playwright`` pin one backend
+    and never fall back.
     """
     global _reader, _reader_tried
     if _reader_tried:
@@ -505,29 +576,50 @@ def get_dom_reader(endpoint: str | None = None) -> DomReader | None:
     if not dom_enabled():
         return None
     url = endpoint or cdp_url()
-    reader = DomReader(url)
+    backend = dom_backend()
+    if backend in ("auto", "selenium"):
+        reader = _connect_reader("selenium", url)
+        if reader is not None:
+            _reader = reader
+            return _reader
+        if backend == "selenium":
+            return None  # explicit choice — no silent fallback
+    if backend in ("auto", "playwright"):
+        reader = _connect_reader("playwright", url)
+        if reader is not None:
+            _reader = reader
+            return _reader
+    return None
+
+
+def _connect_reader(backend: str, url: str):
+    """Attach with one backend; None (with a logged reason) when it cannot."""
+    if backend == "selenium":
+        from .selenium_dom import SeleniumDomReader
+
+        reader = SeleniumDomReader(url)
+        install_hint = "pip install selenium"
+    else:
+        reader = DomReader(url)
+        install_hint = "pip install playwright"
     try:
         reader.connect()
     except ImportError:
-        # Playwright is an optional dependency ([browser] extra). Without
-        # it the driver silently degrades to estimated clicks — say so.
         logger.warning(
-            "[dom] Playwright is not installed — HTML-aware locating is OFF "
-            "(the robot falls back to estimated click points). Install it "
-            "with: pip install playwright"
+            f"[dom] {backend} is not installed — {backend}-backed locating is OFF "
+            f"(install it with: {install_hint})"
         )
         reader.close()
         return None
     except Exception as exc:
         logger.warning(
-            f"[dom] CDP attach to {url} failed ({exc}) — HTML-aware locating is OFF "
-            "for this run (the robot falls back to estimated click points)."
+            f"[dom] {backend} attach to {url} failed ({exc}) — trying the next "
+            "backend if any; otherwise the robot falls back to estimated click points."
         )
         reader.close()
         return None
-    logger.info(f"[dom] attached to Chrome at {url}")
-    _reader = reader
-    return _reader
+    logger.info(f"[dom] attached to Chrome at {url} via {backend}")
+    return reader
 
 
 def reset_dom_reader() -> None:

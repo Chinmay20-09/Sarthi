@@ -51,8 +51,15 @@ Browser Awareness.
 
 ## Browser window & tabs
 
-- **Default:** Playwright launches Chrome (`channel="chrome"`, the Chrome
-  installed on this PC) with a brand-new **temporary profile**. It opens
+Two stacks, one interface — **Selenium is primary**, Playwright the
+fallback (`BROWSER_AWARENESS_DRIVER=selenium|playwright` pins one;
+unset auto-selects Selenium when installed, Playwright otherwise).
+Selenium fetches its chromedriver automatically (Selenium Manager); the
+page HTML is inspected with **BeautifulSoup** (`inspector.py`), no
+page-side JavaScript.
+
+- **Default:** the automation launches Chrome with a brand-new
+  **temporary profile**. It opens
   a visible window of its own so you can watch it work; nothing it does
   can touch your normal browsing profile, cookies or session. The
   temporary profile is deleted when the run ends.
@@ -109,15 +116,17 @@ python -m pytest tests/test_browser_awareness.py -q
 python -m pytest -q                 # whole Sarthi suite
 ```
 
-All tests use fake providers/components and pure logic — Playwright,
-Chrome and the local Ollama model are not required.
+All tests use fake providers/components and pure logic — Selenium,
+Playwright, Chrome and the local Ollama model are not required.
 
 ## Trying it live
 
-Install the driver once (already done in the venv for this project):
+Install the browser stack once (already done in the venv for this
+project):
 
 ```bash
-pip install playwright        # no browser download — uses installed Chrome
+pip install beautifulsoup4 selenium   # Selenium Manager fetches chromedriver
+# or: pip install playwright          # fallback stack, uses installed Chrome
 ```
 
 Then run Sarthi (test mode first to see the plan, no browser opens):
@@ -141,7 +150,8 @@ are already using.
 |------|----------------|
 | `schemas.py` | typed contracts + pure safety gate (`validate_inspection`) |
 | `page_snapshot.py` | pure, sanitized snapshot builder + Hermes text block |
-| `inspector.py` | Playwright DOM inspector (lazy import) |
+| `inspector.py` | Playwright JS walk + BeautifulSoup (Selenium) inspectors (lazy imports) |
+| `selenium_page.py` | Selenium→Playwright-style page adapter (locator/goto/inner_text) |
 | `hermes_inspector.py` | Hermes Browser Awareness Agent + strict JSON validation |
 | `executor.py` | validated action executor + selector allow-list |
 | `manager.py` | inspect → observe → validate → execute → reinspect loop |

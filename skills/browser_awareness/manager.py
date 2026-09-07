@@ -51,12 +51,15 @@ class BrowserAwarenessManager:
     def __init__(
         self,
         session_factory=open_session,
-        inspector_factory=PlaywrightInspector,
+        inspector_factory=None,
         hermes: HermesInspector | None = None,
         executor_factory=SafeExecutor,
         announce_progress: bool = True,
     ):
         self._session_factory = session_factory
+        # None = let the SESSION pick its inspector: Selenium sessions
+        # carry the BeautifulSoup inspector, Playwright sessions the
+        # JS-walk one (see driver.BrowserSession.inspector_factory).
         self._inspector_factory = inspector_factory
         self._hermes = hermes
         self._executor_factory = executor_factory
@@ -114,7 +117,12 @@ class BrowserAwarenessManager:
             session = self._session_factory(url)
             page = session.page
             hermes = self._hermes or HermesInspector()
-            inspector = self._inspector_factory(page)
+            inspector_factory = (
+                self._inspector_factory
+                or getattr(session, "inspector_factory", None)
+                or PlaywrightInspector
+            )
+            inspector = inspector_factory(page)
             executor = self._executor_factory(page)
 
             snapshot = inspector.inspect()

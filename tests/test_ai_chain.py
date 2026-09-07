@@ -1501,3 +1501,364 @@ class TestDriverDomLocating:
         assert driver._dom_point(self._spec(), "copy") is None
         assert driver._dom_point(self._spec(), "composer") is None
         assert dom.calls == []  # reader was never touched
+
+
+# ----------------------------------------------------------------------
+# v1.6 — BeautifulSoup parsing, Selenium reader, backend selection
+# ----------------------------------------------------------------------
+
+
+class TestBs4FindAffordances:
+    """find_affordances: bs4 parsing (primary) vs the v1.5 regex fallback."""
+
+    def test_bs4_and_regex_agree_on_quoted_markup(self):
+        pytest.importorskip("bs4")
+        from skills.automation_engine.ai_chain import dom
+
+        html = (
+            '<header><button aria-label="Edit">Edit</button></header>'
+            "<main>"
+            '<button data-testid="copy-context-menu-item" aria-label="Copy">Copy</button>'
+            '<button aria-label="Copy code">&lt;/&gt;</button>'
+            "</main>"
+            "<footer><button aria-label='Copy'>Copy</button></footer>"
+        )
+        assert dom._find_affordances_bs4(html, "button", "aria-label", r"^copy$") == [
+            "Copy",
+            "Copy",
+        ]
+        assert dom._find_affordances_regex(html, "button", "aria-label", r"^copy$") == [
+            "Copy",
+            "Copy",
+        ]
+
+    def test_bs4_handles_what_the_regex_cannot(self):
+        """Unquoted attribute values parse; markup inside <script> does not."""
+        pytest.importorskip("bs4")
+        from skills.automation_engine.ai_chain import dom
+
+        html = (
+            "<button aria-label=Copy>go</button>"
+            "<script>var b = '<button aria-label=\"Fake\">';</script>"
+        )
+        assert dom._find_affordances_bs4(html, "button", "aria-label", r"^copy$") == ["Copy"]
+        assert dom._find_affordances_bs4(html, "button", "aria-label", r"^fake$") == []
+        # The raw-HTML regex scans text, so it "finds" the fake inside the
+        # script and misses the unquoted value — exactly why bs4 is primary.
+        assert dom._find_affordances_regex(html, "button", "aria-label", r"^fake$") == ["Fake"]
+        assert dom._find_affordances_regex(html, "button", "aria-label", r"^copy$") == []
+
+    def test_find_affordances_uses_bs4_when_installed(self):
+        pytest.importorskip("bs4")
+        from skills.automation_engine.ai_chain import dom
+        from skills.automation_engine.ai_chain.registry import DomMatcher
+
+        any_tag = DomMatcher("composer", "", "aria-label", r"prompt|ask gemini")
+        html = '<div aria-label="Enter a prompt here"></div><p aria-label="Ask Gemini"></p>'
+        assert dom.find_affordances(html, any_tag) == ["Enter a prompt here", "Ask Gemini"]
+
+    def test_bs4_availability_is_cached_bool(self):
+        from skills.automation_engine.ai_chain import dom
+
+        assert isinstance(dom._bs4_available(), bool)
+
+
+class _FakeSwitchTo:
+    def __init__(self, driver):
+        self._driver = driver
+
+    def window(self, handle):
+        self._driver.switched_to.append(handle)
+        self._driver.current = handle
+
+
+class _FakeSeleniumDriver:
+    """Minimal selenium.webdriver.Chrome stand-in for the DOM reader."""
+
+    def __init__(self, urls, visibility=None, snapshot=None):
+        self.window_handles = list(urls)
+        self._urls = urls
+        self._visibility = visibility or {}
+        self._snapshot = snapshot
+        self.current = None
+        self.switched_to: list[str] = []
+        self.scripts: list[tuple] = []
+        self.switch_to = _FakeSwitchTo(self)
+
+    @property
+    def current_url(self):
+        return self._urls.get(self.current, "")
+
+    def execute_script(self, script, arg=None):
+        self.scripts.append((script, arg))
+        if "visibilityState" in script:
+            return self._visibility.get(self.current, "visible")
+        if "candidates" in script:  # the shared snapshot script
+            return self._snapshot
+        return {"ok": True, "chars": 5}  # the shared fill script
+
+
+_SNAPSHOT = {
+    "html": '<button aria-label="Copy">Copy</button>',
+    "dims": {
+        "outer_width": 100,
+        "inner_width": 100,
+        "outer_height": 100,
+        "inner_height": 100,
+    },
+    "candidates": {"button|aria-label": [{"v": "Copy", "x": 10, "y": 20, "w": 30, "h": 15}]},
+}
+
+
+class TestSeleniumDomReader:
+    def test_debugger_address_format(self):
+        from skills.automation_engine.ai_chain.selenium_dom import debugger_address
+
+        assert debugger_address("http://127.0.0.1:9222") == "127.0.0.1:9222"
+        assert debugger_address("http://localhost:9333/") == "localhost:9333"
+        assert debugger_address("") == "127.0.0.1:9222"  # default port
+
+    def test_connect_uses_debugger_address_option(self, monkeypatch):
+        captured = {}
+        driver = _FakeSeleniumDriver({})
+
+        def factory(options):
+            captured["options"] = options
+            return driver
+
+        from skills.automation_engine.ai_chain.selenium_dom import SeleniumDomReader
+
+        _install_fake_selenium(monkeypatch, chrome_factory=factory)
+        reader = SeleniumDomReader("http://127.0.0.1:9333")
+        reader.connect()
+        assert captured["options"].experimental == {"debuggerAddress": "127.0.0.1:9333"}
+
+    def test_locate_returns_window_fraction(self, monkeypatch):
+        from skills.automation_engine.ai_chain import registry
+        from skills.automation_engine.ai_chain.selenium_dom import SeleniumDomReader
+
+        driver = _FakeSeleniumDriver(
+            {"tab-site": "https://chatgpt.com/"},
+            visibility={"tab-site": "visible"},
+            snapshot=_SNAPSHOT,
+        )
+        _install_fake_selenium(monkeypatch, chrome_factory=lambda options: driver)
+        reader = SeleniumDomReader("http://127.0.0.1:9222")
+        reader.connect()
+        matchers = [registry.DomMatcher("copy", "button", "aria-label", r"^copy$")]
+        point = reader.locate("chatgpt.com", matchers)
+        # rect centre (25, 27.5) of a 100x100 chrome-less window.
+        assert point == pytest.approx((0.25, 0.275))
+
+    def test_locate_none_when_tab_missing_or_no_match(self, monkeypatch):
+        from skills.automation_engine.ai_chain import registry
+        from skills.automation_engine.ai_chain.selenium_dom import SeleniumDomReader
+
+        driver = _FakeSeleniumDriver(
+            {"tab-site": "https://chatgpt.com/"},
+            visibility={"tab-site": "visible"},
+            snapshot={"html": "<p>nothing</p>", "dims": _SNAPSHOT["dims"], "candidates": {}},
+        )
+        _install_fake_selenium(monkeypatch, chrome_factory=lambda options: driver)
+        reader = SeleniumDomReader("http://127.0.0.1:9222")
+        reader.connect()
+        matchers = [registry.DomMatcher("copy", "button", "aria-label", r"^copy$")]
+        assert reader.locate("gemini.google.com", matchers) is None  # no such tab
+        assert reader.locate("chatgpt.com", matchers) is None  # no affordance
+
+    def test_close_never_quits_the_browser(self, monkeypatch):
+        from skills.automation_engine.ai_chain.selenium_dom import SeleniumDomReader
+
+        driver = _FakeSeleniumDriver({"tab": "https://x.com/"})
+        driver.quit_calls = 0
+        driver.quit = lambda: setattr(driver, "quit_calls", driver.quit_calls + 1)
+        _install_fake_selenium(monkeypatch, chrome_factory=lambda options: driver)
+        reader = SeleniumDomReader("http://127.0.0.1:9222")
+        reader.connect()
+        reader.close()
+        assert reader._connected is False
+        assert driver.quit_calls == 0  # the automation Chrome stays open
+
+    def test_fill_sends_shared_fill_script(self, monkeypatch):
+        from skills.automation_engine.ai_chain import registry
+        from skills.automation_engine.ai_chain.selenium_dom import SeleniumDomReader
+
+        driver = _FakeSeleniumDriver(
+            {"tab-site": "https://chatgpt.com/"},
+            visibility={"tab-site": "visible"},
+            snapshot=_SNAPSHOT,
+        )
+        _install_fake_selenium(monkeypatch, chrome_factory=lambda options: driver)
+        reader = SeleniumDomReader("http://127.0.0.1:9222")
+        reader.connect()
+        matchers = [registry.DomMatcher("composer", "button", "aria-label", r"^copy$")]
+        assert reader.fill("chatgpt.com", matchers, "hello robot") is True
+        script, arg = driver.scripts[-1]
+        assert "insertText" in script  # the shared DevTools fill script
+        assert arg["text"] == "hello robot"
+
+
+def _install_fake_selenium(monkeypatch, chrome_factory=lambda options: _FakeSeleniumDriver({})):
+    """Put a minimal selenium package into sys.modules for the test."""
+    import sys
+    import types
+
+    selenium_mod = types.ModuleType("selenium")
+    webdriver_mod = types.ModuleType("selenium.webdriver")
+    common_mod = types.ModuleType("selenium.webdriver.common")
+    by_mod = types.ModuleType("selenium.webdriver.common.by")
+    support_mod = types.ModuleType("selenium.webdriver.support")
+    ui_mod = types.ModuleType("selenium.webdriver.support.ui")
+
+    class _FakeBy:
+        CSS_SELECTOR = "css selector"
+        XPATH = "xpath"
+        TAG_NAME = "tag name"
+
+    class _FakeChromeOptions:
+        def __init__(self):
+            self.arguments: list[str] = []
+            self.experimental: dict = {}
+
+        def add_argument(self, argument):
+            self.arguments.append(argument)
+
+        def add_experimental_option(self, name, value):
+            self.experimental[name] = value
+
+    class _FakeSelect:
+        def __init__(self, element):
+            self.element = element
+            self.by_value: list[str] = []
+            self.by_text: list[str] = []
+
+        def select_by_value(self, value):
+            self.by_value.append(value)
+
+        def select_by_visible_text(self, value):
+            self.by_text.append(value)
+
+    webdriver_mod.ChromeOptions = _FakeChromeOptions
+    webdriver_mod.Chrome = lambda options=None: chrome_factory(options)
+    by_mod.By = _FakeBy
+    common_mod.by = by_mod
+    webdriver_mod.common = common_mod
+    ui_mod.Select = _FakeSelect
+    support_mod.ui = ui_mod
+    webdriver_mod.support = support_mod
+    selenium_mod.webdriver = webdriver_mod
+    for name, module in {
+        "selenium": selenium_mod,
+        "selenium.webdriver": webdriver_mod,
+        "selenium.webdriver.common": common_mod,
+        "selenium.webdriver.common.by": by_mod,
+        "selenium.webdriver.support": support_mod,
+        "selenium.webdriver.support.ui": ui_mod,
+    }.items():
+        monkeypatch.setitem(sys.modules, name, module)
+
+
+class _RecordingReader:
+    def __init__(self, name, log, fail=None):
+        self._name = name
+        self._log = log
+        self._fail = fail
+
+    def __call__(self, url):
+        self._log.append((self._name, url))
+        return self
+
+    def connect(self):
+        if self._fail is not None:
+            raise self._fail
+
+    def close(self):
+        pass
+
+
+class TestDomBackendSelection:
+    """get_dom_reader: selenium primary, playwright fallback, env overrides."""
+
+    def setup_method(self):
+        from skills.automation_engine.ai_chain import dom
+
+        dom.reset_dom_reader()
+
+    def teardown_method(self):
+        from skills.automation_engine.ai_chain import dom
+
+        dom.reset_dom_reader()
+
+    def test_backend_env_validation(self, monkeypatch):
+        from skills.automation_engine.ai_chain import dom
+
+        monkeypatch.delenv(dom.DOM_BACKEND_ENV, raising=False)
+        assert dom.dom_backend() == "auto"
+        monkeypatch.setenv(dom.DOM_BACKEND_ENV, "selenium")
+        assert dom.dom_backend() == "selenium"
+        monkeypatch.setenv(dom.DOM_BACKEND_ENV, "PLAYWRIGHT")
+        assert dom.dom_backend() == "playwright"
+        monkeypatch.setenv(dom.DOM_BACKEND_ENV, "nonsense")
+        assert dom.dom_backend() == "auto"
+
+    def test_auto_prefers_selenium(self, monkeypatch):
+        from skills.automation_engine.ai_chain import dom, selenium_dom
+
+        log: list[tuple] = []
+        monkeypatch.setattr(selenium_dom, "SeleniumDomReader", _RecordingReader("selenium", log))
+        monkeypatch.setattr(dom, "DomReader", _RecordingReader("playwright", log))
+        reader = dom.get_dom_reader("http://127.0.0.1:9222")
+        assert reader is not None
+        assert log == [("selenium", "http://127.0.0.1:9222")]  # playwright never tried
+
+    def test_selenium_failure_falls_back_to_playwright(self, monkeypatch):
+        from skills.automation_engine.ai_chain import dom, selenium_dom
+
+        log: list[tuple] = []
+        monkeypatch.setattr(
+            selenium_dom,
+            "SeleniumDomReader",
+            _RecordingReader("selenium", log, fail=RuntimeError("no chromedriver")),
+        )
+        monkeypatch.setattr(dom, "DomReader", _RecordingReader("playwright", log))
+        reader = dom.get_dom_reader("http://127.0.0.1:9222")
+        assert reader is not None
+        assert [name for name, _ in log] == ["selenium", "playwright"]
+
+    def test_explicit_selenium_never_falls_back(self, monkeypatch):
+        from skills.automation_engine.ai_chain import dom, selenium_dom
+
+        log: list[tuple] = []
+        monkeypatch.setenv(dom.DOM_BACKEND_ENV, "selenium")
+        monkeypatch.setattr(
+            selenium_dom,
+            "SeleniumDomReader",
+            _RecordingReader("selenium", log, fail=RuntimeError("dead")),
+        )
+        monkeypatch.setattr(dom, "DomReader", _RecordingReader("playwright", log))
+        assert dom.get_dom_reader("http://127.0.0.1:9222") is None
+        assert log == [("selenium", "http://127.0.0.1:9222")]  # no silent fallback
+
+    def test_explicit_playwright_skips_selenium(self, monkeypatch):
+        from skills.automation_engine.ai_chain import dom, selenium_dom
+
+        log: list[tuple] = []
+        monkeypatch.setenv(dom.DOM_BACKEND_ENV, "playwright")
+        monkeypatch.setattr(selenium_dom, "SeleniumDomReader", _RecordingReader("selenium", log))
+        monkeypatch.setattr(dom, "DomReader", _RecordingReader("playwright", log))
+        reader = dom.get_dom_reader("http://127.0.0.1:9222")
+        assert reader is not None
+        assert log == [("playwright", "http://127.0.0.1:9222")]
+
+    def test_reader_failure_is_cached(self, monkeypatch):
+        from skills.automation_engine.ai_chain import dom, selenium_dom
+
+        log: list[tuple] = []
+        monkeypatch.setenv(dom.DOM_BACKEND_ENV, "playwright")
+        monkeypatch.setattr(selenium_dom, "SeleniumDomReader", _RecordingReader("selenium", log))
+        monkeypatch.setattr(
+            dom, "DomReader", _RecordingReader("playwright", log, fail=RuntimeError("dead"))
+        )
+        assert dom.get_dom_reader("http://127.0.0.1:9222") is None
+        assert dom.get_dom_reader("http://127.0.0.1:9222") is None
+        assert len(log) == 1  # the dead endpoint is not retried

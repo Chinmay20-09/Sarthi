@@ -143,9 +143,14 @@ attaching to the browser you are already logged into):
 chrome.exe --remote-debugging-port=9222
 ```
 
-or set the URL in the environment. When the port is unreachable — or
-Playwright is not installed — nothing breaks: every locator returns
-`None` and the driver silently uses the v1.0 point+scan+Ctrl+A path.
+or set the URL in the environment. The snapshot HTML is parsed with
+**BeautifulSoup** (`bs4`) when installed, with the v1.5 attribute regex
+otherwise. The attachment backend is **Selenium** (`debuggerAddress` to
+the running automation Chrome — never quits it), with Playwright as the
+fallback; `AI_CHAIN_DOM_BACKEND=selenium|playwright|auto` picks one.
+When the port is unreachable — or no backend is installed — nothing
+breaks: every locator returns `None` and the driver silently uses the
+v1.0 point+scan+Ctrl+A path.
 
 Per-site regex matchers live in `registry.py` (`DEFAULT_DOM_PROFILES`);
 override them via `calibration.json` under `actions.<site>.dom` without

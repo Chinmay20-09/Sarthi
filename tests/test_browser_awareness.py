@@ -25,6 +25,473 @@ from skills.browser_awareness.schemas import (
     validate_inspection,
 )
 
+# ---------------------------------------------------------------------------
+# Selenium + BeautifulSoup stack (v1.1 — Selenium primary, PW fallback)
+# ---------------------------------------------------------------------------
+
+
+class _FakeSeleniumElement:
+    def __init__(self, displayed=True, selected=False, tag="button"):
+        self.displayed = displayed
+        self.selected = selected
+        self.tag_used = tag
+        self.clicks = 0
+        self.typed: list[str] = []
+        self.cleared = 0
+        self.relative_queries: list[tuple] = []
+
+    def click(self):
+        self.clicks += 1
+
+    def clear(self):
+        self.cleared += 1
+
+    def send_keys(self, text):
+        self.typed.append(text)
+
+    def is_displayed(self):
+        return self.displayed
+
+    def is_selected(self):
+        return self.selected
+
+    def find_elements(self, by, value):
+        self.relative_queries.append((by, value))
+        return []
+
+
+class _FakeSeleniumDriver:
+    """Minimal webdriver.Chrome stand-in for the adapter + driver tests."""
+
+    def __init__(self):
+        self.located: dict[tuple, list] = {}
+        self.scripts: list[tuple] = []
+        self.loaded: list[str] = []
+        self.url = "https://example.com/"
+        self.source = "<html><body>hi</body></html>"
+        self.options = None
+        self.quit_calls = 0
+        self.closed_handles: list[str] = []
+        self.switched: list[str] = []
+        self.windows = ["tab-chat"]
+        self.current = "tab-chat"
+        self.switch_to = self
+
+    # -- navigation / pages --------------------------------------------
+
+    def get(self, url):
+        self.loaded.append(url)
+        self.url = url
+
+    @property
+    def page_source(self):
+        return self.source
+
+    @property
+    def current_url(self):
+        return self.url
+
+    @property
+    def title(self):
+        return "Example"
+
+    def find_element(self, by, value):
+        matches = self.located.get((by, value)) or []
+        if not matches:
+            raise LookupError(f"no element for {(by, value)}")
+        return matches[0]
+
+    def find_elements(self, by, value):
+        return list(self.located.get((by, value), []))
+
+    def execute_script(self, script, *args):
+        self.scripts.append((script, args))
+        return "ran"
+
+    # -- tabs (switch_to is self: switch_to.window / .new_window) -------
+
+    @property
+    def current_window_handle(self):
+        return self.current
+
+    @property
+    def window_handles(self):
+        return list(self.windows)
+
+    def window(self, handle):
+        self.switched.append(handle)
+        self.current = handle
+
+    def new_window(self, kind):
+        self.windows.append("tab-new")
+        self.current = "tab-new"
+
+    def close(self):
+        self.closed_handles.append(self.current)
+
+    def quit(self):
+        self.quit_calls += 1
+
+
+def _install_fake_selenium(monkeypatch, chrome_factory=None):
+    """Put a minimal selenium package into sys.modules for the test."""
+    import sys
+    import types
+
+    selenium_mod = types.ModuleType("selenium")
+    webdriver_mod = types.ModuleType("selenium.webdriver")
+    common_mod = types.ModuleType("selenium.webdriver.common")
+    by_mod = types.ModuleType("selenium.webdriver.common.by")
+    support_mod = types.ModuleType("selenium.webdriver.support")
+    ui_mod = types.ModuleType("selenium.webdriver.support.ui")
+
+    class _FakeBy:
+        CSS_SELECTOR = "css selector"
+        XPATH = "xpath"
+        TAG_NAME = "tag name"
+
+    class _FakeChromeOptions:
+        def __init__(self):
+            self.arguments: list[str] = []
+            self.experimental: dict = {}
+
+        def add_argument(self, argument):
+            self.arguments.append(argument)
+
+        def add_experimental_option(self, name, value):
+            self.experimental[name] = value
+
+    class _FakeSelect:
+        def __init__(self, element):
+            self.element = element
+            self.by_value: list[str] = []
+            self.by_text: list[str] = []
+            _install_fake_select_instances.append(self)
+
+        def select_by_value(self, value):
+            if value not in getattr(self.element, "select_values", [value]):
+                raise ValueError(f"no option {value!r}")
+            self.by_value.append(value)
+
+        def select_by_visible_text(self, value):
+            self.by_text.append(value)
+
+    webdriver_mod.ChromeOptions = _FakeChromeOptions
+    webdriver_mod.Chrome = lambda options=None: chrome_factory(options)
+    by_mod.By = _FakeBy
+    common_mod.by = by_mod
+    webdriver_mod.common = common_mod
+    ui_mod.Select = _FakeSelect
+    support_mod.ui = ui_mod
+    webdriver_mod.support = support_mod
+    selenium_mod.webdriver = webdriver_mod
+    for name, module in {
+        "selenium": selenium_mod,
+        "selenium.webdriver": webdriver_mod,
+        "selenium.webdriver.common": common_mod,
+        "selenium.webdriver.common.by": by_mod,
+        "selenium.webdriver.support": support_mod,
+        "selenium.webdriver.support.ui": ui_mod,
+    }.items():
+        monkeypatch.setitem(sys.modules, name, module)
+    return _FakeSelect
+
+
+class TestSeleniumPageAdapter:
+    CSS = "css selector"
+    XPATH = "xpath"
+
+    def _page(self, monkeypatch, driver=None):
+        from skills.browser_awareness.selenium_page import SeleniumPageAdapter
+
+        driver = driver or _FakeSeleniumDriver()
+        _install_fake_selenium(monkeypatch)
+        return SeleniumPageAdapter(driver), driver
+
+    def test_goto_uses_driver_get(self, monkeypatch):
+        page, driver = self._page(monkeypatch)
+        page.goto("https://example.com/x", timeout=1000, wait_until="domcontentloaded")
+        assert driver.loaded == ["https://example.com/x"]
+
+    def test_locator_click_resolves_css(self, monkeypatch):
+        page, driver = self._page(monkeypatch)
+        element = _FakeSeleniumElement()
+        driver.located[(self.CSS, "#buy")] = [element]
+        page.locator("#buy").first.click(timeout=500)
+        assert element.clicks == 1
+
+    def test_fill_clears_then_types(self, monkeypatch):
+        page, driver = self._page(monkeypatch)
+        element = _FakeSeleniumElement()
+        driver.located[(self.CSS, "#email")] = [element]
+        page.locator("#email").first.fill("hi@example.com", timeout=500)
+        assert element.cleared == 1
+        assert element.typed == ["hi@example.com"]
+
+    def test_select_option_value_then_text_fallback(self, monkeypatch):
+        page, driver = self._page(monkeypatch)
+        element = _FakeSeleniumElement()
+        element.select_values = ["basic", "pro"]
+        driver.located[(self.CSS, "#plan")] = [element]
+        locator = page.locator("#plan").first
+        locator.select_option("basic", timeout=500)
+        locator.select_option("Basic")  # not a value -> visible-text fallback
+        # One Select wrapper per select_option call, in order.
+        assert _install_fake_select_instances[0].by_value == ["basic"]
+        assert _install_fake_select_instances[1].by_text == ["Basic"]
+
+    def test_check_and_uncheck_toggle_by_state(self, monkeypatch):
+        page, driver = self._page(monkeypatch)
+        unchecked = _FakeSeleniumElement(selected=False)
+        checked = _FakeSeleniumElement(selected=True)
+        driver.located[(self.CSS, "#a")] = [unchecked]
+        driver.located[(self.CSS, "#b")] = [checked]
+        page.locator("#a").first.check(timeout=500)
+        page.locator("#b").first.uncheck(timeout=500)
+        assert unchecked.clicks == 1
+        assert checked.clicks == 1
+
+    def test_is_visible_false_when_missing_or_hidden(self, monkeypatch):
+        page, driver = self._page(monkeypatch)
+        hidden = _FakeSeleniumElement(displayed=False)
+        driver.located[(self.CSS, "#ghost")] = [hidden]
+        assert page.locator("#ghost").first.is_visible(timeout=100) is False
+        assert page.locator("#missing").first.is_visible(timeout=100) is False
+
+    def test_count_is_zero_when_missing(self, monkeypatch):
+        page, _ = self._page(monkeypatch)
+        assert page.locator("#missing").first.count() == 0
+
+    def test_evaluate_wraps_playwright_arrow(self, monkeypatch):
+        page, driver = self._page(monkeypatch)
+        element = _FakeSeleniumElement()
+        driver.located[(self.CSS, "#a")] = [element]
+        page.locator("#a").first.evaluate(
+            "(el) => el.disabled || el.getAttribute('aria-disabled') === 'true'"
+        )
+        script, args = driver.scripts[-1]
+        assert script.startswith("return ((el)")
+        assert args[0] is element
+
+    def test_element_relative_xpath_locator(self, monkeypatch):
+        page, driver = self._page(monkeypatch)
+        element = _FakeSeleniumElement()
+        driver.located[(self.CSS, "#submit")] = [element]
+        form_locator = page.locator("#submit").first.locator("xpath=ancestor::form[1]")
+        assert form_locator.count() == 0
+        assert element.relative_queries == [(self.XPATH, "ancestor::form[1]")]
+
+    def test_inner_text_and_passthrough(self, monkeypatch):
+        page, driver = self._page(monkeypatch)
+        body = _FakeSeleniumElement()
+        body.text = "Hello world"
+        driver.located[(self.CSS, "body")] = [body]
+        assert page.inner_text("body") == "Hello world"
+        assert page.current_url == "https://example.com/"  # passthrough
+        assert page.title == "Example"
+
+
+class _FakeHtmlPage:
+    """A Playwright-shaped page carrying static HTML for the bs4 inspector."""
+
+    def __init__(self, html, body_text="Hello world"):
+        self.page_source = html
+        self.current_url = "https://example.com/pricing"
+        self._body_text = body_text
+
+    def title(self):
+        return "Example — Pricing"
+
+    def inner_text(self, selector):
+        return self._body_text
+
+    def wait_for_load_state(self, *args, **kwargs):
+        pass
+
+
+class TestBeautifulSoupInspector:
+    HTML = """<html><head><title>Example</title></head><body>
+        <nav aria-label="Main"><a href="/home">Home</a></nav>
+        <button id="buy-now">Buy now</button>
+        <button disabled>Locked</button>
+        <a href="/ghost" style="display:none">Ghost</a>
+        <input type="text" placeholder="Your email" name="email">
+        <div role="button" data-testid="save-all">Save all</div>
+        <label for="plan">Choose plan</label>
+        <select id="plan" name="plan"><option>Basic</option></select>
+    </body></html>"""
+
+    def _inspect(self, html):
+        pytest.importorskip("bs4")
+        from skills.browser_awareness.inspector import BeautifulSoupInspector
+
+        return BeautifulSoupInspector(_FakeHtmlPage(html)).inspect()
+
+    def test_snapshot_identity(self):
+        snapshot = self._inspect(self.HTML)
+        assert snapshot.url == "https://example.com/pricing"
+        assert snapshot.title == "Example — Pricing"
+        assert "Hello world" in snapshot.text
+
+    def test_element_kinds_labels_and_selectors(self):
+        snapshot = self._inspect(self.HTML)
+        by_selector = {e.selector: e for e in snapshot.elements}
+        # Unique id wins for the button.
+        buy = by_selector["#buy-now"]
+        assert (buy.kind, buy.text) == ("button", "Buy now")
+        # Unique data-testid for the role=button div.
+        save = by_selector['[data-testid="save-all"]']
+        assert save.kind == "button" and save.text == "Save all"
+        # name-based selector for the input + placeholder carried through.
+        email = by_selector['input[name="email"]']
+        assert email.kind == "input" and email.placeholder == "Your email"
+        # The select is labelled by <label for=plan>.
+        plan = by_selector["#plan"]
+        assert plan.kind == "select" and plan.label == "Choose plan"
+        # nav + inner link are both collected.
+        assert any(e.kind == "nav" and e.label == "Main" for e in snapshot.elements)
+        assert any(e.kind == "link" and e.href == "/home" for e in snapshot.elements)
+
+    def test_disabled_and_hidden_markup_is_dropped(self):
+        snapshot = self._inspect(self.HTML)
+        texts = [e.text for e in snapshot.elements]
+        assert "Locked" not in texts  # disabled attribute
+        assert "Ghost" not in texts  # inline display:none
+
+    def test_page_text_falls_back_to_parsed_body(self):
+        pytest.importorskip("bs4")
+        from skills.browser_awareness.inspector import _page_text
+
+        page = _FakeHtmlPage("<html><body><p>Parsed text</p></body></html>")
+        page.inner_text = lambda selector: ""  # no rendered text available
+        assert "Parsed text" in _page_text(page)
+
+
+def _capture_options(driver):
+    """chrome_factory that records the options Chrome was started with."""
+
+    def factory(options):
+        driver.options = options
+        return driver
+
+    return factory
+
+
+class TestSeleniumDriverSessions:
+    def test_backend_selection(self, monkeypatch):
+        from skills.browser_awareness import driver as driver_mod
+
+        monkeypatch.delenv(driver_mod.DRIVER_ENV, raising=False)
+        _install_fake_selenium(monkeypatch)  # selenium importable -> primary
+        assert driver_mod.driver_backend() == "selenium"
+        monkeypatch.setitem(__import__("sys").modules, "selenium", None)  # blocked
+        assert driver_mod.driver_backend() == "playwright"
+        monkeypatch.setenv(driver_mod.DRIVER_ENV, "playwright")
+        assert driver_mod.driver_backend() == "playwright"
+        monkeypatch.setenv(driver_mod.DRIVER_ENV, "selenium")
+        assert driver_mod.driver_backend() == "selenium"
+
+    def _attach_session(self, monkeypatch):
+        from skills.browser_awareness import driver as driver_mod
+
+        driver = _FakeSeleniumDriver()
+        _install_fake_selenium(monkeypatch, chrome_factory=_capture_options(driver))
+        monkeypatch.setenv("BROWSER_AWARENESS_CDP_URL", "http://127.0.0.1:9222")
+        session = driver_mod.open_session("https://example.com/x")
+        return session, driver
+
+    def test_attach_opens_tab_via_debugger_address(self, monkeypatch):
+        from skills.browser_awareness.inspector import BeautifulSoupInspector
+        from skills.browser_awareness.selenium_page import SeleniumPageAdapter
+
+        session, driver = self._attach_session(monkeypatch)
+        assert driver.options.experimental == {"debuggerAddress": "127.0.0.1:9222"}
+        assert driver.loaded == ["https://example.com/x"]
+        assert driver.current == "tab-new"  # a NEW TAB, not a new browser
+        assert isinstance(session.page, SeleniumPageAdapter)
+        assert session.inspector_factory is BeautifulSoupInspector
+        session.close()
+        # Only our tab closed; focus restored; the browser was NOT quit.
+        assert driver.closed_handles == ["tab-new"]
+        assert driver.current == "tab-chat"
+        assert driver.quit_calls == 0
+        assert session.page is None
+
+    def test_launch_mode_owns_browser_and_quits(self, monkeypatch, tmp_path):
+        from skills.browser_awareness import driver as driver_mod
+
+        driver = _FakeSeleniumDriver()
+        _install_fake_selenium(monkeypatch, chrome_factory=_capture_options(driver))
+        monkeypatch.delenv("BROWSER_AWARENESS_CDP_URL", raising=False)
+        monkeypatch.delenv("BROWSER_AWARENESS_HEADLESS", raising=False)
+        session = driver_mod.open_session("https://example.com/x")
+        user_data_args = [a for a in driver.options.arguments if a.startswith("--user-data-dir=")]
+        assert len(user_data_args) == 1  # isolated temporary profile
+        assert session.inspector_factory is not None
+        session.close()
+        assert driver.quit_calls == 1  # we own this browser — quit it
+        assert session.page is None
+
+    def test_playwright_dispatch_when_pinned(self, monkeypatch):
+        from skills.browser_awareness import driver as driver_mod
+
+        calls = []
+        monkeypatch.setenv(driver_mod.DRIVER_ENV, "playwright")
+        monkeypatch.setattr(
+            driver_mod, "_attach_session", lambda cdp, url: calls.append((cdp, url))
+        )
+        monkeypatch.setenv("BROWSER_AWARENESS_CDP_URL", "http://127.0.0.1:9222")
+        driver_mod.open_session("https://example.com/x")
+        assert calls == [("http://127.0.0.1:9222", "https://example.com/x")]
+
+
+class TestManagerInspectorPairing:
+    def test_session_inspector_factory_wins_when_none_injected(self):
+        from skills.browser_awareness.driver import BrowserSession
+        from skills.browser_awareness.manager import BrowserAwarenessManager
+
+        used = []
+
+        class _RecordingInspector:
+            def __init__(self, page):
+                used.append(page)
+
+            def inspect(self):
+                return build_page_snapshot(
+                    url="https://example.com", title="T", page_text="hi", raw_elements=[]
+                )
+
+        class _Hermes:
+            def observe(self, objective, snapshot):
+                return InspectionResult(status="done", understanding="all good")
+
+        class _Executor:
+            def __init__(self, page):
+                pass
+
+            def perform(self, inspection, snapshot, confirmed=False):
+                return ActionOutcome(ok=True, status="executed", message="ok")
+
+        class _Page:
+            def close(self):
+                pass
+
+        session = BrowserSession(page=_Page(), inspector_factory=_RecordingInspector)
+        page = session.page  # run() closes the session -> page becomes None
+        manager = BrowserAwarenessManager(
+            session_factory=lambda url: session,
+            hermes=_Hermes(),
+            executor_factory=_Executor,
+            announce_progress=False,
+        )
+        result = manager.run(url="https://example.com", objective="describe the page")
+        assert result.status == "completed"
+        assert used == [page]  # the session's backend pairing was used
+
+
+# Populated by _install_fake_selenium so tests can inspect Select calls.
+_install_fake_select_instances: list = []
+
 
 def _element(
     kind="button",

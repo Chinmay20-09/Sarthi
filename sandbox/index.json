@@ -395,6 +395,16 @@
       "tool_used": null,
       "timestamp": "2026-09-06T12:06:50.199010+00:00",
       "duration_ms": 144490.57469999936
+    },
+    {
+      "task_id": "task_d8999e",
+      "prompt": "hello",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-09-07T18:10:28.593242+00:00",
+      "duration_ms": 77682.17809999987
     }
   ],
   "how are you ?": [
