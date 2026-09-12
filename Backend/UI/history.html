@@ -154,7 +154,7 @@
     <div id="sidebar"></div>
     <!-- Top AppBar Shell -->
     <header
-        class="fixed top-0 left-64 right-0 z-30 flex justify-between items-center px-margin-desktop py-4 bg-transparent backdrop-blur-sm">
+        class="fixed top-0 left-0 md:left-64 right-0 z-30 flex flex-col md:flex-row md:justify-between items-start md:items-center gap-2 px-4 md:px-margin-desktop py-4 bg-transparent backdrop-blur-sm">
         <div class="flex items-center gap-4">
             <h2 class="font-headline-md text-headline-md font-bold text-primary">History Log</h2>
             <div class="px-3 py-1 rounded-full border border-white/10 bg-white/5 flex items-center gap-2">
@@ -168,13 +168,13 @@
                 <span
                     class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors">search</span>
                 <input id="history-search"
-                    class="bg-surface-container-low border border-white/10 rounded-full pl-10 pr-4 py-2 w-64 text-sm focus:outline-none focus:ring-1 focus:ring-primary-container transition-all"
+                    class="bg-surface-container-low border border-white/10 rounded-full pl-10 pr-4 py-2 w-full md:w-64 text-sm focus:outline-none focus:ring-1 focus:ring-primary-container transition-all"
                     placeholder="Search interactions..." type="text" />
             </div>
         </div>
     </header>
     <!-- Main Content Canvas -->
-    <main class="ml-64 pt-24 pb-32 px-margin-desktop min-h-screen relative">
+    <main class="ml-0 md:ml-64 pt-24 pb-32 px-4 md:px-margin-desktop min-h-screen relative">
         <div class="max-w-4xl mx-auto relative">
             <!-- API error banner -->
             <div id="api-error-banner"

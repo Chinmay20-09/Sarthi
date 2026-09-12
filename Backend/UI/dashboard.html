@@ -183,15 +183,15 @@
     <!-- Sidebar (loaded from shared component) -->
     <div id="sidebar"></div>
     <!-- Main Content Grid -->
-    <main class="ml-64 mr-80 min-h-screen flex flex-col items-center justify-center relative z-10 px-gutter pb-40">
+    <main class="ml-0 md:ml-64 mr-0 lg:mr-80 min-h-screen flex flex-col items-center justify-center relative z-10 px-4 md:px-gutter pb-40">
         <!-- Voice Orb Visualization -->
         <div class="relative flex flex-col items-center group">
             <div
-                class="w-64 h-64 rounded-full bg-gradient-to-tr from-[#00d9ff]/20 to-[#00d9ff]/5 orb-glow flex items-center justify-center border border-[#00d9ff]/30 relative">
+                class="w-48 h-48 md:w-64 md:h-64 rounded-full bg-gradient-to-tr from-[#00d9ff]/20 to-[#00d9ff]/5 orb-glow flex items-center justify-center border border-[#00d9ff]/30 relative">
                 <!-- Inner Core -->
                 <div
-                    class="w-40 h-40 rounded-full bg-surface-container-lowest/80 backdrop-blur-md flex items-center justify-center border border-primary-fixed-dim/20">
-                    <span class="material-symbols-outlined text-6xl text-primary-fixed-dim animate-pulse"
+                    class="w-28 h-28 md:w-40 md:h-40 rounded-full bg-surface-container-lowest/80 backdrop-blur-md flex items-center justify-center border border-primary-fixed-dim/20">
+                    <span class="material-symbols-outlined text-4xl md:text-6xl text-primary-fixed-dim animate-pulse"
                         style="font-variation-settings: 'FILL' 1;">mic</span>
                 </div>
                 <!-- Orbiting Rings -->
@@ -199,7 +199,7 @@
                     class="absolute inset-0 border-2 border-dashed border-primary/10 rounded-full animate-[spin_20s_linear_infinite]">
                 </div>
             </div>
-            <div class="mt-12 text-center">
+            <div class="mt-8 md:mt-12 text-center">
                 <h2 id="status" class="font-headline-md text-headline-md text-primary tracking-widest uppercase active-glow">
 
                     Ready
@@ -243,7 +243,7 @@
     </main>
     <!-- Right Panel (Today's Overview) -->
     <aside
-        class="fixed right-0 top-0 h-full w-80 p-8 border-l border-white/10 bg-surface/20 backdrop-blur-2xl z-20 flex flex-col gap-8 overflow-y-auto">
+        class="fixed right-0 top-0 h-full w-80 p-8 border-l border-white/10 bg-surface/20 backdrop-blur-2xl z-20 hidden lg:flex flex-col gap-8 overflow-y-auto">
         <div class="flex justify-between items-center mb-4">
             <h2 class="font-headline-md text-headline-md">Overview</h2>
             <span class="material-symbols-outlined text-on-surface-variant">notifications</span>
@@ -352,7 +352,7 @@
     <div id="footer"></div>
     <script src="components.js"></script>
     <script>
-        const DashAPI = "http://127.0.0.1:8000";
+        const DashAPI = window.location.origin; // same host the page was opened from
         let dashProcessing = false;
 
         // ---------------------------------------------------------------------

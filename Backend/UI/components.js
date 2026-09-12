@@ -10,7 +10,10 @@
  *   3. Include containers: <div id="sidebar"></div>, <div id="footer"></div>
  */
 
-const API = "http://127.0.0.1:8000";
+// API base is whatever host the page was opened from (127.0.0.1 locally,
+// the PC's LAN IP when opened from a phone or another device), so the
+// dashboard works on any device without editing code.
+const API = window.location.origin;
 
 async function loadComponent(id, file) {
     try {
@@ -36,10 +39,66 @@ async function loadLayout() {
     highlightCurrentPage();
     attachNavAnimations();
     setupCommandHandlers();
+    setupMobileDrawer();
 
     if (typeof initializePage === "function") {
         initializePage();
     }
+}
+
+// ---------------------------------------------------------------------------
+// Mobile sidebar drawer (phones/tablets <md)
+// ---------------------------------------------------------------------------
+// The shared sidebar is display:none on <md; the footer hamburger toggles it
+// as an off-canvas drawer. Tap outside or navigate to dismiss.
+function setupMobileDrawer() {
+    const root = document.getElementById("sarthi-sidebar-root");
+    const sidebar = document.getElementById("sarthi-sidebar");
+    const scrim = document.getElementById("sarthi-sidebar-scrim");
+    const menuBtn = document.getElementById("sarthi-menu-btn");
+    if (!root || !sidebar || !menuBtn) return;
+
+    const isOpen = () => root.classList.contains("sarthi-drawer-open");
+
+    const close = () => {
+        root.classList.remove("sarthi-drawer-open");
+        sidebar.classList.remove("sarthi-drawer-open");
+        if (scrim) scrim.classList.remove("sarthi-drawer-open");
+    };
+
+    const open = () => {
+        root.classList.add("sarthi-drawer-open");
+        sidebar.classList.add("sarthi-drawer-open");
+        if (scrim) scrim.classList.add("sarthi-drawer-open");
+    };
+
+    menuBtn.addEventListener("click", (event) => {
+        // The document-level tap-outside listener must not immediately
+        // re-close the drawer for the same tap that opened it.
+        event.stopPropagation();
+        if (isOpen()) {
+            close();
+        } else {
+            open();
+        }
+    });
+
+    if (scrim) {
+        scrim.addEventListener("click", close);
+    }
+
+    // Navigation always closes the drawer (nav links carry .sarthi-nav-close).
+    document.querySelectorAll(".sarthi-nav-close").forEach((el) => {
+        el.addEventListener("click", close);
+    });
+
+    // Tap outside the open drawer closes it.
+    document.addEventListener("click", (event) => {
+        if (!isOpen()) return;
+        const target = event.target;
+        if (target instanceof Node && sidebar.contains(target)) return;
+        close();
+    });
 }
 
 function highlightCurrentPage() {

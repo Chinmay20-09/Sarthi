@@ -1,5 +1,12 @@
-<footer class="fixed bottom-0 left-0 w-full z-50 flex justify-center pb-6">
-    <div class="rounded-full mb-8 mx-auto w-fit border border-white/10 bg-surface-container/60 backdrop-blur-[30px] shadow-[0_0_20px_rgba(0,217,255,0.1)] flex items-center px-4 py-2 gap-4">
+<footer class="fixed bottom-0 left-0 w-full z-50 flex justify-center pb-6 px-4">
+    <div class="rounded-full mb-8 mx-auto w-fit max-w-full border border-white/10 bg-surface-container/60 backdrop-blur-[30px] shadow-[0_0_20px_rgba(0,217,255,0.1)] flex items-center px-4 py-2 gap-4">
+        <!-- Hamburger — only rendered on <md screens, opens the off-canvas
+             sidebar drawer (see sidebar.html + components.js wiring). -->
+        <button id="sarthi-menu-btn"
+            class="hidden flex-col items-center justify-center text-on-surface-variant px-6 py-2 rounded-full hover:bg-white/5 transition-all duration-200 active:scale-90 md:hidden">
+            <span class="material-symbols-outlined">menu</span>
+            <span class="font-label-caps text-[10px] uppercase mt-1">Menu</span>
+        </button>
         <button id="speakButton"
             class="dock-item flex flex-col items-center justify-center text-primary drop-shadow-[0_0_4px_rgba(0,217,255,0.8)] px-6 py-2 rounded-full hover:bg-white/5 transition-all duration-200 active:scale-90">
             <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1;">mic</span>

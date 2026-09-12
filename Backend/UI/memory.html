@@ -215,9 +215,9 @@
     <div id="sidebar"></div>
 
     <!-- Main Content Canvas -->
-    <main class="ml-64 min-h-screen relative overflow-hidden">
+    <main class="ml-0 md:ml-64 min-h-screen relative overflow-hidden">
         <!-- Top App Bar -->
-        <header class="flex justify-between items-center w-full px-margin-desktop py-8 bg-transparent relative z-20">
+        <header class="flex flex-col md:flex-row md:justify-between items-start md:items-center w-full gap-4 px-4 md:px-margin-desktop py-8 bg-transparent relative z-20">
             <div class="flex items-center gap-6">
                 <div class="flex flex-col">
                     <span class="font-label-caps text-label-caps text-primary tracking-[0.2em]">SYSTEM MODULE</span>
@@ -234,7 +234,7 @@
                         <span class="material-symbols-outlined text-on-surface-variant text-sm">search</span>
                     </div>
                     <input id="memory-search"
-                        class="bg-surface-container-lowest border-0 border-b border-primary/20 focus:border-primary focus:ring-0 text-primary placeholder-on-surface-variant/40 font-data-mono text-xs pl-10 pr-4 py-2 w-64 transition-all duration-500 rounded-sm"
+                        class="bg-surface-container-lowest border-0 border-b border-primary/20 focus:border-primary focus:ring-0 text-primary placeholder-on-surface-variant/40 font-data-mono text-xs pl-10 pr-4 py-2 w-full md:w-64 transition-all duration-500 rounded-sm"
                         placeholder="QUERY MEMORY..." type="text" />
                 </div>
                 <div class="flex items-center gap-4">
@@ -252,7 +252,7 @@
         </header>
 
         <!-- API Error Banner -->
-        <div id="api-error-banner" class="hidden mx-margin-desktop mt-2 px-4 py-2.5 rounded-lg bg-error/10 border border-error/30 text-error text-sm font-data-mono flex items-center gap-2 relative z-20">
+        <div id="api-error-banner" class="hidden mx-4 md:mx-margin-desktop mt-2 px-4 py-2.5 rounded-lg bg-error/10 border border-error/30 text-error text-sm font-data-mono flex items-center gap-2 relative z-20">
             <span class="material-symbols-outlined text-sm">cloud_off</span>
             <span>Could not connect to Sarthi API — data may be stale.</span>
         </div>
@@ -260,9 +260,9 @@
         <!-- Dynamic Background Animation -->
         <div class="absolute inset-0 z-0 pointer-events-none opacity-40"></div>
 
-        <section class="relative z-10 px-margin-desktop pb-32">
+        <section class="relative z-10 px-4 md:px-margin-desktop pb-32">
             <!-- Neural Visualization Layout -->
-            <div class="grid grid-cols-12 gap-gutter items-start">
+            <div class="grid grid-cols-12 gap-4 md:gap-gutter items-start">
                 <!-- Left Column: Statistics & Context Focus -->
                 <div class="col-span-12 lg:col-span-3 flex flex-col gap-6">
                     <!-- Memory Status -->
@@ -342,7 +342,7 @@
                     </div>
 
                     <!-- Details Bento Grid (populated by JS) -->
-                    <div id="details-grid" class="grid grid-cols-3 gap-6">
+                    <div id="details-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <!-- Populated by JS -->
                     </div>
 

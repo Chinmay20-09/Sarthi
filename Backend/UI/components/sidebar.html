@@ -1,5 +1,33 @@
-<aside id="sarthi-sidebar"
-    class="fixed left-0 top-0 h-full flex flex-col py-16 h-screen w-64 border-r border-white/10 bg-surface/40 backdrop-blur-[40px] z-50 transition-all duration-300">
+<div id="sarthi-sidebar-root">
+    <!-- Mobile drawer behavior: off-canvas by default, toggled by the footer
+         hamburger (footer.html) on <md screens; desktop keeps it always on.
+         The scrim is a sibling (not child) of the aside because the aside's
+         backdrop-filter would trap a fixed-position child inside itself. -->
+    <style>
+        @media (max-width: 767px) {
+            #sarthi-sidebar.sarthi-drawer-open {
+                display: flex;
+            }
+            #sarthi-sidebar-scrim.sarthi-drawer-open {
+                display: block;
+            }
+        }
+        #sarthi-sidebar-scrim {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 40;
+            display: none;
+        }
+        @media (min-width: 768px) {
+            #sarthi-sidebar-scrim {
+                display: none !important;
+            }
+        }
+    </style>
+    <div id="sarthi-sidebar-scrim"></div>
+    <aside id="sarthi-sidebar"
+        class="fixed left-0 top-0 h-full hidden md:flex md:flex-col py-16 h-screen w-64 max-w-[85vw] border-r border-white/10 bg-surface/40 backdrop-blur-[40px] z-50 transition-all duration-300">
     <style>
         #sarthi-nav::-webkit-scrollbar {
             width: 3px;
@@ -30,37 +58,37 @@
     </div>
     <nav class="flex-1 flex flex-col min-h-0" id="sarthi-nav">
         <div class="flex-1 overflow-y-auto space-y-2">
-            <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+            <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150 sarthi-nav-close"
                 href="dashboard.html" data-page="dashboard">
                 <span class="material-symbols-outlined mr-4">home</span>
                 <span class="font-body-lg text-body-lg">Home</span>
             </a>
-            <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+            <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150 sarthi-nav-close"
                 href="chat.html" data-page="chat">
                 <span class="material-symbols-outlined mr-4">chat</span>
                 <span class="font-body-lg text-body-lg">Chat</span>
             </a>
-            <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+            <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150 sarthi-nav-close"
                 href="skills.html" data-page="skills">
                 <span class="material-symbols-outlined mr-4">extension</span>
                 <span class="font-body-lg text-body-lg">Skills</span>
             </a>
-            <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+            <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150 sarthi-nav-close"
                 href="memory.html" data-page="memory">
                 <span class="material-symbols-outlined mr-4">psychology</span>
                 <span class="font-body-lg text-body-lg">Memory</span>
             </a>
-            <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+            <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150 sarthi-nav-close"
                 href="knowledge.html" data-page="knowledge">
                 <span class="material-symbols-outlined mr-4">database</span>
                 <span class="font-body-lg text-body-lg">Knowledge</span>
             </a>
-            <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+            <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150 sarthi-nav-close"
                 href="history.html" data-page="history">
                 <span class="material-symbols-outlined mr-4">history</span>
                 <span class="font-body-lg text-body-lg">History</span>
             </a>
-            <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150"
+            <a class="nav-item flex items-center px-8 py-4 transition-all duration-300 text-on-surface-variant font-medium hover:bg-white/5 hover:text-primary active:scale-95 duration-150 sarthi-nav-close"
                 href="settings.html" data-page="settings">
                 <span class="material-symbols-outlined mr-4">settings</span>
                 <span class="font-body-lg text-body-lg">Settings</span>
@@ -68,3 +96,4 @@
         </div>
     </nav>
 </aside>
+</div>

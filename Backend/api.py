@@ -1688,6 +1688,8 @@ if __name__ == "__main__":
 
     import uvicorn
 
+    from config import API_HOST, API_PORT
+
     # reload=True spawns the server through uvicorn 0.51's multiprocessing
     # reloader — a detached spawn worker. Closing the "Sarthi API" window
     # kills the reloader but NOT the worker, which keeps listening on port
@@ -1705,4 +1707,6 @@ if __name__ == "__main__":
     args, _unknown = parser.parse_known_args()
 
     bus.publish("system_startup", {}, source="api")
-    uvicorn.run("api:app", host="127.0.0.1", port=8000, reload=args.reload)
+    # Host/port come from config.py (API_HOST=0.0.0.0) so every device on the
+    # LAN can reach the dashboard at http://<LAN-IP>:8000, not just this PC.
+    uvicorn.run("api:app", host=API_HOST, port=API_PORT, reload=args.reload)
