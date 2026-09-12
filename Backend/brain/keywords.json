@@ -1,0 +1,16 @@
+{
+  "_comment": "Sarthi wordfinder keywords. Each entry ends an 'open ...' target: the interpreter stops the target at the first known keyword instead of swallowing the whole sentence. Edit this file directly or run 'python -m brain.wordfinder add <keyword>'.",
+  "keywords": [
+    "chatgpt",
+    "gemini",
+    "youtube",
+    "spotify",
+    "telegram",
+    "whatsapp",
+    "notepad",
+    "calculator",
+    "file explorer",
+    "task manager",
+    "visual studio code"
+  ]
+}

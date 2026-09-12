@@ -78,7 +78,7 @@ desktop.ini# ==========================================
 *.tmp
 *.temp
 *.bak
-
+
 
 # ==========================================
 # Audio Files (Temporary)
@@ -113,9 +113,9 @@ hf_cache/
 
 # ==========================================
 # Generated Knowledge Base
-# ==========================================
+# (anchored to Backend/ — the knowledge package lives there now)
 
-knowledge/applications.json
+Backend/knowledge/applications.json
 
 # Keep websites.json because it's manually maintained
 # Keep loader.py because it's source code
@@ -154,9 +154,18 @@ results/
 # User calibration (ai_chain laptop automation)
 # ==========================================
 
-skills/automation_engine/ai_chain/calibration.json
+Backend/skills/automation_engine/ai_chain/calibration.json
 # Persistent automation Chrome profile (logins — personal data)
-skills/automation_engine/ai_chain/.chrome-profile/
+Backend/skills/automation_engine/ai_chain/.chrome-profile/
+
+# ==========================================
+# Desktop client build artifacts (PyInstaller)
+# ==========================================
+
+Desktop/build/
+Desktop/dist/
+Desktop/sarthi.exe
+Desktop/*.spec.bak
 
 # ==========================================
 # User-editable interpreter keywords (wordfinder)

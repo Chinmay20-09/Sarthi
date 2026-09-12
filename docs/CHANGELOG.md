@@ -7,6 +7,71 @@ in the git log.
 
 ## [Unreleased]
 
+### Added (client/backend restructure, September 12)
+
+- **Client/backend architecture** — the repository is now split into
+  `Backend/` (all intelligence: `api.py`, `brain/`, `knowledge/`, `skills/`,
+  `hermes/`, `hands/`, `speech/`, `connectors/`, `database/`, `events/`,
+  `utils/`, `UI/`, `config.py`, `.env`, and the launcher `sarthi.bat`),
+  `Desktop/` (the Windows client), `flutter/` + `apk/` (reserved for future
+  clients — **not implemented**), and `tests/` (the single project-wide
+  pytest suite, unchanged at the root). Existing flat imports
+  (`from brain.engine import BrainEngine`) work unchanged: pytest adds
+  `Backend/` to `sys.path` and the editable install maps packages through
+  `package-dir = {"" = "Backend"}`. `config.py`'s `PROJECT_ROOT` resolves to
+  `Backend/`, keeping every runtime-data path (logs, SQLite, knowledge JSON,
+  sandbox, results) consistent.
+- **Client-facing `/command` contract** — the endpoint now accepts
+  `{"query": "..."}` (client-independent schema, `extra="forbid"`, requires
+  `query` or `text`) alongside the legacy `{"text": ...}` web-UI schema.
+  Both flow through the **same** `_process_command_text` pipeline — no
+  duplicate command path exists. Every `/command` and `/listen` response
+  additionally carries the envelope `success` (bool), `response`
+  (human-readable text), and `data` (structured detail or `null`); all
+  legacy fields (action, target, text, routing, mode, …) are preserved, so
+  the web UI contract is untouched.
+- **Desktop client** (`Desktop/`) — a thin Windows client that contains no
+  assistant intelligence: `sarthi.exe` launches a minimal tkinter GUI
+  (SARTHI title, Query textbox, Send button, response area, status bar).
+  Source: `Desktop/client/sarthi_client/` (`gui.py` presentation,
+  `controller.py` validate→send→translate, `backend.py` the only HTTP
+  boundary, `config.py` the backend-URL mechanism). The client sends
+  `{"query": ...}` to `POST /command`, renders the `response` field, and
+  turns an unreachable backend / malformed response into status-bar
+  messages — the GUI never crashes on network faults. Backend URL resolves
+  in one place: `SARTHI_BACKEND_URL` env var → `sarthi_client.json` →
+  default `http://127.0.0.1:8000` (loopback; not exposed publicly).
+- **Desktop build** — `Desktop/sarthi_client.spec` (PyInstaller) builds the
+  windowed one-file `Desktop/sarthi.exe`; the spec is committed, the exe is
+  a gitignored build artifact. The build excludes every backend package,
+  proving the client ships none of the intelligence.
+- **Launchers** — `Backend/sarthi.bat` starts the backend from any working
+  directory (dev and windowless `background` modes, paths relative to the
+  script); root `start.bat` now delegates to it. Smoke test moved to
+  `Backend/main-test.py` (CI and pre-commit updated).
+- **Tests** — `tests/test_backend_api.py` (API starts; `/command` accepts
+  `query` + legacy `text`, rejects unknown/missing fields; envelope shape),
+  `tests/test_desktop_client.py` (request construction, response handling,
+  backend-unavailable, malformed responses, controller translation, config
+  resolution, GUI button disable — network fully mocked), and
+  `tests/test_architecture_boundaries.py` (AST-level: Desktop client never
+  imports backend internals and only `backend.py` touches HTTP; Backend
+  never imports Desktop UI; root layout + pytest pythonpath guarded).
+  Suite: **763 tests, all passing** from `Sarthi/` (`pytest`).
+
+### Changed (client/backend restructure)
+
+- Runtime data moved with its owners: `knowledge/applications.json`,
+  `database/sarthi.db`, `sandbox/`, `results/`, `logs/` now live under
+  `Backend/`; `.env` moved to `Backend/.env` (hermes config loader resolves
+  it relative to its own file, so no code change was needed). Gitignore
+  anchors updated (`Backend/knowledge/applications.json`,
+  `Backend/skills/automation_engine/ai_chain/*`), plus new
+  `Desktop/build/`, `Desktop/dist/`, `Desktop/sarthi.exe` entries.
+- `api.py` serves the UI via an absolute `BACKEND_DIR / "UI"` mount and
+  writes test-run reports to `BACKEND_DIR / "results"` — no more
+  cwd-dependent static-file resolution.
+
 ### Added (Desktop hand, September 12)
 
 - **Desktop hand — the physical execution layer** (`hands/desktop/`): a

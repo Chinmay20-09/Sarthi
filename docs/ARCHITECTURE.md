@@ -1,17 +1,101 @@
 # Sarthi Architecture
 
-**Last verified against the code:** September 6, 2026 (full audit pass; test suite green).
-This document is generated from the implementation, not from intent. When code and
-this document disagree, fix the document or the code — never assume one is right.
+**Last verified against the code:** September 12, 2026 (client/backend restructure;
+test suite green). This document is generated from the implementation, not from
+intent. When code and this document disagree, fix the document or the code —
+never assume one is right.
+
+---
+
+## 0. Client/Backend Architecture (September 12, 2026)
+
+Sarthi is now a **client/backend system**. All intelligence lives in the
+**Backend**; clients are thin interfaces that talk to it over HTTP.
+
+```
+Sarthi/
+├── Backend/     # THE INTELLIGENCE — FastAPI service
+│               #   api.py, main.py, main-test.py, desktop_agent.py,
+│               #   config.py, sarthi.bat (launcher), .env, .env.example,
+│               #   brain/ hands/ knowledge/ skills/ speech/ hermes/
+│               #   connectors/ database/ events/ utils/ UI/ scripts/
+│               #   runtime data: knowledge/*.json, database/sarthi.db,
+│               #   sandbox/, results/, logs/
+├── Desktop/     # Windows client — sarthi.exe (built from client/ source)
+├── flutter/     # reserved — future Flutter client (not implemented)
+├── apk/         # reserved — future Android distribution (not implemented)
+├── tests/       # the single project-wide pytest suite (root, run: pytest)
+└── docs/        # this document, PROJECT_STATE.md, CHANGELOG.md, ...
+```
+
+**The network boundary (the architectural rule):**
+
+```
+User
+ ↓
+Desktop sarthi.exe                (tkinter GUI: Query → Send → Response)
+ ↓ HTTP  {"query": "open chrome"}
+Backend POST /command             (FastAPI, 127.0.0.1:8000)
+ ↓
+Model / Interpreter / Brain / Knowledge / Skills / Executor
+ ↓ HTTP  {"success": true, "response": "...", "data": {...}|null, ...}
+Desktop sarthi.exe                (displays response)
+```
+
+- The Desktop client **never imports** brain/interpreter/model/knowledge/
+  executor — only HTTP via `Desktop/client/sarthi_client/backend.py`.
+- The Backend **never imports** Desktop UI code.
+- Both rules are locked by `tests/test_architecture_boundaries.py`.
+- `/command` is client-independent: `{"query": ...}` (Desktop exe, future
+  Flutter/Android) and the legacy `{"text": ...}` (web UI) both flow through
+  the **same** pipeline — there is exactly one command-processing path.
+  Every `/command` and `/listen` response additionally carries the envelope
+  `success` (bool), `response` (human-readable text), and `data`
+  (structured detail or null), alongside all legacy fields.
+- Backend URL configuration for the client lives in exactly one place:
+  `Desktop/client/sarthi_client/config.py` — `SARTHI_BACKEND_URL` env var →
+  `sarthi_client.json` → default `http://127.0.0.1:8000` (loopback; the
+  backend is not exposed publicly by default).
+- The Desktop exe is a build artifact produced by
+  `Desktop/sarthi_client.spec` (PyInstaller); the spec is the committed
+  source of truth.
+
+**Future direction (planned, not implemented):**
+
+```
+                Sarthi Backend (:8000)
+                        │
+            ┌───────────┼───────────┐
+            ▼           ▼           ▼
+       Desktop       Flutter      Android
+       sarthi.exe      UI           APK
+        (today)     (reserved)   (reserved)
+```
+
+and, inside the Windows client: `Desktop client + Desktop Hand → Windows
+control` — the Desktop Hand moves (or federates) into the client behind a
+local IPC seam; `Backend/desktop_agent.py` (standalone hand, no Brain) is
+that seam. No IPC is implemented yet.
+
+**Import/layout notes:** the intelligence packages kept their flat names
+(`from brain.engine import BrainEngine` still works everywhere): pytest adds
+`Backend/` to `sys.path` (`pythonpath = ["Backend", "Desktop/client"]` in
+`pyproject.toml`), the editable install exposes them via `package-dir =
+{"": "Backend"}`, and `Backend/sarthi.bat` runs the API with `Backend/` as
+its working directory. `config.py`'s `PROJECT_ROOT` now resolves to
+`Backend/`, which keeps every runtime-data path (logs, SQLite DB, knowledge
+JSON, sandbox, results) consistent without any code change.
 
 ---
 
 ## 1. System Overview
 
-Sarthi is a local-first desktop assistant. One FastAPI process serves both the
-REST API and the static UI; a layered pipeline interprets natural-language
-commands and executes them through skills; a separate conversational layer
-("Hermes") handles everything the deterministic pipeline cannot.
+Sarthi is a local-first desktop assistant. One FastAPI process (the
+**Backend**) serves both the REST API and the static UI; a layered pipeline
+interprets natural-language commands and executes them through skills; a
+separate conversational layer ("Hermes") handles everything the deterministic
+pipeline cannot. Clients — the Desktop `sarthi.exe`, the web UI, and future
+Flutter/Android apps — talk to it over HTTP (see §0).
 
 ```
 UI (8 static pages, served by the API at /ui)
@@ -70,12 +154,13 @@ A single Python process (plus optional helpers):
 
 | Process | Started by | Role |
 |---|---|---|
-| `python api.py` (or `pythonw -m uvicorn api:app` in background mode) | `start.bat` | FastAPI app: REST API, mounted routers, `/ui` static files. Runs **without** uvicorn reload by default so closing the server window frees port 8000. |
+| `python api.py` (or `pythonw -m uvicorn api:app` in background mode) | `Backend/sarthi.bat` (root `start.bat` delegates to it) | FastAPI app: REST API, mounted routers, `/ui` static files. Runs **without** uvicorn reload by default so closing the server window frees port 8000. |
 | `python main.py` | manual | Voice CLI: record → Whisper → same `BrainEngine` |
 | `python -m hermes.main` | manual | Hermes self-test: config → provider manager → one task through the orchestrator → sandbox |
 
 Ollama (or another configured model endpoint) is an **external** service contacted
-over HTTP; nothing else runs as a Sarthi process. `python api.py --reload`
+over HTTP; nothing else runs as a Sarthi process (the Desktop exe is a thin
+client, not a Sarthi process). `python api.py --reload`
 re-enables hot-reload for development (the spawned reloader worker survives the
 console window — see the warning in `api.py`).
 
@@ -231,7 +316,7 @@ via knowledge, finds matching processes through the hand's read-only
 `find_application_process`, then terminates by explicit pid. Existing
 open/search/play flows behave exactly as before.
 
-**Independence:** `desktop_agent.py` runs the hand standalone
+**Independence:** `Backend/desktop_agent.py` runs the hand standalone
 (`--capabilities`, `--self-test`, `--exec ACTION key=value`). This is the
 seam for a future `Sarthi.exe` desktop runtime: a small local IPC layer
 (serving `DesktopRequest` → `DesktopResult`) can be added there without
@@ -487,7 +572,8 @@ Two small, distinct layers — there is deliberately no bigger framework:
 
 Canonical references: `.env.example` (copy to `.env`; never commit) and
 `README_ENV.md`. Hardcoded values that are intentional: port 8000 in
-`api.py`/`start.bat` (single local instance), CORS origins, sandbox default path.
+`api.py`/`sarthi.bat` (single local instance), CORS origins, sandbox default
+path, and the Desktop client's default backend URL (`127.0.0.1:8000`).
 
 ---
 
@@ -526,10 +612,14 @@ CONTRIBUTING for the untracking caveat).
 
 ## 14. Testing
 
-`python -m pytest tests/ -q` — **713 tests, 41 files, all passing** (plus 1
+`python -m pytest tests/ -q` from `Sarthi/` — **763 tests, 45 files, all
+passing** (plus 1
 benign deprecation warning from FastAPI's test client). Lint/format: `ruff
 check .` and `ruff format --check .` are clean. Smoke test: `python
-main-test.py` (9 checks, no LLM call).
+`Backend/main-test.py` (9 checks, no LLM call). Pytest config lives in
+`pyproject.toml` (`testpaths = ["tests"]`, `pythonpath = ["Backend",
+"Desktop/client"]`); the root `tests/` folder is the single suite and the
+only place tests live.
 
 Boundary tests live in `tests/test_pipeline_compatibility.py` (Scanner →
 Knowledge → Resolver, Brain → Hermes) and `tests/test_provider_abstraction.py`
@@ -556,6 +646,7 @@ pytest, smoke test. Local pre-commit hooks mirror it (plus a no-DB-files guard).
 | **Knowledge source** | JSON file + loader wiring in `KnowledgeManager`; `get_all_entities()` already normalizes | bypass the manager |
 | **API endpoint** | `api.py` or a mounted router; update the README table | let the UI call internal modules |
 | **UI page** | `UI/<page>.html` using `components.js` sidebar/footer | duplicate the sidebar markup |
+| **Client** | extend `Desktop/client/sarthi_client/` (GUI → controller → backend.py); rebuild the exe via `Desktop/sarthi_client.spec` | import Backend internals in the client; talk HTTP anywhere but `backend.py` |
 
 Full integration paths and review rules: `CONTRIBUTING.md`.
 

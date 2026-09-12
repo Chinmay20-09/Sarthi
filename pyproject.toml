@@ -48,9 +48,17 @@ browser = [
 ]
 
 # ---------------------------------------------------------------------------
-# Package discovery — flat layout with multiple top-level packages
+# Package discovery — client/backend layout.
+#
+# The intelligence packages live under Backend/ and are exposed as
+# top-level packages (brain, knowledge, ...) so all existing flat
+# imports ("from brain.engine import BrainEngine") keep working.
 # ---------------------------------------------------------------------------
+[tool.setuptools.package-dir]
+"" = "Backend"
+
 [tool.setuptools.packages.find]
+where = ["Backend"]
 include = [
     "actions*",
     "brain*",
@@ -64,6 +72,19 @@ include = [
     "speech*",
     "utils*",
 ]
+
+# ---------------------------------------------------------------------------
+# Pytest — the root tests/ suite stays the single source of truth.
+#
+# pythonpath puts Backend/ on sys.path as the project root (brain, skills,
+# api, ...) exactly as when those packages lived at the repo root, and
+# Desktop/client/ for the sarthi_client package — so `pytest` from
+# Sarthi/ discovers and runs everything unchanged.
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["Backend", "Desktop/client"]
+addopts = "-q"
 
 # ============================================================================
 # Ruff — linter + formatter (replaces flake8, black, isort)
@@ -84,6 +105,8 @@ exclude = [
     "*.egg-info",
     "models",
     ".cache",
+    "Desktop/build",
+    "Desktop/dist",
 ]
 
 [tool.ruff.format]

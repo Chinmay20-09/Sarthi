@@ -88,25 +88,46 @@ pip install -e ".[dev]"
 python -m pytest tests/ -v
 ```
 
-### Run the API Server
+### Run the Backend (API Server)
 
 ```bash
-python api.py
+# From the repo root — delegates to the real launcher:
+start.bat
+
+# Or directly:
+Backend\sarthi.bat            # dev mode (visible server window)
+Backend\sarthi.bat background # windowless (pythonw)
+python Backend/api.py         # manual
+
 # → http://127.0.0.1:8000 (redirects to UI)
 # → http://127.0.0.1:8000/health (health check)
 ```
 
+### Run the Desktop Client
+
+```bash
+python Desktop/run.py         # from source
+
+# or double-click Desktop/sarthi.exe (build: see Desktop/README.md)
+```
+
+The Desktop client is a thin GUI (query textbox → Send → response) that
+talks to the Backend API over HTTP — it contains no assistant
+intelligence. Backend URL is configured in one place:
+`SARTHI_BACKEND_URL` env var, a `sarthi_client.json` file, or the
+default `http://127.0.0.1:8000` (see `Desktop/README.md`).
+
 ### Run the Scanner
 
 ```bash
-python -c "from knowledge.manager import get_manager; get_manager().refresh_applications()"
-# Discovers 700+ applications and saves to knowledge/applications.json
+python -c "import sys; sys.path.insert(0, 'Backend'); from knowledge.manager import get_manager; get_manager().refresh_applications()"
+# Discovers 700+ applications and saves to Backend/knowledge/applications.json
 ```
 
 ### Run the CLI (Voice)
 
 ```bash
-python main.py
+python Backend/main.py
 # Press ENTER to speak a command
 ```
 
@@ -124,7 +145,11 @@ Open `http://127.0.0.1:8000` in your browser while the API is running — it aut
 ### Try It via cURL
 
 ```bash
-# Process a text command
+# Process a text command (client-independent schema — Desktop exe, future Flutter/APK)
+curl -X POST http://127.0.0.1:8000/command \
+  -H "Content-Type: application/json" \
+  -d '{"query": "open chrome"}'
+# Legacy web-UI schema still accepted (identical pipeline):
 curl -X POST http://127.0.0.1:8000/command \
   -H "Content-Type: application/json" \
   -d '{"text": "open chrome"}'
@@ -182,6 +207,10 @@ curl http://127.0.0.1:8000/knowledge
 
 ```
 sarthi/
+├── Backend/        # THE INTELLIGENCE — FastAPI service (started by Backend/sarthi.bat)
+│
+│   # ── Everything between here and Desktop/ lives INSIDE Backend/ ──
+│
 ├── brain/          # Core intelligence pipeline
 │   ├── engine.py       # BrainEngine orchestrator
 │   ├── interpreter.py  # Text → Intent(s) parser (compound commands)
@@ -262,14 +291,23 @@ sarthi/
 │   ├── history.html    # Command timeline (live /command-history)
 │   └── settings.html   # Settings (live metrics + connectors; cosmetic toggles)
 │
-├── api.py          # FastAPI server (API + static UI, one process)
-├── main.py         # CLI entry point (voice)
-├── main-test.py    # Smoke test
-├── desktop_agent.py  # Standalone Desktop hand entry point (Sarthi.exe seam)
-├── start.bat       # Dev / windowless launcher for the API
-├── config.py       # Central configuration (paths, ports, Whisper)
-└── tests/          # Pytest suite (713 tests)
+├── Desktop/        # Windows client (thin GUI — no assistant intelligence)
+│   ├── client/sarthi_client/  # Client source (tkinter GUI, controller, HTTP boundary)
+│   ├── run.py              # Run from source: python Desktop/run.py
+│   ├── sarthi_client.spec  # PyInstaller build config
+│   └── sarthi.exe          # Built exe (double-click; gitignored artifact)
+│
+├── flutter/        # Future Flutter client (not implemented)
+├── apk/            # Future Android distribution (not implemented)
+├── tests/          # Project-wide pytest suite (root — single source of truth)
+└── docs/           # ARCHITECTURE.md, PROJECT_STATE.md, CHANGELOG.md, ...
 ```
+
+The root `start.bat` is a thin delegate to `Backend/sarthi.bat` (the real
+launcher, which works from any working directory); `Desktop/` builds into
+`Desktop/sarthi.exe` via `Desktop/sarthi_client.spec` (see `Desktop/README.md`).
+`flutter/` and `apk/` are reserved placeholders for future clients that will
+reuse the same Backend API.
 
 ### Knowledge System
 
@@ -549,7 +587,7 @@ The Entity Resolver consumes all types automatically.
 |---|---|---|
 | `GET` | `/` | Redirects to `/ui/dashboard.html` |
 | `GET` | `/health` | Health check |
-| `POST` | `/command` | Process text: `{"text": "open chrome"}` |
+| `POST` | `/command` | Process text: `{"query": "open chrome"}` (client schema) or `{"text": ...}` (legacy); returns `success`/`response`/`data` envelope + legacy fields |
 | `POST` | `/listen` | Process voice (records + transcribes via Whisper) |
 | `GET`/`POST` | `/mode` | Get/switch chat mode (default \| conversation) |
 | `GET`/`POST` | `/test-mode` | Dry-run mode for skills |
@@ -619,7 +657,7 @@ python -m pytest tests/test_interpreter.py -v
 python -m pytest tests/ --cov=.
 ```
 
-**713 tests** across 41 test files. Key coverage:
+**763 tests** across 45 test files. Key coverage:
 
 | Test File | Coverage |
 |---|---|
@@ -636,12 +674,15 @@ python -m pytest tests/ --cov=.
 | `test_browser.py` | Browser skill routes |
 | `test_connectors.py` | Connector registry + models |
 | `test_desktop_hand.py` | Desktop hand: capabilities, validation, delegation |
+| `test_desktop_client.py` | Desktop exe client: request construction, response handling, offline/malformed handling |
+| `test_backend_api.py` | Client-facing `/command` envelope (query + legacy text schemas) |
+| `test_architecture_boundaries.py` | Client↛Backend imports, Backend↛Desktop imports, layout |
 
 ### Verification
 
 ```
 python -m pytest tests/ -q
-# 713 passed
+# 763 passed
 ```
 
 ---
@@ -711,7 +752,7 @@ mypy .
 |---|---|
 | Type coverage | Advisory (mypy progressive mode) |
 | Error handling | Comprehensive |
-| Test suite | 713 passing tests |
+| Test suite | 763 passing tests |
 | Performance | Optimized |
 | Maintainability | High |
 
@@ -725,7 +766,7 @@ mypy .
 | 4 | Database package (SQLite, models, cache) | ✅ Complete |
 | 5 | Centralized logging setup | ✅ Complete |
 | 6 | UI consolidation (shared components) | ✅ Complete |
-| 7 | Unit tests (713 tests) | ✅ Complete |
+| 7 | Unit tests (763 tests) | ✅ Complete |
 | 8 | Automation engine cleanup | ✅ Complete |
 | 9 | Linting, formatting | ✅ Complete |
 | 10 | Clean architecture refactoring (Knowledge System) | ✅ Complete |

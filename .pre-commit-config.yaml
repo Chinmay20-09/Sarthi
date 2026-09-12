@@ -45,7 +45,7 @@ repos:
         description: >-
           Quick sanity check: verifies the basic brain pipeline still works
           (entity resolution, app open, filler removal, error handling).
-        entry: python main-test.py
+        entry: python Backend/main-test.py
         language: system
         pass_filenames: false
         always_run: true

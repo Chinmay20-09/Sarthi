@@ -15,6 +15,11 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+# Path to this Backend directory — the base for static assets that live
+# alongside the code (the UI). Absolute on purpose: the API must serve the
+# UI regardless of the process's current working directory.
+BACKEND_DIR = Path(__file__).resolve().parent
+
 # Under pythonw (start.bat's windowless background mode) there is no
 # console: sys.stdout/sys.stderr are None, which would crash uvicorn's
 # logging setup and every print() in the request handlers. Route them to
@@ -25,12 +30,6 @@ if sys.stderr is None:
     sys.stderr = open(os.devnull, "w", encoding="utf-8")
 
 import json
-
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
 
 from brain.engine import BrainEngine
 from brain.intent import Intent
@@ -43,8 +42,13 @@ from brain.modes import (
     set_test_mode,
 )
 from events import get_bus
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from hermes.routes import router as hermes_router
 from knowledge.manager import get_manager
+from pydantic import BaseModel, model_validator
 from skills.browser.routes import router as browser_router
 from skills.registry import get_registry
 from utils.logger import get_logger, setup_logging
@@ -83,7 +87,7 @@ app.include_router(browser_router)
 app.include_router(hermes_router)
 
 # Serve Frontend
-app.mount("/ui", StaticFiles(directory="UI"), name="ui")
+app.mount("/ui", StaticFiles(directory=BACKEND_DIR / "UI"), name="ui")
 
 # Core
 engine = BrainEngine()
@@ -92,11 +96,32 @@ bus = get_bus()
 skill_registry = get_registry()
 
 
-class CommandRequest(BaseModel):
-    text: str
-    # Optional conversation session id (used by conversation mode so Hermes
-    # remembers earlier turns of the same chat).
+class ClientCommandRequest(BaseModel):
+    """Client-facing /command request — the client-independent schema.
+
+    Clients (Desktop exe, future Flutter app, future Android APK) send
+    ``{"query": "..."}``. The legacy ``{"text": "..."}`` field from the
+    web UI is accepted too (the two are aliases; ``text`` wins when both
+    are present), so the existing dashboard contract is untouched.
+    """
+
+    model_config = {"extra": "forbid"}
+
+    query: str | None = None
+    text: str | None = None
     session_id: str | None = None
+
+    @model_validator(mode="after")
+    def _require_query_or_text(self) -> "ClientCommandRequest":
+        """At least one of ``query``/``text`` must be present."""
+        if self.query is None and self.text is None:
+            raise ValueError("either 'query' or 'text' is required")
+        return self
+
+    @property
+    def command_text(self) -> str:
+        """The effective command text (``text`` alias wins over ``query``)."""
+        return self.text if self.text is not None else (self.query or "")
 
 
 class ModeRequest(BaseModel):
@@ -170,6 +195,30 @@ def _mode_command_response(text: str, mode: str) -> dict:
         "error": None,
         "source": "nlp",
         "mode": mode,
+    }
+
+
+def _client_envelope(result: dict) -> dict:
+    """Wrap a /command result in the client-facing response envelope.
+
+    The envelope is the stable contract for network clients (Desktop exe,
+    future Flutter/Android apps):
+
+        {"success": bool, "response": str, "data": {...} | None}
+
+    ``response`` is the human-readable answer, ``data`` carries optional
+    structured detail and is extensible without breaking clients. All
+    legacy fields (action, target, text, routing, mode, ...) are preserved
+    at the top level so the web UI contract is unchanged.
+    """
+    response_text = result.get("text")
+    if not response_text and isinstance(result.get("result"), dict):
+        response_text = result["result"].get("message")
+    return {
+        **result,
+        "success": bool(result.get("success")),
+        "response": response_text or "",
+        "data": result.get("result") if isinstance(result.get("result"), dict) else None,
     }
 
 
@@ -253,11 +302,14 @@ def _conversation_response(text: str, session_id: str | None) -> dict:
     }
 
 
-@app.post("/command")
-def command(request: CommandRequest):
-    """Process a text command through the brain pipeline."""
+def _process_command_text(text: str, session_id: str | None) -> dict:
+    """Shared /command pipeline: mode handling + brain execution.
+
+    Single processing path for both request schemas ({"query"} and the
+    legacy {"text"}) — no duplicate command pipeline exists.
+    """
     # Validate empty input
-    if not request.text or not request.text.strip():
+    if not text or not text.strip():
         return {
             "action": None,
             "target": None,
@@ -266,18 +318,18 @@ def command(request: CommandRequest):
             "text": "Please enter a command.",
             "result": None,
             "error": "empty input",
-            "input": request.text,
+            "input": text,
             "mode": get_mode(),
             "routing": "command",
         }
 
-    bus.publish("intent_received", {"text": request.text}, source="api")
+    bus.publish("intent_received", {"text": text}, source="api")
 
     # Mode commands ("conversation mode", "/exit", ...) work in every mode.
-    mode_cmd = detect_mode_command(request.text)
+    mode_cmd = detect_mode_command(text)
     if mode_cmd is not None:
-        result = _mode_command_response(request.text, set_mode(mode_cmd))
-        result["input"] = request.text
+        result = _mode_command_response(text, set_mode(mode_cmd))
+        result["input"] = text
         result["routing"] = "command"
         bus.publish("command_completed", result, source="api")
         return result
@@ -285,18 +337,31 @@ def command(request: CommandRequest):
     # Conversation mode: pure chat — the brain pipeline is never invoked, so
     # no skill or task can execute.
     if get_mode() == CONVERSATION_MODE:
-        result = _conversation_response(request.text, request.session_id)
-        result["input"] = request.text
+        result = _conversation_response(text, session_id)
+        result["input"] = text
         bus.publish("command_completed", result, source="api")
         return result
 
-    response = engine.process(request.text)
+    response = engine.process(text)
     result = response.to_api_dict()
-    result["input"] = request.text
+    result["input"] = text
     result["mode"] = get_mode()
     result["routing"] = _detect_response_mode(result)
     bus.publish("command_completed", result, source="api")
     return result
+
+
+@app.post("/command")
+def command(request: ClientCommandRequest):
+    """Process a text command through the brain pipeline.
+
+    Accepts the client-independent schema {"query": "..."} (Desktop exe,
+    future Flutter/Android clients) and the legacy {"text": "..."} from
+    the web UI. Both go through the same pipeline and return the full
+    legacy payload plus the client envelope fields ``response``/``data``.
+    """
+    result = _process_command_text(request.command_text, request.session_id)
+    return _client_envelope(result)
 
 
 @app.get("/mode")
@@ -356,7 +421,7 @@ def listen_command():
     api_result["routing"] = _detect_response_mode(api_result)
 
     bus.publish("command_completed", api_result, source="api")
-    return api_result
+    return _client_envelope(api_result)
 
 
 @app.get("/knowledge")
@@ -1360,9 +1425,8 @@ def _cleanup_old_results(results_dir: Path) -> int:
 def get_test_prompts():
     """Load the list of test prompts from test_prompts.json."""
     import json
-    from pathlib import Path
 
-    path = Path(__file__).parent / "test_prompts.json"
+    path = BACKEND_DIR / "test_prompts.json"
     if not path.exists():
         return {"success": True, "prompts": []}
     try:
@@ -1381,11 +1445,10 @@ def run_test_prompts():
     """
     import json
     import time
-    from pathlib import Path
 
     from utils.telemetry import HardwareThresholds, TelemetryCollector, classify_failure
 
-    path = Path(__file__).parent / "test_prompts.json"
+    path = BACKEND_DIR / "test_prompts.json"
     if not path.exists():
         return {"success": False, "error": "test_prompts.json not found"}
 
@@ -1518,7 +1581,7 @@ def run_test_prompts():
     summary["failure_types"] = failure_types
 
     # Auto-save results to results/ directory (JSON + CSV)
-    results_dir = Path(__file__).parent / "results"
+    results_dir = BACKEND_DIR / "results"
     results_dir.mkdir(exist_ok=True)
     _cleanup_old_results(results_dir)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
