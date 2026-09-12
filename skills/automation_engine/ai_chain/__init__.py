@@ -11,17 +11,34 @@ Public API:
     parse_chain_command(text)     — parse a spoken "chain ... from A to B"
     resolve_site(name)            — map an AI name/alias to its SiteSpec
     ScreenController              — low-level laptop-control primitives
+    resolve_element(driver, action, target) — DOM-aware element resolver
+    BrowserAutomation(driver)     — navigate / click / copy / paste
+    run_browser_chain(steps, ...) — declarative multi-site browser chains
 
 Safety:
     - prints a HANDS-OFF warning + countdown before taking control
     - Ctrl+Alt+X aborts at any time
     - PyAutoGUI failsafe: moving the mouse into a screen corner aborts
 
+Browser automation (v1.7):
+    Element discovery goes through the DOM (BeautifulSoup analysis +
+    Selenium interaction) — never through coordinate guessing. See
+    ``browser_automation.py`` for the resolver, verified copy/paste and
+    chain state.
+
 Calibration:
     run ``python -m skills.automation_engine.ai_chain.calibrate`` to
     record exact on-screen points for your monitor & browser.
 """
 
+from .browser_automation import (
+    BrowserAutomation,
+    ChainResult,
+    ChainState,
+    ResolveError,
+    resolve_element,
+    run_browser_chain,
+)
 from .calibration import resolve_site
 from .chain import run_ai_chain
 from .control import ScreenController
@@ -33,6 +50,12 @@ __all__ = [
     "parse_chain_command",
     "resolve_site",
     "ScreenController",
+    "resolve_element",
+    "BrowserAutomation",
+    "run_browser_chain",
+    "ChainState",
+    "ChainResult",
+    "ResolveError",
     "ChainRequest",
     "ChainOutcome",
     "StepOutcome",

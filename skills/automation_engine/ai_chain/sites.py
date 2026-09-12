@@ -48,7 +48,7 @@ from .dom import get_dom_reader, keyword_for
 from .models import SiteSpec
 from .parsing import extract_reply, paste_verify_prefix, prompt_present
 from .registry import (
-    copy_retries,
+    coordinate_scan_enabled,
     copy_scan_candidates,
     dom_action_enabled,
     get_dom_matchers,
@@ -386,25 +386,25 @@ class WebAiDriver:
                     f"[{spec.label}] DOM Copy hit missed the clipboard — falling back to scan"
                 )
 
-            # v1.0 fallback — registered point first, then a grid across
-            # the last-message region (nearest cells first), each verified
-            # by the clipboard: a Copy button is the only affordance that
-            # puts message text there. Budget-capped, so a missed point
-            # degrades to a short scan instead of Ctrl+A'ing the whole
-            # page.
+            # v1.0 fallback — DOM locating failed or is off. Click the
+            # single CALIBRATED point (verified by the clipboard: a Copy
+            # button is the only affordance that puts message text there).
+            # The multi-point scan grid is DISABLED by default — HTML
+            # element discovery must not guess coordinates
+            # (AI_CHAIN_COORDINATE_SCAN=1 re-enables the legacy grid).
             candidates = copy_scan_candidates(spec.key)
             if candidates:
-                for fx, fy in candidates[: max(1, copy_retries(spec.key))]:
+                budget = len(candidates) if coordinate_scan_enabled() else 1
+                for fx, fy in candidates[:budget]:
                     x, y = self.ctrl.fraction_point(rect, fx, fy)
                     text = self.ctrl.copy_with_button(x, y)
                     if text:
                         return text, True
                     logger.info(
-                        f"[{spec.label}] Copy button miss at ({fx:.2f}, {fy:.2f}) — scanning"
+                        f"[{spec.label}] Copy button miss at ({fx:.2f}, {fy:.2f}) — "
+                        "falling back to the page copy"
                     )
-                logger.info(
-                    f"[{spec.label}] Copy button not found in scan — falling back to page copy"
-                )
+                logger.info(f"[{spec.label}] Copy button not found — falling back to page copy")
 
         return self.ctrl.select_all_and_copy(), False
 

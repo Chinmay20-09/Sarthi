@@ -7,6 +7,40 @@ in the git log.
 
 ## [Unreleased]
 
+### Added (browser automation, September 8)
+
+- **AI Chain v1.7 — DOM-aware browser automation module**
+  (`skills/automation_engine/ai_chain/browser_automation.py`): a reusable
+  browser capability for multi-site chains. `resolve_element(driver,
+  action, target)` parses the **current** page HTML with BeautifulSoup
+  (raw-HTML regex fallback when `bs4` is absent, mirroring `dom.py`),
+  scores candidates by semantic relevance (exact id → stable attributes →
+  aria-label → name → data-* → role → associated label → exact/partial
+  visible text → placeholder/title → class), produces a Selenium XPath,
+  verifies the live element, and rejects ambiguous/weak matches instead of
+  clicking blindly. `BrowserAutomation` adds verified navigate/click/copy/
+  paste actions with explicit `ChainState` (`clipboard`, `extracted_values`,
+  `current_url`, `last_action`) and `[BROWSER]` logging; `run_browser_chain`
+  executes declarative open→copy→open→paste chains with values passed
+  between websites through chain state.
+- **Copy prefers DOM extraction** — if the site exposes the value in the
+  DOM it is extracted directly; the clipboard workflow (click the semantic
+  Copy button → read clipboard) runs only when no DOM value exists or the
+  user explicitly asks for a clipboard copy. Paste verifies the field
+  contains the value (JS insertion retried before failing).
+- **No coordinate guessing for HTML element discovery** — the v1.0
+  multi-point Copy-button scan grid is now **off by default**
+  (`AI_CHAIN_COORDINATE_SCAN=1` re-enables it); when DOM locating fails
+  the driver clicks only the single calibrated point, then falls back to
+  the Ctrl+A/Ctrl+C page copy. PyAutoGUI remains a last-resort execution
+  mechanism for genuinely non-DOM desktop UI only.
+- **Tests** — `tests/test_browser_automation.py` (36 tests): button by
+  text/aria-label, input by placeholder/name, textarea, contenteditable,
+  multiple-match scoring, ambiguous/unsafe rejection, verified copy and
+  paste, re-resolution after navigation and dynamic DOM changes, no
+  coordinate-clicking guarantees, plus the copy-on-site-A → paste-on-site-B
+  integration chain (mocked HTML/Selenium, no real browser).
+
 ### Performance (database, September 6)
 
 - **`session_id` indexes** on `conversation_messages` and `chat_messages` —

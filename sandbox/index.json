@@ -405,6 +405,16 @@
       "tool_used": null,
       "timestamp": "2026-09-07T18:10:28.593242+00:00",
       "duration_ms": 77682.17809999987
+    },
+    {
+      "task_id": "task_c27c76",
+      "prompt": "hello",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-09-07T18:53:34.909514+00:00",
+      "duration_ms": 97355.65819999919
     }
   ],
   "how are you ?": [
@@ -595,6 +605,36 @@
       "tool_used": "ai_chain",
       "timestamp": "2026-09-05T12:34:50.306986+00:00",
       "duration_ms": 193555
+    },
+    {
+      "task_id": "task_083cec",
+      "prompt": "prompt from chatgpt for birthday wish and send it to gemini",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-09-07T18:23:28.885829+00:00",
+      "duration_ms": 115612.56779999984
+    },
+    {
+      "task_id": "task_95df6d",
+      "prompt": "prompt from chatgpt for birthday wish and send it to gemini",
+      "provider": "ai_chain",
+      "model": "chatgpt -> gemini",
+      "status": "error",
+      "tool_used": "ai_chain",
+      "timestamp": "2026-09-07T18:24:38.693571+00:00",
+      "duration_ms": 99869
+    },
+    {
+      "task_id": "task_d103cd",
+      "prompt": "prompt from chatgpt for birthday wish and send it to gemini",
+      "provider": "ai_chain",
+      "model": "chatgpt -> gemini",
+      "status": "error",
+      "tool_used": "ai_chain",
+      "timestamp": "2026-09-12T14:09:23.240824+00:00",
+      "duration_ms": 84217
     }
   ],
   "prompt of love poem from chatgpt and send it to gemini": [
@@ -631,6 +671,28 @@
       "tool_used": null,
       "timestamp": "2026-09-06T10:52:48.943667+00:00",
       "duration_ms": 15340.61870000005
+    }
+  ],
+  "prompt from chatgpt for my birthday image and send it to gemini": [
+    {
+      "task_id": "task_cffc47",
+      "prompt": "prompt from chatgpt for my birthday image and send it to gemini",
+      "provider": "ai_chain",
+      "model": "chatgpt -> gemini",
+      "status": "error",
+      "tool_used": "ai_chain",
+      "timestamp": "2026-09-07T18:28:00.607622+00:00",
+      "duration_ms": 75439
+    },
+    {
+      "task_id": "task_8f5f57",
+      "prompt": "prompt from chatgpt for my birthday image and send it to gemini",
+      "provider": "ai_chain",
+      "model": "chatgpt -> gemini",
+      "status": "error",
+      "tool_used": "ai_chain",
+      "timestamp": "2026-09-07T18:53:57.144264+00:00",
+      "duration_ms": 90419
     }
   ]
 }

@@ -80,6 +80,30 @@ DEFAULT_SCAN_REGIONS: dict[str, tuple[float, float, float, float]] = {
 # the driver gives up and falls back to the Ctrl+A/Ctrl+C page copy.
 DEFAULT_COPY_RETRIES = 9  # 1 registered point + an 4x2 scan grid
 
+# HTML element discovery must NOT guess coordinates. The multi-point scan
+# grid below is therefore OFF by default — the driver clicks only the
+# single calibrated point when DOM locating fails. Set
+# AI_CHAIN_COORDINATE_SCAN=1 to restore the old scan behaviour.
+COORDINATE_SCAN_ENV = "AI_CHAIN_COORDINATE_SCAN"
+
+
+def coordinate_scan_enabled() -> bool:
+    """Whether the v1.0 multi-point scan grid may find the Copy button.
+
+    Off by default: element discovery goes through the DOM (v1.5 matchers
+    / the browser_automation resolver), never through coordinate
+    guessing. ``AI_CHAIN_COORDINATE_SCAN=1`` re-enables the grid for
+    legacy behaviour.
+    """
+    return os.getenv(COORDINATE_SCAN_ENV, "").strip().lower() not in (
+        "",
+        "0",
+        "false",
+        "no",
+        "off",
+    )
+
+
 # Grid density for the scan (columns x rows inside the scan region).
 SCAN_STEPS_X = 4
 SCAN_STEPS_Y = 2
@@ -203,6 +227,10 @@ def copy_scan_candidates(site_key: str) -> list[tuple[float, float]]:
     limited by the affordance's ``retries`` budget, so an uncalibrated
     point degrades to a short scan instead of the whole-page copy.
     Returns [] for sites without a registered Copy button.
+
+    Callers should consult ``coordinate_scan_enabled()`` before using
+    the grid: the multi-point scan is OFF by default because HTML
+    element discovery must not guess coordinates.
     """
     actions = get_actions(site_key)
     copy = actions.copy

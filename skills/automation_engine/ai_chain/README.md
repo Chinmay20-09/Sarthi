@@ -284,6 +284,92 @@ print(outcome.status)   # planned | completed | aborted | failed
 print(outcome.message)
 ```
 
+## v1.7 — DOM-aware browser automation (`browser_automation.py`)
+
+A reusable, DOM-first browser capability for Sarthi chains — the same
+semantic resolution the v1.5 matchers do per-site, but general and
+pluggable:
+
+```
+User command → Interpreter / Chain Planner → Browser Automation
+    → load website → inspect DOM (BeautifulSoup) → identify semantic element
+    → perform action (Selenium) → verify result → next website → …
+```
+
+**Element resolver** — `resolve_element(driver, action, target)`:
+
+```python
+from skills.automation_engine.ai_chain import resolve_element, BrowserAutomation
+
+resolved = resolve_element(driver, action="click", target="copy button")
+resolved.locator     # ("xpath", "/html/body/div[2]/button[1]")
+resolved.element     # the live Selenium element
+resolved.reason      # why it was chosen (logged too)
+```
+
+The resolver reads the **current** `driver.page_source` on every call,
+parses it with **BeautifulSoup** (raw-HTML regex fallback when `bs4` is
+not installed, same convention as `dom.py`), scores candidates by
+semantic relevance (exact `id` > stable attributes > `aria-label` >
+`name` > `data-*` > `role` > associated label > exact visible text >
+partial visible text > placeholder/title > class), picks the strongest,
+produces a Selenium XPath and **verifies the live element exists**.
+Equal-scoring ties raise `AmbiguousElementError` (strict by default);
+weak matches are rejected instead of clicked blindly.
+
+**Verified actions with chain state** — `BrowserAutomation(driver)`:
+
+```python
+auto = BrowserAutomation(driver)
+auto.navigate("https://example.com", wait=1.0)
+auto.copy("Copy", key="value")            # DOM extraction first, clipboard fallback
+value = auto.state.extracted_values["value"]
+auto.paste("Paste value here", value)       # verified the field contains it
+```
+
+- **Copy:** prefers extracting the value directly from the DOM; only when
+  no DOM value exists (or the user explicitly asks for a clipboard copy)
+  does it resolve and click the semantic Copy button and read the
+  clipboard. Either way the result is verified non-empty before it is
+  stored.
+- **Paste:** resolves the input/textarea/contenteditable semantically,
+  focuses, clears, types, and verifies the field contains the value; a JS
+  insertion (input event) is retried before failing.
+- **Chain state:** `ChainState` carries `clipboard`, `extracted_values`,
+  `current_url` and `last_action` between websites, so an extracted value
+  from site A can be pasted into site B without depending on the physical
+  clipboard.
+
+**Declarative chains** — `run_browser_chain(steps)`:
+
+```python
+from skills.automation_engine.ai_chain import run_browser_chain
+
+result = run_browser_chain([
+    {"action": "open", "url": "https://a.example.com"},
+    {"action": "copy", "target": "Copy", "key": "value"},
+    {"action": "open", "url": "https://b.example.com"},
+    {"action": "paste", "target": "Paste value here", "value": "$value"},
+])
+result.success
+result.state.extracted_values
+```
+
+Every step logs `[BROWSER]` lines (loading, DOM loaded, candidates
+found, selected element + score, click/paste, verification); a failed
+resolution logs the target, candidates, selectors attempted, reason,
+current URL and a DOM excerpt. Tests in `tests/test_browser_automation.py`
+cover the resolver with mocked HTML/Selenium plus the copy-on-A →
+paste-on-B integration chain.
+
+**No coordinate guessing.** HTML element discovery never uses
+`pyautogui.click(x, y)` or scan grids. The v1.0 multi-point Copy-button
+scan grid is **off by default** (`AI_CHAIN_COORDINATE_SCAN=1` re-enables
+it); when DOM locating fails the driver clicks only the single
+calibrated point and falls back to the Ctrl+A/Ctrl+C page copy.
+PyAutoGUI remains available to `control.py` purely as a last-resort
+execution mechanism for genuinely non-DOM desktop UI.
+
 ## Result folder layout
 
 ```
@@ -314,3 +400,7 @@ tests run) on machines without them.
 - Reads replies from the clipboard — very long replies are captured in
   full, but pages that render text in shadow-DOM-ish widgets may need
   the copy fallback tuned per site.
+- The v1.0 multi-point scan grid is disabled by default; sites whose Copy
+  button is not found by the DOM matchers fall back to the calibrated
+  point and then the Ctrl+A/Ctrl+C page copy (`AI_CHAIN_COORDINATE_SCAN=1`
+  restores the legacy grid).

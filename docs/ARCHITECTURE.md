@@ -259,6 +259,18 @@ BrowserAwarenessManager   (MAX_STEPS = 8, per-run temporary context)
   classifier for its RPA loop; its transcript extraction uses the same local
   provider via `create_local_provider()`. It is laptop-automation, not Browser
   Awareness — see `skills/automation_engine/ai_chain/README.md`.
+- **v1.7 browser automation (`ai_chain/browser_automation.py`):** the reusable
+  DOM-aware layer behind multi-site chains. `resolve_element(driver, action,
+  target)` parses the live page HTML with BeautifulSoup (regex fallback),
+  scores candidates by semantic signals (id, aria-label, name, placeholder,
+  role, associated label, visible text, data-*), produces a Selenium XPath and
+  verifies the live element — no coordinate guessing. `BrowserAutomation`
+  wraps navigate/click/copy/paste with per-action verification and explicit
+  `ChainState`; `run_browser_chain(steps)` executes declarative
+  open→copy→open→paste chains with values passed between sites through chain
+  state (physical clipboard only when the user asks). The v1.0 multi-point
+  scan grid is disabled by default (`AI_CHAIN_COORDINATE_SCAN=1` re-enables
+  the legacy behaviour).
 
 ---
 

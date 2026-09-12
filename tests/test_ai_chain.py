@@ -643,11 +643,12 @@ class TestDriverScreenAwareness:
         assert ctrl.page_copy_calls >= 1
 
     def test_ask_finds_copy_button_by_scanning(self, monkeypatch):
-        """A missed point is recovered by scanning the last-message region."""
+        """With the legacy scan grid re-enabled, a missed point is recovered."""
         from skills.automation_engine.ai_chain import sites
 
         monkeypatch.setattr("skills.automation_engine.ai_chain.sites.time.sleep", lambda s: None)
         monkeypatch.setattr("skills.automation_engine.ai_chain.sites.MIN_FINISH_SECONDS", 0.0)
+        monkeypatch.setenv("AI_CHAIN_COORDINATE_SCAN", "1")  # legacy grid is opt-in
         prompt = "make a logo"
         reply_text = "ChatGPT: Here is your logo, a blue circle."
         # The registered point misses on every read; the FIRST scan cell
@@ -782,6 +783,17 @@ class TestBrowserAwarenessRegistry:
         assert candidates[0] == point
         # Derived region still produces in-bounds candidates.
         assert all(0.0 <= fx <= 1.0 and 0.0 <= fy <= 1.0 for fx, fy in candidates)
+
+    def test_coordinate_scan_grid_disabled_by_default(self, monkeypatch):
+        """HTML element discovery must not guess coordinates (v1.7)."""
+        from skills.automation_engine.ai_chain import registry
+
+        monkeypatch.delenv("AI_CHAIN_COORDINATE_SCAN", raising=False)
+        assert registry.coordinate_scan_enabled() is False
+        monkeypatch.setenv("AI_CHAIN_COORDINATE_SCAN", "0")
+        assert registry.coordinate_scan_enabled() is False
+        monkeypatch.setenv("AI_CHAIN_COORDINATE_SCAN", "1")
+        assert registry.coordinate_scan_enabled() is True
 
 
 # ----------------------------------------------------------------------
@@ -1436,13 +1448,12 @@ class TestDriverDomLocating:
         assert dom.calls[0] == "composer"
         assert dom.calls[1:] == ["copy", "copy", "copy"]
 
-    def test_dom_copy_miss_falls_back_to_scan_and_page_copy(self, monkeypatch):
+    def test_dom_copy_miss_falls_back_to_point_and_page_copy(self, monkeypatch):
+        """A DOM miss clicks only the calibrated point, never a scan grid."""
         from skills.automation_engine.ai_chain import sites
 
         monkeypatch.setattr("skills.automation_engine.ai_chain.sites.time.sleep", lambda s: None)
         monkeypatch.setattr("skills.automation_engine.ai_chain.sites.MIN_FINISH_SECONDS", 0.0)
-        from skills.automation_engine.ai_chain import registry
-
         prompt = "make a logo"
         conversation = f"ChatGPT  New chat\n{prompt}\nassistant: your logo is ready"
         ctrl = _StubController(
@@ -1454,9 +1465,10 @@ class TestDriverDomLocating:
         driver = sites.WebAiDriver(ctrl, dom_reader=dom)
         reply = driver.ask(self._spec(), prompt)
         assert "logo is ready" in reply
-        # v1.0 path still works: scan clicked, then the page copy was used.
+        # v1.0 fallback clicks ONLY the single calibrated point per read
+        # (coordinate guessing is off by default), then the page copy ran.
         assert ctrl.page_copy_calls == 3
-        assert len(ctrl.button_clicked) == 3 * registry.copy_retries("chatgpt")
+        assert len(ctrl.button_clicked) == 3  # one calibrated point per read
 
     def test_dom_composer_focus_preferred(self, monkeypatch):
         from skills.automation_engine.ai_chain import sites
