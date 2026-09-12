@@ -7,6 +7,63 @@ in the git log.
 
 ## [Unreleased]
 
+### Added (Desktop hand, September 12)
+
+- **Desktop hand — the physical execution layer** (`hands/desktop/`): a
+  deterministic, capability-gated executor for the local Windows desktop.
+  The Brain decides what should happen; the hand performs the computer
+  interaction and returns a structured `DesktopResult`
+  (`{success, action, target, message, error?, data?}`) for every call —
+  failures are returned, never hidden and never raised past the boundary.
+  Every action is logged (`[Desktop] action=... target=... status=...`).
+- **Capability allow-list** (`hands/desktop/capabilities.py`): ten
+  implemented capabilities (APPLICATION_LAUNCH, APPLICATION_CLOSE,
+  WINDOW_READ, BROWSER_CONTROL, KEYBOARD, MOUSE, CLIPBOARD, FILESYSTEM_READ,
+  FILESYSTEM_WRITE, PROCESS_CONTROL) covering 20 actions; unknown actions,
+  unexpected arguments and wrong-typed arguments are rejected before
+  anything runs. WINDOW_CONTROL and SHELL are declared as planned and
+  deliberately not registered (SHELL needs a review gate).
+- **Safety boundaries from day one:** no shell execution and no arbitrary
+  code execution anywhere in the package (locked by a source-grep test);
+  name→path resolution stays upstream in the knowledge layer; filesystem
+  actions are scoped to allowed roots (default: user profile) with a 1 MB
+  read/write cap; `open_url` accepts http/https only; optional backends
+  (pyautogui, pyperclip, pywin32) degrade to structured failures — never
+  fake successes. The browser priority chain (DOM/accessibility → visual →
+  calibrated coordinates, never random) is documented in
+  `hands/desktop/README.md`; element discovery stays in Browser Awareness
+  and the ai_chain DOM layer.
+- **Standalone entry point** (`desktop_agent.py`) — run the hand without
+  the Brain: `--capabilities`, `--self-test` (read-only),
+  `--exec ACTION key=value`. This is the architecture seam for a future
+  `Sarthi.exe` desktop runtime; a local IPC layer (DesktopRequest →
+  DesktopResult) can be added there later without touching Brain modules.
+- **Tests** — `tests/test_desktop_hand.py` (44 tests): capability
+  registration, invalid actions/arguments, structured results, launch/close,
+  clipboard, keyboard, filesystem scoping, process validation, `[Desktop]`
+  logging, Executor → Desktop delegation, plus architecture guards (no
+  shell/exec in the hand package, no reasoning entry points). All OS
+  backends mocked — no test opens apps, moves the mouse, or touches the
+  real clipboard.
+
+### Changed (Desktop hand)
+
+- **AppLauncherSkill delegates OS launching to the Desktop hand**
+  (`skills/app_launcher/main.py` v1.2.0): the skill keeps its knowledge-layer
+  responsibilities (lookup, favourites gate) and `_launch_path` now calls
+  `hands.desktop.processes.launch_process` / `startfile` — the same
+  CreateProcess (list-form Popen, no shell) and ShellExecute rules as
+  before, now centralized in the hand.
+- **Executor handles "close"** (`brain/executor.py`): a built-in `close`
+  handler resolves the target via the knowledge layer, finds matching
+  running processes through the hand's read-only `find_application_process`,
+  and terminates them by explicit pid. Unknown apps return a structured
+  `not_found`; not-running apps return `not_running` — both instead of
+  falling through to the Hermes conversational fallback.
+- **Packaging** — `hands*` added to the setuptools package list;
+  `pyproject.toml` unchanged otherwise (no new dependencies: the hand uses
+  psutil from the core deps and the existing optional `automation` extra).
+
 ### Added (browser automation, September 8)
 
 - **AI Chain v1.7 — DOM-aware browser automation module**

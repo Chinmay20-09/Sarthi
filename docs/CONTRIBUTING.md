@@ -11,6 +11,11 @@ breaking the architecture. Read it before your first PR.
 ```
 brain/            Core intelligence pipeline (Interpreter → Planner →
                   Resolver → Executor). brain/engine.py is the public entry point.
+hands/            Physical execution layer. The Desktop hand
+                  (hands/desktop/) performs validated Windows actions
+                  (launch, keyboard, clipboard, scoped files, processes);
+                  hands/desktop/capabilities.py is the only action
+                  allow-list. Hands execute; they never reason.
 knowledge/        Entity knowledge base. KnowledgeManager (singleton) is the ONLY
                   public interface; loader.py is internal JSON I/O.
 skills/           Pluggable capabilities. One folder per skill with manifest.json.
@@ -27,7 +32,7 @@ utils/            Shared helpers (logger, voice announcements, telemetry).
 UI/               Static web interface served by api.py (/ui).
 api.py            FastAPI server — the ONLY API boundary for the UI.
 config.py         Central configuration (app paths/ports; Hermes uses .env).
-tests/            Pytest suite (580 tests). Run with `python -m pytest tests/`.
+tests/            Pytest suite (713 tests). Run with `python -m pytest tests/`.
 ```
 
 ## Development Setup
@@ -73,6 +78,9 @@ UI (static pages) ──> api.py (FastAPI) ──> BrainEngine.process(text)
 Skills ──> KnowledgeManager ──> KnowledgeLoader ──> knowledge/*.json
 Hermes ──> ToolRegistry ──> existing skills (never a second executor)
 Brain ──> BrowserAwarenessSkill ──> inspector ─> Hermes observes ─> validate ─> executor
+Executor/Skills ──> DesktopHand (hands/desktop/) ──> Windows
+                    (explicit paths/pids only; capability allow-list;
+                     structured DesktopResult; no shell, no code execution)
 ```
 
 **Data contract of the pipeline:** `Intent(action, target, confidence, site, raw_text)`.
@@ -132,6 +140,24 @@ they cannot fulfill return `handled: True` so later fallbacks don't override the
 
 That is the entire integration: no Hermes core, Brain, skill, or API changes.
 Hermes core must never import a concrete adapter — only the registry may.
+
+### Adding a Desktop Action
+
+1. Add the action (and its argument spec) to a capability in
+   `hands/desktop/capabilities.py` — the allow-list is the security
+   boundary, so review additions like a security change.
+2. Implement the backend (a private method on `DesktopHand` in
+   `hand.py`, or a function in the relevant module: `processes.py`,
+   `windows.py`, `input.py`, `filesystem.py`, `browser.py`).
+3. Return a plain dict (`message` + payload keys) or a `DesktopResult`
+   — never raise past `execute()` for expected failures.
+4. Add tests to `tests/test_desktop_hand.py` with mocked OS backends.
+
+Never: execute shell commands or arbitrary code, resolve names to paths
+inside the hand (that is the knowledge layer's job), or guess screen
+coordinates as a strategy. Planned capabilities (WINDOW_CONTROL, SHELL)
+must not be implemented without a design review — SHELL in particular
+needs an explicit allow-list gate.
 
 ### Adding a Connector
 
@@ -218,6 +244,8 @@ Rules:
 - `hermes/tool_registry.py` allow-list — adding a tool here grants Hermes
   a new capability; review it like a security change.
 - `brain/executor.py` dispatch order — the NLP fallback must stay last.
+- `hands/desktop/capabilities.py` — this allow-list defines everything the
+  Desktop hand may ever do; adding an action grants a new OS capability.
 - `skills/browser_awareness/executor.py` selector allow-list and
   `schemas.py` validation gate — these are the browser safety boundary.
 

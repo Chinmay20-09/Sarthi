@@ -11,8 +11,6 @@ ARCHITECTURE:
 """
 
 import logging
-import os
-import subprocess
 from typing import Any
 
 from brain.intent import Intent
@@ -36,7 +34,7 @@ class AppLauncherSkill(BaseSkill):
 
     name = "app_launcher"
     description = "Launches desktop applications via the Knowledge Layer"
-    version = "1.1.0"
+    version = "1.2.0"
 
     # ------------------------------------------------------------------
     # BaseSkill interface
@@ -148,7 +146,7 @@ class AppLauncherSkill(BaseSkill):
 
             logger.debug(f"Launching: {app_path}")
             self._launch_path(app_path)
-            logger.info(f"Opened {app_name}")
+            logger.info(f"Opened {app_name} (via DesktopHand)")
 
             return {
                 "success": True,
@@ -170,7 +168,11 @@ class AppLauncherSkill(BaseSkill):
 
     @staticmethod
     def _launch_path(app_path: str) -> None:
-        """Launch an application path WITHOUT going through a shell.
+        """Launch an application path through the Desktop hand.
+
+        The Desktop hand is Sarthi's physical execution layer; this skill
+        keeps its knowledge-layer responsibilities (lookup, favourites
+        gate) and delegates the OS interaction. Inside the hand:
 
         - ``.exe`` targets are started directly via CreateProcess using a
           list-form Popen (shell=False): nothing is shell-parsed, so shell
@@ -180,7 +182,9 @@ class AppLauncherSkill(BaseSkill):
           ``os.startfile`` (ShellExecute), which also involves no cmd.exe
           and no metacharacter parsing.
         """
+        from hands.desktop.processes import launch_process, startfile
+
         if app_path.lower().endswith(".exe"):
-            subprocess.Popen([app_path])
+            launch_process(app_path)
         else:
-            os.startfile(app_path)
+            startfile(app_path)

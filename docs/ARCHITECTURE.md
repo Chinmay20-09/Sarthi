@@ -24,6 +24,7 @@ BrainEngine (brain/engine.py)
    interpret → plan → resolve → execute
    │                    (fuzzy resolution via knowledge layer)
    ├── built-in handlers: open → AppLauncher → Browser → needs_decision
+   │                      close → knowledge → DesktopHand (close_application)
    │                      browse → BrowserAwarenessSkill (validated actions)
    │                      remember / recall / forget / clean
    ├── skills fallback pool (skills/registry.py, NLP skill registered LAST)
@@ -31,6 +32,14 @@ BrainEngine (brain/engine.py)
                                ├── ToolPlanner → ToolRegistry (bounded loop)
                                └── ProviderManager → provider adapters
                                      (Ollama local / OpenRouter / any OpenAI-compatible)
+   │
+   ▼ (OS-level actions)
+DesktopHand (hands/desktop/hand.py)  ── the physical execution layer
+   open_application / close_application / open_url / type_text / hotkey /
+   copy / paste / click / read_clipboard / list_windows / get_processes / ...
+   │  capability allow-list, argument validation, structured DesktopResult
+   ▼
+Windows (processes, windows, clipboard, input, filesystem)
 ```
 
 Two mantras hold the design together:
@@ -50,6 +59,7 @@ Two mantras hold the design together:
 | Connectors | `connectors/registry.py` | `BaseConnector` subclasses |
 | Entities | `knowledge/manager.py` | applications v2 / websites v1 schemas |
 | Executor handlers | `brain/executor.py` | built-in handlers + skill fallback pool (NLP last) |
+| Desktop actions | `hands/desktop/capabilities.py` | the only allow-list of what Desktop may do |
 | Providers | `hermes/providers/registry.py` | the only place a provider *name* maps to a class |
 
 ---
@@ -151,7 +161,83 @@ change (see CONTRIBUTING.md).
 
 ---
 
-## 5. Provider Architecture
+## 5. Desktop Hand (physical execution layer)
+
+`hands/desktop/` is Sarthi's hand on the computer. The chain is:
+
+```
+Brain (decides)  →  Executor / Skill  →  DesktopHand (performs)  →  Windows
+```
+
+The hand executes explicit, validated operations and never reasons. It
+contains no model, no interpreter, no resolver, and no policy beyond its
+validation gate. "open chrome" is *decided* by the brain + knowledge
+layer; the hand only ever receives an explicit path, pid, URL, or text.
+
+```
+hands/
+└── desktop/
+    ├── __init__.py       public exports (DesktopHand, models, backends)
+    ├── hand.py           DesktopHand: execute(action, target, **kwargs)
+    ├── capabilities.py   the action allow-list (per-capability arg specs)
+    ├── models.py         DesktopRequest / DesktopResult contracts
+    ├── processes.py      launch (CreateProcess/ShellExecute, never shell),
+    │                     terminate, list (psutil)
+    ├── windows.py        window enumeration / foreground window (pywin32,
+    │                     optional — degrades gracefully)
+    ├── input.py          keyboard / mouse (pyautogui) + clipboard
+    │                     (pyperclip) — optional automation extra
+    ├── filesystem.py     scoped file ops (allowed roots, 1 MB cap)
+    ├── browser.py        open_url (http/https only)
+    └── README.md         module documentation
+```
+
+**Contract:** `desktop.execute(action, target=None, **kwargs)` returns a
+structured dict `{success, action, target, message, error?, data?}` — a
+`DesktopResult`. Failures are returned, never raised past the boundary
+and never hidden. Every action is logged:
+`[Desktop] action=... target=... status=...`.
+
+**Safety model:**
+- The action table in `capabilities.py` is the only thing the hand can
+  do; unknown actions and unexpected/wrong-typed arguments are rejected
+  before anything runs.
+- No shell execution and no arbitrary code execution exist anywhere in
+  the package (locked by a test that greps the sources).
+- Name→path resolution happens upstream (knowledge layer); the hand
+  needs explicit paths and pids.
+- Filesystem actions are scoped to allowed roots (default: the user
+  profile) with a 1 MB read/write cap.
+- Optional backends (pyautogui/pyperclip/pywin32) degrade to structured
+  failures when not installed — the hand never fakes success.
+
+**Capabilities implemented today** (see `hands/desktop/README.md` for the
+full table): APPLICATION_LAUNCH, APPLICATION_CLOSE, WINDOW_READ,
+BROWSER_CONTROL, KEYBOARD, MOUSE, CLIPBOARD, FILESYSTEM_READ,
+FILESYSTEM_WRITE, PROCESS_CONTROL. Planned and deliberately not
+registered: WINDOW_CONTROL, SHELL.
+
+**Browser rule:** the hand never guesses coordinates as a strategy. The
+project priority is DOM/browser automation → accessibility/semantic UI →
+visual/UI automation → calibrated coordinate fallback (never random).
+Element discovery stays in Browser Awareness (`skills/browser_awareness/`)
+and the ai_chain DOM layer; Desktop provides only the physical primitives
+at the end of that chain.
+
+**Executor delegation:** `AppLauncherSkill._launch_path` delegates to
+`hands.desktop.processes` (same CreateProcess/ShellExecute rules as
+before), and the executor's built-in `close` handler resolves the target
+via knowledge, finds matching processes through the hand's read-only
+`find_application_process`, then terminates by explicit pid. Existing
+open/search/play flows behave exactly as before.
+
+**Independence:** `desktop_agent.py` runs the hand standalone
+(`--capabilities`, `--self-test`, `--exec ACTION key=value`). This is the
+seam for a future `Sarthi.exe` desktop runtime: a small local IPC layer
+(serving `DesktopRequest` → `DesktopResult`) can be added there without
+touching any Brain module. No IPC is implemented yet.
+
+## 6. Provider Architecture
 
 The chain below is the verified conceptual boundary:
 
@@ -220,10 +306,13 @@ graceful combined failure. `/hermes/status` exposes the active stack (no secrets
 
 ---
 
-## 6. Browser Awareness
+## 7. Browser Awareness
 
 The non-deterministic extension of "open": inspect an arbitrary website and act
 on it with validated steps. Location: `skills/browser_awareness/`.
+Element discovery here is the semantic front of the browser priority chain
+(see §5): DOM/accessibility first, coordinates only as a calibrated last
+resort — the Desktop hand supplies the physical primitives afterwards.
 
 ```
 "open example.com and find the pricing page"  → interpreter → action="browse"
@@ -274,7 +363,7 @@ BrowserAwarenessManager   (MAX_STEPS = 8, per-run temporary context)
 
 ---
 
-## 7. Skills
+## 8. Skills
 
 Discovery (`skills/registry.py`, the single mechanism): scan `skills/` for
 `manifest.json` → `SkillMetadata` (no code imported) → on demand, import
@@ -305,7 +394,7 @@ propose → validate → register pattern (see CONTRIBUTING.md).
 
 ---
 
-## 8. Knowledge
+## 9. Knowledge
 
 - **Scanner** (`skills/scanner/application_scanner.py`): Windows locations
   (Program Files, LocalAppData, Start Menu, PATH), `.exe` + `.lnk` (COM-resolved),
@@ -332,7 +421,7 @@ Boundary tests lock these shapes in `tests/test_pipeline_compatibility.py`.
 
 ---
 
-## 9. Connectors
+## 10. Connectors
 
 `connectors/base.py` defines `BaseConnector` (metadata, `get_auth_url`,
 `handle_auth_callback`, `disconnect`, `is_connected`, `execute_tool`).
@@ -349,7 +438,7 @@ the route).
 
 ---
 
-## 10. API / UI
+## 11. API / UI
 
 One API process serves everything: REST under `/`, static UI at `/ui`
 (mounted from `UI/`), `/` redirects to `dashboard.html`. CORS is locked to the
@@ -385,7 +474,7 @@ toggles are explicitly labeled visual previews without backing settings).
 
 ---
 
-## 11. Configuration
+## 12. Configuration
 
 Two small, distinct layers — there is deliberately no bigger framework:
 
@@ -402,7 +491,7 @@ Canonical references: `.env.example` (copy to `.env`; never commit) and
 
 ---
 
-## 12. Persistence
+## 13. Persistence
 
 | Store | Location | Owner | Content |
 |---|---|---|---|
@@ -435,9 +524,9 @@ CONTRIBUTING for the untracking caveat).
 
 ---
 
-## 13. Testing
+## 14. Testing
 
-`python -m pytest tests/ -q` — **597 tests, 40 files, all passing** (plus 1
+`python -m pytest tests/ -q` — **713 tests, 41 files, all passing** (plus 1
 benign deprecation warning from FastAPI's test client). Lint/format: `ruff
 check .` and `ruff format --check .` are clean. Smoke test: `python
 main-test.py` (9 checks, no LLM call).
@@ -454,7 +543,7 @@ pytest, smoke test. Local pre-commit hooks mirror it (plus a no-DB-files guard).
 
 ---
 
-## 14. Extension Points
+## 15. Extension Points
 
 | I want to add a… | Do this | Never |
 |---|---|---|
@@ -463,6 +552,7 @@ pytest, smoke test. Local pre-commit hooks mirror it (plus a no-DB-files guard).
 | **Provider** | `hermes/providers/<name>.py` (`AIProvider` subclass) + registry entry + `.env` docs | import a concrete adapter outside `hermes/providers/` |
 | **Connector** | `connectors/<service>/` (`BaseConnector` subclass) + `registry.discover()` entry | wire it into the executor or brain |
 | **Browser capability** | extend `skills/browser_awareness/` schemas + validation rules + `SafeExecutor`; add tests | let the model inject selectors or call the executor directly |
+| **Desktop action** | add the action to a capability in `hands/desktop/capabilities.py`, implement its backend, add tests | bypass the allow-list, execute shell/code, guess coordinates |
 | **Knowledge source** | JSON file + loader wiring in `KnowledgeManager`; `get_all_entities()` already normalizes | bypass the manager |
 | **API endpoint** | `api.py` or a mounted router; update the README table | let the UI call internal modules |
 | **UI page** | `UI/<page>.html` using `components.js` sidebar/footer | duplicate the sidebar markup |
@@ -471,7 +561,7 @@ Full integration paths and review rules: `CONTRIBUTING.md`.
 
 ---
 
-## 15. Current Limitations
+## 16. Current Limitations
 
 Explicit, verified:
 
@@ -479,6 +569,9 @@ Explicit, verified:
    splitting lives in the interpreter. The file says so honestly.
 2. **Hermes skill authoring is not implemented** — planned; the safety boundary
    already exists, the build/validate/register path does not.
+2a. **Desktop WINDOW_CONTROL and SHELL are planned, not implemented** — the
+    capability list declares them; no action uses them. SHELL in particular
+    needs a review gate before any code exists.
 3. **No native tool calling, vision, or streaming** in any adapter — the
    prompt-based tool protocol covers tool calls; images/streaming are unwired.
 4. **ModelCapabilities.context_window is never populated** — no context-limit
@@ -492,8 +585,10 @@ Explicit, verified:
 7. **Resolver quirk:** a machine-scanned app can shadow a website alias when
    both clean to the same string (canonical names indexed before aliases).
    Deterministic; websites remain reachable by canonical name.
-8. **Windows-oriented:** scanner, app launching and ai_chain automation assume
-   Windows; core pipeline/API/tests are cross-platform (CI runs on Ubuntu).
+8. **Windows-oriented:** scanner, app launching, ai_chain automation and the
+   Desktop hand assume Windows; core pipeline/API/tests are cross-platform
+   (CI runs on Ubuntu). Desktop input/clipboard/window backends degrade to
+   structured failures without their optional dependencies.
 9. **Mode/test-mode state is process-local** — a restart resets it.
 10. **`hermes/routes.py` keeps module-level `_orchestrator`/`_sandbox` globals**
     solely for test compatibility; the real singletons live in

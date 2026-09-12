@@ -160,6 +160,11 @@ curl http://127.0.0.1:8000/knowledge
 │     ├── Resolver     (fuzzy entity matching)             │
 │     └── Executor     (dispatch to handlers/skills)       │
 ├─────────────────────────────────────────────────────────┤
+│                     Hands Layer                          │
+│   DesktopHand (hands/desktop/) — physical execution      │
+│     launch/close apps · URLs · keyboard · mouse ·        │
+│     clipboard · scoped filesystem · processes · windows  │
+├─────────────────────────────────────────────────────────┤
 │                      Skills Layer                        │
 │   BaseSkill                                              │
 │     ├── GitHubProjectSkill  (project tracking)           │
@@ -186,6 +191,17 @@ sarthi/
 │   ├── modes.py        # default / conversation mode + test mode
 │   ├── context.py      # Pipeline runtime context
 │   └── response.py     # Standardized response model
+│
+├── hands/          # Physical execution layer (hands do, brains think)
+│   └── desktop/        # DesktopHand: capability-gated Windows actions
+│       ├── hand.py         # execute(action, **kwargs) → DesktopResult
+│       ├── capabilities.py # The action allow-list (per-capability specs)
+│       ├── models.py       # DesktopRequest / DesktopResult contracts
+│       ├── processes.py    # Launch/terminate/list (never via shell)
+│       ├── windows.py      # Window enumeration (optional pywin32)
+│       ├── input.py        # Keyboard/mouse/clipboard (optional pyautogui)
+│       ├── filesystem.py   # Scoped file ops (allowed roots, 1 MB cap)
+│       └── browser.py      # open_url (http/https only)
 │
 ├── knowledge/      # Entity knowledge base
 │   ├── manager.py      # KnowledgeManager (singleton, ONLY public interface)
@@ -249,9 +265,10 @@ sarthi/
 ├── api.py          # FastAPI server (API + static UI, one process)
 ├── main.py         # CLI entry point (voice)
 ├── main-test.py    # Smoke test
+├── desktop_agent.py  # Standalone Desktop hand entry point (Sarthi.exe seam)
 ├── start.bat       # Dev / windowless launcher for the API
 ├── config.py       # Central configuration (paths, ports, Whisper)
-└── tests/          # Pytest suite (580 tests)
+└── tests/          # Pytest suite (713 tests)
 ```
 
 ### Knowledge System
@@ -326,7 +343,7 @@ class BaseSkill(ABC):
 |---|---|---|
 | `project_tracker` | 1.1.0 | GitHub & Notion project tracking |
 | `automation_engine` | 1.1.0 | AI-chain laptop automation + code generation |
-| `app_launcher` | 1.1.0 | Launch installed applications |
+| `app_launcher` | 1.2.0 | Launch installed applications (delegates to the Desktop hand) |
 | `browser` | 1.1.0 | Open/search known websites (deterministic) |
 | `scanner` | 1.1.0 | Application discovery engine |
 | `natural_language_processor` | 1.1.0 | Conversational fallback (Hermes chat) |
@@ -602,7 +619,7 @@ python -m pytest tests/test_interpreter.py -v
 python -m pytest tests/ --cov=.
 ```
 
-**580 tests** across 39 test files. Key coverage:
+**713 tests** across 41 test files. Key coverage:
 
 | Test File | Coverage |
 |---|---|
@@ -618,12 +635,13 @@ python -m pytest tests/ --cov=.
 | `test_browser_awareness.py` | Browser Awareness safety gate + manager loop |
 | `test_browser.py` | Browser skill routes |
 | `test_connectors.py` | Connector registry + models |
+| `test_desktop_hand.py` | Desktop hand: capabilities, validation, delegation |
 
 ### Verification
 
 ```
 python -m pytest tests/ -q
-# 580 passed
+# 713 passed
 ```
 
 ---
@@ -693,7 +711,7 @@ mypy .
 |---|---|
 | Type coverage | Advisory (mypy progressive mode) |
 | Error handling | Comprehensive |
-| Test suite | 580 passing tests |
+| Test suite | 713 passing tests |
 | Performance | Optimized |
 | Maintainability | High |
 
@@ -707,7 +725,7 @@ mypy .
 | 4 | Database package (SQLite, models, cache) | ✅ Complete |
 | 5 | Centralized logging setup | ✅ Complete |
 | 6 | UI consolidation (shared components) | ✅ Complete |
-| 7 | Unit tests (580 tests) | ✅ Complete |
+| 7 | Unit tests (713 tests) | ✅ Complete |
 | 8 | Automation engine cleanup | ✅ Complete |
 | 9 | Linting, formatting | ✅ Complete |
 | 10 | Clean architecture refactoring (Knowledge System) | ✅ Complete |

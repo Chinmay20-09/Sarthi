@@ -3,13 +3,22 @@
 **What Sarthi is:** a local-first Windows-oriented desktop assistant. One
 FastAPI process serves a REST API and the web UI; a deterministic pipeline
 (Interpreter → Resolver → Executor) runs skills against discovered knowledge;
-Hermes is the conversational layer for everything else.
+the Desktop hand is the physical execution layer that touches Windows; Hermes
+is the conversational layer for everything else.
 
 ## Implemented and stable
 
 - **Core pipeline** — interpreter (compound commands), entity resolution
   (RapidFuzz over 700+ scanned apps + curated websites), executor with
-  built-in handlers and a skill fallback pool. Locked by boundary tests.
+  built-in handlers (open, close, browse, remember/recall/forget, clean) and
+  a skill fallback pool. Locked by boundary tests.
+- **Desktop hand** (`hands/desktop/`) — the physical execution layer:
+  launch/close apps by explicit path/pid, open http/https URLs, keyboard,
+  mouse, clipboard, scoped filesystem reads/writes, process and window
+  enumeration. Capability allow-list + argument validation + structured
+  `DesktopResult`; every action logged; no shell, no code execution, no
+  coordinate guessing. Executor and app launcher delegate OS actions to it.
+  Standalone entry point: `desktop_agent.py` (future `Sarthi.exe` seam).
 - **Skills** — 10 skills with manifest-based discovery, enable/disable, DI
   (knowledge + events). NLP fallback registered last.
 - **Knowledge** — scanner → applications.json (v2 categories: favourite /
@@ -30,13 +39,16 @@ Hermes is the conversational layer for everything else.
 - **Automation engine / ai_chain** — laptop-control RPA loop with hands-off
   voice contract, DOM-regex locating (v1.5), screen-state classifier,
   7 AI sites. Experimental by nature (depends on external site UIs).
-- **Tooling** — 580 tests green, ruff lint/format clean, CI on push/PR,
+- **Tooling** — 713 tests green, ruff lint/format clean, CI on push/PR,
   pre-commit hooks, smoke test.
 
 ## Experimental / partially implemented
 
 - **ai_chain** — works, but fragile against site redesigns by design;
   calibration per monitor recommended.
+- **Desktop hand input/clipboard/window backends** — depend on the optional
+  `automation` extra (pyautogui, pyperclip) and pywin32; without them the
+  hand returns structured failures instead of fake successes.
 - **Connectors framework** — one real connector; generic "test" endpoint does
   not validate credentials.
 - **Test-runner page** (`/test/run` + telemetry dashboard) — functional but
@@ -45,6 +57,9 @@ Hermes is the conversational layer for everything else.
 ## Known limitations (top ones)
 
 - Planner is a documented pass-through; the interpreter owns compound commands.
+- Desktop WINDOW_CONTROL and SHELL capabilities are declared but deliberately
+  not implemented (SHELL needs a review gate first). No local IPC between the
+  Brain and a standalone desktop agent yet — `desktop_agent.py` is the seam.
 - No native tool-calling/vision/streaming in providers (prompt protocol covers
   tools; everything else is deliberately unwired).
 - Hermes skill authoring: planned, not implemented.

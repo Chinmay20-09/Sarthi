@@ -415,6 +415,26 @@
       "tool_used": null,
       "timestamp": "2026-09-07T18:53:34.909514+00:00",
       "duration_ms": 97355.65819999919
+    },
+    {
+      "task_id": "task_6c8f31",
+      "prompt": "hello",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-09-12T15:01:46.679038+00:00",
+      "duration_ms": 86059.94430000009
+    },
+    {
+      "task_id": "task_7b567a",
+      "prompt": "hello",
+      "provider": "Ollama",
+      "model": "hermes3:8b",
+      "status": "success",
+      "tool_used": null,
+      "timestamp": "2026-09-12T15:09:54.839201+00:00",
+      "duration_ms": 88635.15189999998
     }
   ],
   "how are you ?": [

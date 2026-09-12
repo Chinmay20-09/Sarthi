@@ -2,7 +2,8 @@
 
 Regression: the launcher used ``subprocess.Popen(app_path, shell=True)``,
 which passed the path through cmd.exe. Paths with shell metacharacters could
-have been interpreted as commands. The launcher must now:
+have been interpreted as commands. Launching now delegates to the Desktop
+hand (hands/desktop/processes.py), which must keep the same guarantees:
     - launch .exe targets with a list-form Popen (CreateProcess, no shell)
     - launch every other target (.lnk, .bat, URLs) with os.startfile
       (ShellExecute — also no shell)
@@ -19,10 +20,11 @@ def test_exe_launched_with_list_form_popen(monkeypatch):
     def fake_popen(args, **kwargs):
         captured["args"] = args
         captured["shell"] = kwargs.get("shell")
+        return type("P", (), {"pid": 1})()
 
-    monkeypatch.setattr("skills.app_launcher.main.subprocess.Popen", fake_popen)
+    monkeypatch.setattr("hands.desktop.processes.subprocess.Popen", fake_popen)
     monkeypatch.setattr(
-        "skills.app_launcher.main.os.startfile", lambda p: captured.setdefault("startfile", p)
+        "hands.desktop.processes.os.startfile", lambda p: captured.setdefault("startfile", p)
     )
 
     AppLauncherSkill._launch_path(r"C:\Program Files\Chrome\chrome.exe")
@@ -40,10 +42,10 @@ def test_lnk_launched_with_startfile(monkeypatch):
         captured["startfile"] = path
 
     monkeypatch.setattr(
-        "skills.app_launcher.main.subprocess.Popen",
+        "hands.desktop.processes.subprocess.Popen",
         lambda *a, **k: captured.setdefault("popen", True),
     )
-    monkeypatch.setattr("skills.app_launcher.main.os.startfile", fake_startfile)
+    monkeypatch.setattr("hands.desktop.processes.os.startfile", fake_startfile)
 
     AppLauncherSkill._launch_path(r"C:\ProgramData\Microsoft\Windows\Start Menu\Chrome.lnk")
 
@@ -57,10 +59,11 @@ def test_launch_case_insensitive_for_exe(monkeypatch):
 
     def fake_popen(args, **kwargs):
         captured["args"] = args
+        return type("P", (), {"pid": 1})()
 
-    monkeypatch.setattr("skills.app_launcher.main.subprocess.Popen", fake_popen)
+    monkeypatch.setattr("hands.desktop.processes.subprocess.Popen", fake_popen)
     monkeypatch.setattr(
-        "skills.app_launcher.main.os.startfile", lambda p: captured.setdefault("startfile", p)
+        "hands.desktop.processes.os.startfile", lambda p: captured.setdefault("startfile", p)
     )
 
     AppLauncherSkill._launch_path("C:\\Tools\\MYAPP.EXE")
@@ -80,14 +83,15 @@ class _FakeKnowledge:
 
 
 def test_execute_launches_favourite_via_safe_path(monkeypatch):
-    """execute() routes the stored path through the safe launcher."""
+    """execute() routes the stored path through the Desktop hand."""
     captured = {}
 
     def fake_popen(args, **kwargs):
         captured["args"] = args
         captured["shell"] = kwargs.get("shell")
+        return type("P", (), {"pid": 1})()
 
-    monkeypatch.setattr("skills.app_launcher.main.subprocess.Popen", fake_popen)
+    monkeypatch.setattr("hands.desktop.processes.subprocess.Popen", fake_popen)
 
     skill = AppLauncherSkill(knowledge_manager=_FakeKnowledge(r"C:\Apps\thing.exe"))
     result = skill.execute(Intent(action="open", target="thing"))
@@ -103,7 +107,7 @@ def test_execute_launch_failure_is_graceful(monkeypatch):
     def boom(path):
         raise FileNotFoundError(path)
 
-    monkeypatch.setattr("skills.app_launcher.main.os.startfile", boom)
+    monkeypatch.setattr("hands.desktop.processes.os.startfile", boom)
 
     skill = AppLauncherSkill(knowledge_manager=_FakeKnowledge(r"C:\Nope\missing.lnk"))
     result = skill.execute(Intent(action="open", target="thing"))

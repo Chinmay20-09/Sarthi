@@ -8,10 +8,15 @@ The Executor maintains a registry of handlers:
     - Built-in handlers for core actions (e.g., open_application, open_site)
     - Skill handlers (loaded from skills/ directory and registered by action)
     - Fallback: tries all registered skills when no direct handler matches
+
+OS-level execution (launching, closing) delegates to the Desktop hand
+(hands/desktop/) — Sarthi's physical execution layer. The Brain decides;
+the hand performs.
 """
 
 import logging
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from brain.context import BrainContext
@@ -266,6 +271,63 @@ class BrainExecutor:
                 }
 
             self.register_handler("open", handle_open)
+
+            def handle_close(intent: Intent) -> dict[str, Any] | None:
+                """Handle 'close' — resolve the target, then delegate to Desktop.
+
+                The Brain resolves what "close chrome" means (knowledge
+                lookup); the Desktop hand performs the actual termination
+                by explicit process id. Unknown targets return a structured
+                not-found error instead of falling through to Hermes.
+                """
+                target = (intent.target or "").strip()
+                if not target:
+                    return {"success": False, "status": "error", "error": "No target specified"}
+
+                from hands.desktop import get_desktop_hand
+                from knowledge.manager import get_manager as get_knowledge_manager
+
+                app = get_knowledge_manager().find_application(target)
+                if app is None:
+                    return {
+                        "success": False,
+                        "status": "not_found",
+                        "handled": True,
+                        "error": f"I don't know an application named '{target}'.",
+                    }
+
+                exe_name = Path(app.get("path", "")).name
+                hand = get_desktop_hand()
+                matched = hand.find_application_process(exe_name)
+                if matched is None:
+                    return {
+                        "success": False,
+                        "status": "not_running",
+                        "handled": True,
+                        "error": f"{app.get('name', target)} doesn't appear to be running.",
+                    }
+
+                results = []
+                for proc in matched:
+                    results.append(
+                        hand.execute("close_application", target=target, pid=proc["pid"])
+                    )
+                closed = sum(1 for r in results if r.get("success"))
+                if closed:
+                    return {
+                        "action": "close_application",
+                        "target": target,
+                        "application": app.get("name", target),
+                        "closed": closed,
+                    }
+                return {
+                    "success": False,
+                    "status": "error",
+                    "handled": True,
+                    "error": f"Could not close {app.get('name', target)}.",
+                }
+
+            self.register_handler("close", handle_close)
 
             def handle_browse(intent: Intent) -> dict[str, Any] | None:
                 """Handle 'browse' — inspect an arbitrary website.

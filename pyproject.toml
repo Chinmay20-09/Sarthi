@@ -54,6 +54,7 @@ browser = [
 include = [
     "actions*",
     "brain*",
+    "hands*",
     "connectors*",
     "database*",
     "events*",
