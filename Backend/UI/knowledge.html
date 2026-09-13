@@ -303,6 +303,19 @@
                         <div class="text-xs text-on-surface-variant py-4 text-center">Loading connectors...</div>
                     </div>
                 </div>
+                <!-- Projects Panel -->
+                <div class="glass-panel p-6 rounded-xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-label-caps text-label-caps text-on-surface-variant">PROJECTS</h3>
+                        <button id="add-project-btn" class="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-label-caps text-primary border border-primary/20 rounded-lg hover:bg-primary/10 transition-all">
+                            <span class="material-symbols-outlined text-[14px]">add</span>
+                            ADD
+                        </button>
+                    </div>
+                    <div id="projects-list" class="flex flex-col gap-2 max-h-[400px] overflow-y-auto">
+                        <div class="text-xs text-on-surface-variant py-4 text-center">Loading projects...</div>
+                    </div>
+                </div>
                 <div class="glass-panel p-6 rounded-xl h-48 relative overflow-hidden">
                     <h3 class="font-label-caps text-label-caps text-on-surface-variant mb-4">STORAGE HEALTH</h3>
                     <div class="flex items-end gap-1 h-20">
@@ -332,6 +345,38 @@
                         <div id="modal-body">
                             <div class="text-on-surface-variant text-sm py-4">Loading...</div>
                         </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Project Modal (Add/Edit) -->
+            <div id="project-modal" class="fixed inset-0 z-50 hidden">
+                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="project-modal-backdrop"></div>
+                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md">
+                    <div class="glass-panel rounded-2xl p-6 border border-white/10 shadow-2xl">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 id="project-modal-title" class="font-headline-md text-headline-md">Add Project</h3>
+                            <button id="project-modal-close" class="text-on-surface-variant hover:text-on-surface transition-colors">
+                                <span class="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+                        <form id="project-form" class="flex flex-col gap-4">
+                            <div>
+                                <label class="font-label-caps text-[10px] text-on-surface-variant mb-1 block">PROJECT NAME</label>
+                                <input id="project-name" type="text" required class="w-full bg-surface-container rounded-lg px-3 py-2.5 text-on-surface border border-white/10 focus:border-primary/50 focus:outline-none text-sm" placeholder="Sarthi">
+                            </div>
+                            <div>
+                                <label class="font-label-caps text-[10px] text-on-surface-variant mb-1 block">GITHUB URL</label>
+                                <input id="project-github-url" type="text" class="w-full bg-surface-container rounded-lg px-3 py-2.5 text-on-surface border border-white/10 focus:border-primary/50 focus:outline-none text-sm" placeholder="https://github.com/user/repo">
+                            </div>
+                            <div>
+                                <label class="font-label-caps text-[10px] text-on-surface-variant mb-1 block">TERMINAL PATH</label>
+                                <input id="project-terminal-path" type="text" class="w-full bg-surface-container rounded-lg px-3 py-2.5 text-on-surface border border-white/10 focus:border-primary/50 focus:outline-none text-sm" placeholder="C:/Sarthi">
+                            </div>
+                            <div class="flex gap-3 mt-2">
+                                <button type="submit" id="project-submit-btn" class="flex-1 px-4 py-2.5 bg-primary/10 border border-primary/30 text-primary rounded-lg text-sm font-medium hover:bg-primary/20 transition-all">Add Project</button>
+                                <button type="button" id="project-modal-cancel" class="px-4 py-2.5 bg-white/5 border border-white/10 text-on-surface-variant rounded-lg text-sm hover:bg-white/10 transition-all">Cancel</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -859,6 +904,121 @@
             }
         }
 
+        // ---------------------------------------------------------------------
+        // Projects (name + GitHub repo + local terminal path)
+        // ---------------------------------------------------------------------
+        let projectModalMode = "add"; // "add" | "edit"
+        let projectModalId = null;
+
+        async function loadProjects() {
+            const container = document.getElementById("projects-list");
+            if (!container) return;
+            try {
+                const res = await fetch(KnowledgeAPI + "/projects");
+                const data = await res.json();
+                const projects = data.projects || [];
+                container.innerHTML = "";
+
+                projects.forEach(p => {
+                    const item = document.createElement("div");
+                    item.className = "p-3 rounded-lg border border-white/5 hover:bg-white/5 transition-all group/proj";
+                    item.innerHTML =
+                        '<div class="flex items-start justify-between gap-2">' +
+                        '  <div class="min-w-0">' +
+                        '    <p class="font-body-sm text-sm font-medium truncate">' + escK(p.name) + '</p>' +
+                        (p.github_url ?
+                        '    <p class="text-[10px] text-on-surface-variant font-data-mono truncate mt-1"><span class="text-on-surface-variant/60">GitHub </span>' + escK(p.github_url) + '</p>' : "") +
+                        (p.terminal_path ?
+                        '    <p class="text-[10px] text-on-surface-variant font-data-mono truncate"><span class="text-on-surface-variant/60">Terminal </span>' + escK(p.terminal_path) + '</p>' : "") +
+                        '  </div>' +
+                        '  <div class="flex items-center gap-1 opacity-0 group-hover/proj:opacity-100 transition-opacity flex-shrink-0">' +
+                        '    <button class="proj-edit p-1 rounded hover:bg-white/10 transition-colors" title="Edit">' +
+                        '      <span class="material-symbols-outlined text-xs text-on-surface-variant">edit</span>' +
+                        '    </button>' +
+                        '    <button class="proj-delete p-1 rounded hover:bg-error/10 transition-colors" title="Delete">' +
+                        '      <span class="material-symbols-outlined text-xs text-error">delete</span>' +
+                        '    </button>' +
+                        '  </div>' +
+                        '</div>';
+
+                    item.querySelector(".proj-edit").addEventListener("click", () => openProjectModal("edit", p));
+                    item.querySelector(".proj-delete").addEventListener("click", () => deleteProject(p.id, p.name));
+                    container.appendChild(item);
+                });
+
+                if (!projects.length) {
+                    container.innerHTML = '<div class="text-xs text-on-surface-variant py-6 text-center">' +
+                        '<span class="material-symbols-outlined text-2xl text-on-surface-variant/30 block mb-2">folder_open</span>' +
+                        'No projects yet. Click <strong>ADD</strong> to register one.</div>';
+                }
+            } catch (err) {
+                console.warn("Failed to load projects:", err);
+                container.innerHTML = '<div class="text-xs text-on-surface-variant py-4 text-center">Projects unavailable.</div>';
+            }
+        }
+
+        function openProjectModal(mode, project) {
+            projectModalMode = mode;
+            projectModalId = project ? project.id : null;
+            document.getElementById("project-modal-title").textContent = mode === "edit" ? "Edit Project" : "Add Project";
+            document.getElementById("project-submit-btn").textContent = mode === "edit" ? "Save Changes" : "Add Project";
+            document.getElementById("project-name").value = project ? project.name : "";
+            document.getElementById("project-github-url").value = project ? (project.github_url || "") : "";
+            document.getElementById("project-terminal-path").value = project ? (project.terminal_path || "") : "";
+            document.getElementById("project-modal").classList.remove("hidden");
+            document.getElementById("project-name").focus();
+        }
+
+        function closeProjectModal() {
+            document.getElementById("project-modal").classList.add("hidden");
+        }
+
+        async function saveProject(e) {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById("project-name").value,
+                github_url: document.getElementById("project-github-url").value,
+                terminal_path: document.getElementById("project-terminal-path").value,
+            };
+            const submitBtn = document.getElementById("project-submit-btn");
+            submitBtn.disabled = true;
+            try {
+                const isEdit = projectModalMode === "edit" && projectModalId != null;
+                const res = await fetch(
+                    KnowledgeAPI + "/projects" + (isEdit ? "/" + projectModalId : ""),
+                    {
+                        method: isEdit ? "PUT" : "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload),
+                    }
+                );
+                const data = await res.json();
+                if (data.success) {
+                    closeProjectModal();
+                    await loadProjects(); // local refresh — no page reload
+                } else {
+                    alert(data.error || "Could not save the project.");
+                }
+            } catch (err) {
+                console.error("Save project failed:", err);
+                alert("Could not save the project. Is the Sarthi server running?");
+            } finally {
+                submitBtn.disabled = false;
+            }
+        }
+
+        async function deleteProject(id, name) {
+            if (!confirm("Delete project '" + name + "'?")) return;
+            try {
+                const res = await fetch(KnowledgeAPI + "/projects/" + id, { method: "DELETE" });
+                const data = await res.json();
+                if (!data.success && data.error) alert(data.error);
+                await loadProjects();
+            } catch (err) {
+                console.error("Delete project failed:", err);
+            }
+        }
+
         function initializePage() {
             // Micro-interactions for glass panels
             document.querySelectorAll('.glass-panel').forEach(panel => {
@@ -887,11 +1047,19 @@
             document.getElementById("modal-close").addEventListener("click", closeModal);
             document.getElementById("modal-backdrop").addEventListener("click", closeModal);
 
+            // Projects
+            document.getElementById("add-project-btn").addEventListener("click", () => openProjectModal("add", null));
+            document.getElementById("project-form").addEventListener("submit", saveProject);
+            document.getElementById("project-modal-close").addEventListener("click", closeProjectModal);
+            document.getElementById("project-modal-cancel").addEventListener("click", closeProjectModal);
+            document.getElementById("project-modal-backdrop").addEventListener("click", closeProjectModal);
+
             // Refresh events button
             const refreshBtn = document.getElementById("refresh-events-btn");
             if (refreshBtn) refreshBtn.addEventListener("click", loadCalendarEvents);
 
             loadConnectors();
+            loadProjects();
         }
     </script>
 </body>

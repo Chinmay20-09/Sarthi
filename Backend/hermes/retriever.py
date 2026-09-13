@@ -54,6 +54,8 @@ MAX_SANDBOX_MATCHES = 3
 MAX_SANDBOX_CHARS = 1200
 MAX_CONVERSATION_TURNS = 4
 MAX_CONVERSATION_CHARS = 800
+MAX_PROJECTS = 6
+MAX_PROJECTS_CHARS = 500
 MAX_APPS_SCANNED = 2000  # safety cap for the fuzzy entity scan
 
 _WORD_RE = re.compile(r"[a-z0-9]{2,}")
@@ -446,6 +448,55 @@ def _retrieve_conversation(
     ]
 
 
+def _retrieve_projects(db, keywords: list[str]) -> tuple[list[str], list[Source]]:
+    """The user's projects (projects table), keyword-matched first.
+
+    Surfaces name + GitHub repo + local terminal path so Hermes can relate a
+    mentioned project to where it lives ("work on Sarthi" -> repo + path).
+    Projects are few and highly relevant, so unmatched ones fill the section
+    up to the cap, same policy as memory facts.
+    """
+    started = time.perf_counter()
+    try:
+        rows = db.fetch_all(
+            "SELECT name, github_url, terminal_path FROM projects "
+            "ORDER BY updated_at DESC LIMIT ?",
+            (MAX_APPS_SCANNED,),
+        ) or []
+    except Exception as e:
+        # Table missing (pre-migration DB) or DB hiccup — degrade silently.
+        logger.debug("retriever: projects query failed: %s", e)
+        return [], [Source(name="projects", kind="sql", duration_ms=_ms(started), count=0)]
+
+    lines_all = []
+    for r in rows:
+        name = str(r.get("name", ""))
+        github = str(r.get("github_url", "") or "")
+        path = str(r.get("terminal_path", "") or "")
+        parts = [f"Project: {name}"]
+        if github:
+            parts.append(f"GitHub: {github}")
+        if path:
+            parts.append(f"Terminal: {path}")
+        lines_all.append(" — ".join(parts))
+
+    if not lines_all:
+        return [], [Source(name="projects", kind="sql", duration_ms=_ms(started), count=0)]
+
+    matched = [line for line in lines_all if any(kw in line.lower() for kw in keywords)]
+    chosen = matched[:MAX_PROJECTS] or lines_all[:MAX_PROJECTS]
+    text = _clip("\n".join(f"- {line}" for line in chosen), MAX_PROJECTS_CHARS)
+    return [text], [
+        Source(
+            name="projects",
+            kind="sql",
+            duration_ms=_ms(started),
+            count=len(chosen),
+            detail={"matched": len(matched), "total": len(lines_all)},
+        )
+    ]
+
+
 def _ms(started: float) -> float:
     return (time.perf_counter() - started) * 1000
 
@@ -512,6 +563,11 @@ class Retriever:
                 context.sources.extend(src)
                 if settings:
                     sections.append("Saved settings:\n" + "\n".join(f"- {s}" for s in settings))
+
+                projects, src = _retrieve_projects(db, keywords)
+                context.sources.extend(src)
+                if projects and projects[0]:
+                    sections.append("Known projects:\n" + projects[0])
 
         # Knowledge entities (apps + websites)
         k_lines, src = _retrieve_knowledge(query)

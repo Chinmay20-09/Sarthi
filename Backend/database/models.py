@@ -157,6 +157,25 @@ CREATE TABLE IF NOT EXISTS browser_profiles (
 """
 
 # =============================================================================
+# Projects Table
+# =============================================================================
+
+# The user's projects (name, GitHub repo, local terminal path) so Sarthi/Hermes
+# can relate a mentioned project to its repo and local checkout. name is
+# unique (case-insensitive enforcement happens at the API layer; the index
+# here is a hard backstop on a table that starts empty).
+CREATE_PROJECTS = """
+CREATE TABLE IF NOT EXISTS projects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    github_url TEXT DEFAULT '',
+    terminal_path TEXT DEFAULT '',
+    created_at TEXT,
+    updated_at TEXT
+)
+"""
+
+# =============================================================================
 # Indexes
 # =============================================================================
 
@@ -173,6 +192,11 @@ ON conversation_messages (session_id)
 CREATE_INDEX_CHAT_MESSAGES_SESSION = """
 CREATE INDEX IF NOT EXISTS idx_chat_messages_session
 ON chat_messages (session_id)
+"""
+
+CREATE_INDEX_PROJECTS_NAME = """
+CREATE UNIQUE INDEX IF NOT EXISTS idx_projects_name
+ON projects (name)
 """
 
 # =============================================================================
@@ -192,10 +216,12 @@ ALL_TABLES: dict[str, str] = {
     "chat_messages": CREATE_CHAT_MESSAGES,
     "connectors": CREATE_CONNECTORS,
     "browser_profiles": CREATE_BROWSER_PROFILES,
+    "projects": CREATE_PROJECTS,
 }
 
 # Canonical indexes, also created automatically at connect time.
 ALL_INDEXES: dict[str, str] = {
     "idx_conversation_messages_session": CREATE_INDEX_CONVERSATION_MESSAGES_SESSION,
     "idx_chat_messages_session": CREATE_INDEX_CHAT_MESSAGES_SESSION,
+    "idx_projects_name": CREATE_INDEX_PROJECTS_NAME,
 }

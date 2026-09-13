@@ -74,6 +74,9 @@ def connect_via_web_interface(client_config: dict) -> dict[str, Any]:
         session = open_session(auth_url)
     except Exception as e:
         logger.error(f"Could not open the automation browser for Google sign-in: {e}")
+        # Stop the callback waiter — without a browser nobody will ever
+        # reach the redirect, so don't leave the server thread lingering.
+        handler._event.set()
         return {
             "success": False,
             "error": (

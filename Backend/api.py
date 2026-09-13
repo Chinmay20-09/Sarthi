@@ -95,6 +95,13 @@ knowledge = get_manager()
 bus = get_bus()
 skill_registry = get_registry()
 
+# Voice replies: speak every command response aloud (not just the
+# hands-off automation warnings). Subscribed once at startup; the
+# responder itself decides what is speakable and honours the user toggle.
+from utils.spoken_replies import register_voice_replies
+
+register_voice_replies(bus)
+
 
 class ClientCommandRequest(BaseModel):
     """Client-facing /command request — the client-independent schema.
@@ -142,6 +149,10 @@ class SettingRequest(BaseModel):
     value: str
 
 
+class VoiceRepliesRequest(BaseModel):
+    enabled: bool
+
+
 class ChatMessageRequest(BaseModel):
     session_id: str
     role: str
@@ -160,6 +171,18 @@ class ConnectorUpdateRequest(BaseModel):
     type: str | None = None
     service: str | None = None
     config: dict | None = None
+
+
+class ProjectRequest(BaseModel):
+    name: str
+    github_url: str = ""
+    terminal_path: str = ""
+
+
+class ProjectUpdateRequest(BaseModel):
+    name: str | None = None
+    github_url: str | None = None
+    terminal_path: str | None = None
 
 
 @app.get("/", include_in_schema=False)
@@ -621,6 +644,24 @@ def get_setting(key: str):
     return {"key": key, "value": row["value"] if row else None}
 
 
+@app.post("/settings/voice-replies")
+def set_voice_replies(request: VoiceRepliesRequest):
+    """Turn spoken replies on or off (persisted across restarts)."""
+    from utils.spoken_replies import set_enabled
+
+    enabled = set_enabled(request.enabled)
+    logger.info(f"Voice replies {'enabled' if enabled else 'disabled'}")
+    return {"success": True, "key": "voice_replies", "enabled": enabled}
+
+
+@app.get("/settings/voice-replies")
+def get_voice_replies():
+    """Current spoken-replies preference (default: on)."""
+    from utils.spoken_replies import get_enabled
+
+    return {"success": True, "key": "voice_replies", "enabled": get_enabled()}
+
+
 @app.get("/memory")
 def list_memories():
     """List the facts the user saved with /remember (for the sidebar badge)."""
@@ -1033,6 +1074,142 @@ def google_calendar_events(max_results: int = 10):
 
     result = gc.execute_tool("list_events", {"max_results": max_results})
     return result
+
+
+# ---------------------------------------------------------------------------
+# Projects (name + GitHub repo + local terminal path, for Hermes context)
+# ---------------------------------------------------------------------------
+
+
+_URL_SCHEMES = ("http://", "https://", "git@", "ssh://")
+
+
+def _save_project(
+    name: str,
+    github_url: str,
+    terminal_path: str,
+    *,
+    project_id: int | None = None,
+    current_name: str | None = None,
+) -> dict:
+    """Validate and insert/update one project row (shared by POST and PUT).
+
+    Minimal validation on purpose: name required, URLs/path trimmed, and a
+    duplicate-name backstop (the DB unique index is the hard guarantee).
+    """
+    from database.manager import get_database
+
+    name = (name or "").strip()
+    github_url = (github_url or "").strip()
+    terminal_path = (terminal_path or "").strip()
+
+    if not name:
+        return {"success": False, "error": "Project name is required"}
+    if len(name) > 120:
+        return {"success": False, "error": "Project name is too long (max 120 characters)"}
+    if github_url and not github_url.lower().startswith(_URL_SCHEMES):
+        return {
+            "success": False,
+            "error": "GitHub URL must start with http://, https://, git@ or ssh://",
+        }
+
+    db = get_database()
+    # Duplicate names are rejected — unless it's this project keeping its own
+    # (possibly re-cased) name on update.
+    if (name.lower() != (current_name or "").lower()) or project_id is None:
+        clash = db.fetch_one(
+            "SELECT id FROM projects WHERE name = ? COLLATE NOCASE", (name,)
+        )
+        if clash and clash["id"] != project_id:
+            return {
+                "success": False,
+                "error": f"A project named '{name}' already exists",
+            }
+
+    if project_id is None:
+        db.execute(
+            "INSERT INTO projects (name, github_url, terminal_path, created_at, updated_at) "
+            "VALUES (?, ?, ?, datetime('now'), datetime('now'))",
+            (name, github_url, terminal_path),
+        )
+        row = db.fetch_one("SELECT * FROM projects WHERE id = last_insert_rowid()")
+    else:
+        db.execute(
+            "UPDATE projects SET name = ?, github_url = ?, terminal_path = ?, "
+            "updated_at = datetime('now') WHERE id = ?",
+            (name, github_url, terminal_path, project_id),
+        )
+        row = db.fetch_one("SELECT * FROM projects WHERE id = ?", (project_id,))
+    return {"success": True, "project": row}
+
+
+@app.get("/projects")
+def list_projects():
+    """List the user's projects (name, GitHub URL, local terminal path)."""
+    from database.manager import get_database
+
+    db = get_database()
+    rows = db.fetch_all("SELECT * FROM projects ORDER BY name COLLATE NOCASE")
+    return {"success": True, "count": len(rows), "projects": rows}
+
+
+@app.get("/projects/{project_id}")
+def get_project(project_id: int):
+    """Fetch one project by id."""
+    from database.manager import get_database
+
+    db = get_database()
+    row = db.fetch_one("SELECT * FROM projects WHERE id = ?", (project_id,))
+    if row is None:
+        return {"success": False, "error": f"Project not found: {project_id}"}
+    return {"success": True, "project": row}
+
+
+@app.post("/projects")
+def add_project(request: ProjectRequest):
+    """Add a project."""
+    return _save_project(request.name, request.github_url, request.terminal_path)
+
+
+@app.put("/projects/{project_id}")
+def update_project(project_id: int, request: ProjectUpdateRequest):
+    """Update one project's editable fields."""
+    from database.manager import get_database
+
+    db = get_database()
+    existing = db.fetch_one("SELECT * FROM projects WHERE id = ?", (project_id,))
+    if existing is None:
+        return {"success": False, "error": f"Project not found: {project_id}"}
+
+    name = request.name if request.name is not None else existing["name"]
+    github_url = (
+        request.github_url if request.github_url is not None else existing["github_url"]
+    )
+    terminal_path = (
+        request.terminal_path
+        if request.terminal_path is not None
+        else existing["terminal_path"]
+    )
+    return _save_project(
+        name,
+        github_url,
+        terminal_path,
+        project_id=project_id,
+        current_name=existing["name"],
+    )
+
+
+@app.delete("/projects/{project_id}")
+def delete_project(project_id: int):
+    """Remove one project."""
+    from database.manager import get_database
+
+    db = get_database()
+    existing = db.fetch_one("SELECT id, name FROM projects WHERE id = ?", (project_id,))
+    if existing is None:
+        return {"success": False, "error": f"Project not found: {project_id}"}
+    db.execute("DELETE FROM projects WHERE id = ?", (project_id,))
+    return {"success": True, "deleted_id": project_id, "deleted_name": existing["name"]}
 
 
 @app.get("/system/metrics")

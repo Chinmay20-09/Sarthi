@@ -317,9 +317,11 @@ class TestWebInterfaceConnect:
             mock_handler = mock_handler_cls.return_value
             mock_handler.start_server_and_wait.return_value = ("code", None)
             result = connector_web.connect_via_web_interface({"installed": {}})
+            # The flow forced a visible window and restored the env on exit
+            # (asserted inside patch.dict — it clears the var on exit).
+            assert os.environ.get("BROWSER_AWARENESS_HEADLESS") == "1"
 
         assert result["success"] is True
-        assert os.environ.get("BROWSER_AWARENESS_HEADLESS") == "1"  # restored
 
     def test_web_flow_browser_failure_returns_error(self):
         from connectors.google_calendar import connector_web
@@ -329,8 +331,16 @@ class TestWebInterfaceConnect:
                 "skills.browser_awareness.driver.open_session",
                 side_effect=RuntimeError("no chrome"),
             ),
-            patch("connectors.google_calendar.auth.OAuthCallbackHandler"),
+            patch(
+                "connectors.google_calendar.auth.OAuthCallbackHandler"
+            ) as mock_handler_cls,
         ):
+            # A real callback waiter would block; give the mock a proper
+            # tuple so the waiter thread ends cleanly when the flow stops it.
+            mock_handler_cls.return_value.start_server_and_wait.return_value = (
+                None,
+                None,
+            )
             result = connector_web.connect_via_web_interface({"installed": {}})
 
         assert result["success"] is False
