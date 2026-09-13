@@ -13,9 +13,16 @@ Public helpers:
     get_sandbox()         — the shared TaskSandbox every task is saved to.
     chat(message)         — plain conversational reply. NO tool planning, NO
                              tool fetching — the model is asked directly.
+    route_command(text)   — the fast/complex gate (Phase 3a router, with
+                             config knobs applied).
+    run_task(query)       — the complex path: bounded Hermes agent loop
+                             (Phase 3d) with retrieval + validated tools.
     get_provider_status() — diagnostic snapshot of the active provider stack.
 """
 
+from knowledge.memory import build_memory_prompt
+
+from hermes.agent import HermesAgent
 from hermes.config.loader import ConfigLoader
 from hermes.conversation import DEFAULT_SESSION, get_conversation_store
 from hermes.models import Task
@@ -23,10 +30,10 @@ from hermes.orchestrator import HermesOrchestrator
 from hermes.providers.base import ProviderResponse
 from hermes.providers.registry import build_provider_manager, provider_status
 from hermes.sandbox import TaskSandbox
-from knowledge.memory import build_memory_prompt
 
 _orchestrator: HermesOrchestrator | None = None
 _sandbox: TaskSandbox | None = None
+_agent = None
 
 
 def get_sandbox() -> TaskSandbox:
@@ -94,3 +101,60 @@ def chat(message: str, session_id: str | None = None) -> ProviderResponse:
         store.add_turn(session_id, "assistant", response.text)
 
     return response
+
+
+# ----------------------------------------------------------------------
+# Complex-task path (Phase 3g): router → agent
+# ----------------------------------------------------------------------
+
+
+def route_command(text: str):
+    """Classify one command for the fast/complex gate (config-aware).
+
+    Returns a hermes.router.Route with the config knobs applied.
+    """
+    from hermes.router import route_command as _route
+
+    route = _route(text)
+
+    # Router knobs (Phase 3f): mode override + minimum complexity score.
+    config = ConfigLoader().load()
+    mode = getattr(config, "router_mode", "auto")
+    min_score = getattr(config, "router_min_score", 1)
+
+    if mode == "always":
+        route.route = "hermes"
+        route.reason = "router_mode_always"
+    elif mode == "off":
+        route.route = "fast"
+        route.reason = "router_mode_off"
+    elif route.score < min_score:
+        route.route = "fast"
+        route.reason = "below_min_score"
+
+    return route
+
+
+def run_task(query: str, session_id: str | None = None) -> dict:
+    """Execute a complex task through the bounded Hermes agent loop.
+
+    This is the complex-path entry point for callers that have already
+    decided (or want the agent to decide) that Hermes should handle the
+    request. The agent still tries the deterministic pipeline first, so a
+    misrouted simple command costs nothing.
+
+    Args:
+        query: The user's request.
+        session_id: Optional conversation session for history/memory.
+
+    Returns:
+        Agent result dict: {success, text, tool_used, iterations,
+        duration_ms, timed_out, route, reason, provider, model, trace}.
+    """
+    config = ConfigLoader().load()
+    agent = HermesAgent(
+        sandbox=get_sandbox(),
+        max_iterations=getattr(config, "agent_max_iterations", 5),
+        timeout_seconds=getattr(config, "agent_timeout", 300.0),
+    )
+    return agent.run(query, session_id=session_id)

@@ -19,6 +19,24 @@ Variables:
 - HERMES_TIMEOUT: seconds
 - HERMES_SANDBOX_PATH: path to store sandbox data
 
+Agent loop bounds (the bounded complex-task loop):
+- HERMES_AGENT_MAX_ITERATIONS: max tool-requesting model turns per complex
+  task (default: 5)
+- HERMES_AGENT_TIMEOUT: wall-clock budget in seconds for one complex task
+  (default: 300)
+
+Complexity router knobs (the fast/complex gate):
+- HERMES_ROUTER_MODE: "auto" (heuristic routing, default), "always" (every
+  command is treated as complex; the deterministic pipeline still runs first
+  inside the agent), or "off" (never route to Hermes from /command)
+- HERMES_ROUTER_MIN_SCORE: minimum heuristic complexity score for a command
+  to be considered complex (default: 1)
+
+Retrieval knobs (bounded context feeding for complex tasks):
+- HERMES_RETRIEVAL_ENABLED: "true" (default) or "false"
+- HERMES_RETRIEVAL_MAX_CHARS: total character budget for retrieved context
+  (default: 6000)
+
 Local Hermes-specific (provider=local|ollama, and the automatic fallback
 for remote providers):
 - LOCAL_HERMES_URL: http://localhost:11434 (Ollama's default port; the local

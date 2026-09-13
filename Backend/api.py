@@ -347,6 +347,53 @@ def _process_command_text(text: str, session_id: str | None) -> dict:
     result["input"] = text
     result["mode"] = get_mode()
     result["routing"] = _detect_response_mode(result)
+
+    # Phase 4 — complexity router: when the deterministic pipeline could not
+    # handle the request (skill refusal / no handler / conversational
+    # fallback) and the router says the request is COMPLEX, run the bounded
+    # Hermes agent loop (retrieval + validated tools). Simple commands are
+    # never routed here, so the fast path keeps its latency.
+    if not result.get("success") or result.get("routing") == "hermes":
+        try:
+            from hermes.service import route_command as hermes_route_command
+
+            route = hermes_route_command(text)
+        except Exception:
+            route = None
+        if route is not None and route.route == "hermes":
+            try:
+                from hermes.service import run_task
+
+                agent_result = run_task(text, session_id=session_id)
+                if agent_result.get("success"):
+                    result = {
+                        "action": "hermes_task",
+                        "target": None,
+                        "status": "completed",
+                        "success": True,
+                        "text": agent_result.get("text", ""),
+                        "result": {
+                            "source": "hermes",
+                            "message": agent_result.get("text", ""),
+                            "provider": agent_result.get("provider", ""),
+                            "model": agent_result.get("model", ""),
+                            "tool_used": agent_result.get("tool_used"),
+                            "iterations": agent_result.get("iterations", 0),
+                        },
+                        "error": None,
+                        "input": text,
+                        "mode": get_mode(),
+                        "routing": "hermes",
+                        "hermes": {
+                            "reason": agent_result.get("reason", ""),
+                            "iterations": agent_result.get("iterations", 0),
+                            "timed_out": agent_result.get("timed_out", False),
+                            "tool_used": agent_result.get("tool_used"),
+                        },
+                    }
+            except Exception as e:  # Hermes must never break /command
+                logger.warning("Hermes agent path failed: %s", e)
+
     bus.publish("command_completed", result, source="api")
     return result
 
@@ -1687,7 +1734,6 @@ if __name__ == "__main__":
     import argparse
 
     import uvicorn
-
     from config import API_HOST, API_PORT
 
     # reload=True spawns the server through uvicorn 0.51's multiprocessing

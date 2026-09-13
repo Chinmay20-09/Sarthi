@@ -30,3 +30,23 @@ class HermesConfig:
     local_timeout: float = 180.0
     # legacy (falls back for providers without their own key field)
     api_key: str = ""
+    # ------------------------------------------------------------------
+    # Agent loop bounds (Phase 3f) — how long/many steps one complex task
+    # may take. The loop is bounded by iterations AND wall-clock time.
+    # ------------------------------------------------------------------
+    agent_max_iterations: int = 5
+    agent_timeout: float = 300.0
+    # ------------------------------------------------------------------
+    # Router knobs (Phase 3f) — the complexity gate in front of Hermes.
+    # HERMES_ROUTER_MODE: "auto" (heuristics), "always" (everything to
+    # Hermes; deterministic pipeline still runs first inside the agent),
+    # or "off" (never route to Hermes from the /command pipeline).
+    # ------------------------------------------------------------------
+    router_mode: str = "auto"
+    router_min_score: int = 1
+    # ------------------------------------------------------------------
+    # Retrieval knobs (Phase 3f) — bounding what the retriever feeds the
+    # model. Character budgets keep prompts small enough for an 8B model.
+    # ------------------------------------------------------------------
+    retrieval_max_total_chars: int = 6000
+    retrieval_enabled: bool = True

@@ -7,6 +7,54 @@ in the git log.
 
 ## [Unreleased]
 
+### Added (Hermes two-path architecture, September 13)
+
+- **Complexity router (`hermes/router.py`)** — a pure-heuristic fast/complex
+  gate (~0.25 ms per command, no model loads, no DB/network). Simple
+  deterministic commands ("open youtube", "play lost in love") stay on the
+  fast path; multi-step, AI-interaction, data-flow, and context-dependent
+  requests route to Hermes. Aligned with the interpreter's own action words
+  and deterministic compound shapes ("open X and search Y" stays fast;
+  "run X from chatgpt to gemini" is recognized as the automation engine's
+  AI-chain shape). Knobs: `HERMES_ROUTER_MODE`, `HERMES_ROUTER_MIN_SCORE`.
+- **Hybrid retriever (`hermes/retriever.py`)** — bounded RAG over the
+  existing stores only (knowledge_memory, command_history, settings,
+  knowledge entities, sandbox index, session history). SQL-first keyword
+  retrieval; no vector database, no embeddings. Every section capped,
+  total capped by `HERMES_RETRIEVAL_MAX_CHARS` (default 6000). Secret-looking
+  settings keys are withheld from prompts. `Retriever(db=…,
+  conversation_store=…)` accepts isolated dependencies for tests.
+- **Tool-call validator (`hermes/validator.py`)** — the single gate between
+  Hermes' decisions and Sarthi's tools: structural shape, name hygiene,
+  registration check, and argument-safety checks (size ceilings, control
+  chars, credential-shaped values/keys, shell metacharacters, path
+  traversal, SQL-injection shapes, prompt-injection payloads). Structured
+  refusals with stable reason codes — never exceptions.
+- **Bounded agent loop (`hermes/agent.py`)** — the complex-path executor:
+  deterministic pipeline first, retrieval second, then a validator-gated
+  reasoning loop capped by `HERMES_AGENT_MAX_ITERATIONS` (default 5) and
+  `HERMES_AGENT_TIMEOUT` (default 300 s). Every run is traced and persisted
+  to the sandbox.
+- **Six new tools** — `close_app` (brain executor's close handler),
+  `search_web` (Browser skill), `browser_ask` (DOM-aware Browser Awareness,
+  never coordinates), `history_search` (command_history), `memory_search`
+  (/remember facts), `project_get` (Project Tracker). Ten tools registered
+  in total; all delegate to existing Sarthi capabilities.
+- **`/command` router integration** — when the deterministic pipeline cannot
+  handle a request and the router classifies it as complex, the Hermes agent
+  runs and its answer replaces the failure. Simple commands never touch
+  Hermes; a Hermes failure leaves the original result intact; a Hermes
+  exception can never break `/command`.
+- **`.env.example`** — added (was referenced by `docs/README_ENV.md` but
+  missing), covering provider settings and all new Phase 3f knobs.
+
+### Tests
+
+- New suites: `test_hermes_router.py` (42), `test_hermes_retriever.py` (32),
+  `test_hermes_validator.py` (73), `test_hermes_agent.py` (20),
+  `test_hermes_tools.py` (22), `test_hermes_pipeline_integration.py` (13).
+  Full suite: 965 passing.
+
 ### Added (client/backend restructure, September 12)
 
 - **Client/backend architecture** — the repository is now split into

@@ -548,6 +548,42 @@ UI can badge who handled a request. Conversation mode ("conversation mode" /
 `/exit`) bypasses the brain pipeline entirely and goes to Hermes plain chat
 (no tools).
 
+### The two-path architecture (September 2026)
+
+Sarthi has two execution paths, gated by a complexity router:
+
+```
+FAST PATH (simple, deterministic):        COMPLEX PATH (Hermes):
+User                                      User
+ ↓                                          ↓
+Interpreter                              Complexity Router (hermes/router.py)
+ ↓                                          ↓
+Entity Resolver                          Deterministic pipeline (first try)
+ ↓                                          ↓
+Executor                                 Hybrid Retriever (hermes/retriever.py)
+ ↓                                          ↓
+Application / Website                    Bounded agent loop (hermes/agent.py)
+                                          ↓
+                                          Validator (hermes/validator.py) → ToolRegistry → tools
+                                          ↓
+                                          Hermes continues or answers
+```
+
+- The router is pure text heuristics (~0.25 ms): no model loads, no DB, no
+  network. Its action-word set mirrors the interpreter's `ACTION_WORDS`, and
+  the interpreter's own compound shapes ("open X and search/play Y") stay
+  fast by design.
+- Inside `/command`, the router only ever promotes a request to Hermes when
+  the deterministic pipeline did NOT succeed — a deterministic success always
+  wins, so fast-path latency is preserved.
+- The agent loop is bounded three ways: iteration cap, wall-clock budget,
+  and the validator+registry gate (unknown tools and unsafe arguments never
+  execute). All ten registered tools delegate to existing Sarthi skills —
+  Hermes decides WHAT; Sarthi decides HOW.
+- Router/retrieval/agent knobs live in `.env` (see `.env.example`):
+  `HERMES_ROUTER_MODE`, `HERMES_ROUTER_MIN_SCORE`, `HERMES_AGENT_*`,
+  `HERMES_RETRIEVAL_*`.
+
 **UI → API cross-check (verified by grep):** every `fetch()` in the UI maps to
 an existing endpoint; the UI never imports backend modules. Each page declares
 its own API-origin constant (`components.js` exports `API`; `chat.html` uses

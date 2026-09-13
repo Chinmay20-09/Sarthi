@@ -7,10 +7,16 @@ shell execution.
 """
 
 from .base import BaseTool, ToolResult
+from .browser_ask import BrowserAskTool
+from .close_app import CloseAppTool
 from .github import GitHubTool
+from .history_search import HistorySearchTool
+from .memory_search import MemorySearchTool
 from .open_app import OpenAppTool
 from .open_website import OpenWebsiteTool
 from .personal_context import PersonalContextTool
+from .project_get import ProjectGetTool
+from .search_web import SearchWebTool
 
 __all__ = [
     "BaseTool",
@@ -19,6 +25,12 @@ __all__ = [
     "OpenAppTool",
     "OpenWebsiteTool",
     "PersonalContextTool",
+    "CloseAppTool",
+    "SearchWebTool",
+    "BrowserAskTool",
+    "HistorySearchTool",
+    "MemorySearchTool",
+    "ProjectGetTool",
     "register_default_tools",
 ]
 
@@ -32,5 +44,11 @@ def register_default_tools(registry) -> None:
     """
     registry.register(OpenAppTool())
     registry.register(OpenWebsiteTool())
+    registry.register(CloseAppTool())
+    registry.register(SearchWebTool())
+    registry.register(BrowserAskTool())
+    registry.register(HistorySearchTool())
+    registry.register(MemorySearchTool())
+    registry.register(ProjectGetTool())
     registry.register(GitHubTool())
     registry.register(PersonalContextTool())

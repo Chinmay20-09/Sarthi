@@ -56,6 +56,21 @@ class ConfigLoader:
             ),
             local_model=os.getenv("LOCAL_HERMES_MODEL", HermesConfig.local_model),
             local_timeout=float(os.getenv("LOCAL_HERMES_TIMEOUT", HermesConfig.local_timeout)),
+            # Agent loop bounds (Phase 3f)
+            agent_max_iterations=int(
+                os.getenv("HERMES_AGENT_MAX_ITERATIONS", HermesConfig.agent_max_iterations)
+            ),
+            agent_timeout=float(os.getenv("HERMES_AGENT_TIMEOUT", HermesConfig.agent_timeout)),
+            # Router knobs (Phase 3f)
+            router_mode=os.getenv("HERMES_ROUTER_MODE", HermesConfig.router_mode),
+            router_min_score=int(os.getenv("HERMES_ROUTER_MIN_SCORE", HermesConfig.router_min_score)),
+            # Retrieval knobs (Phase 3f)
+            retrieval_max_total_chars=int(
+                os.getenv("HERMES_RETRIEVAL_MAX_CHARS", HermesConfig.retrieval_max_total_chars)
+            ),
+            retrieval_enabled=(
+                os.getenv("HERMES_RETRIEVAL_ENABLED", "true").strip().lower() != "false"
+            ),
         )
 
         if self._env_path is None:

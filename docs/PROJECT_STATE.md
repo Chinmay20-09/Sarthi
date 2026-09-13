@@ -48,6 +48,20 @@ This boundary is locked by `tests/test_architecture_boundaries.py`.
   OpenRouter / any OpenAI-compatible endpoint opt-in with automatic local
   fallback. Bounded tool loop (4 tools), JSON-validated, sandbox records every
   task and indexes them by query. `GET /hermes/status` for diagnostics.
+- **Hermes complex-task path (September 13, 2026)** — the two-path
+  architecture is wired end to end. A pure-heuristic complexity router
+  (`hermes/router.py`, ~0.25 ms, no model/DB/network) gates every `/command`:
+  simple commands stay on the deterministic pipeline; when the pipeline
+  cannot handle a request and the router says it is complex, the bounded
+  agent loop (`hermes/agent.py`) runs — deterministic pipeline first,
+  hybrid retrieval (`hermes/retriever.py`) over the existing stores, then a
+  validator-gated tool loop (`hermes/validator.py`) capped by iterations and
+  wall-clock time. Ten tools are registered (open/close app, open website,
+  web search, DOM-aware browser_ask, history/memory search, project status,
+  GitHub, personal context) — every one delegating to an existing Sarthi
+  capability. Configurable via `HERMES_ROUTER_MODE`,
+  `HERMES_AGENT_MAX_ITERATIONS`, `HERMES_AGENT_TIMEOUT`,
+  `HERMES_RETRIEVAL_*` (see `.env.example`).
 - **Browser Awareness** — Playwright inspection of arbitrary sites, model
   observes and recommends, pure validation gate, allow-listed safe executor,
   isolated temporary Chrome profile. Independent of the configured provider.

@@ -3,6 +3,7 @@
 import uuid
 
 from fastapi import APIRouter, HTTPException
+from knowledge.memory import build_memory_prompt
 from pydantic import BaseModel, Field
 
 from hermes.conversation import DEFAULT_SESSION, get_conversation_store
@@ -11,7 +12,6 @@ from hermes.orchestrator import HermesOrchestrator
 from hermes.sandbox import TaskSandbox
 from hermes.service import get_orchestrator as _service_get_orchestrator
 from hermes.service import get_sandbox as _service_get_sandbox
-from knowledge.memory import build_memory_prompt
 
 router = APIRouter(prefix="/hermes", tags=["hermes"])
 
