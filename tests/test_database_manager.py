@@ -192,3 +192,58 @@ class TestGetDatabase:
         db2 = get_database()
         assert db1 is db2
         db1.close()
+
+
+class TestBrowserProfiles:
+    """database/profiles.py — the persistent automation-profile registry."""
+
+    def test_no_entry_returns_none(self, tmp_path):
+        from database.profiles import get_profile_dir
+
+        db = DatabaseManager(tmp_path / "profiles.db")
+        assert get_profile_dir(db) is None
+
+    def test_ensure_default_registers_dir(self, tmp_path):
+        from database.profiles import ensure_default_profile, get_profile_dir
+
+        db = DatabaseManager(tmp_path / "profiles.db")
+        profile_dir = ensure_default_profile(db, profile_dir=tmp_path / "prof")
+        assert profile_dir == (tmp_path / "prof").resolve()
+        # The registered row is what future launches resolve to.
+        assert get_profile_dir(db) == str(profile_dir)
+
+    def test_ensure_default_is_idempotent(self, tmp_path):
+        from database.profiles import ensure_default_profile
+
+        db = DatabaseManager(tmp_path / "profiles.db")
+        first = ensure_default_profile(db, profile_dir=tmp_path / "prof")
+        # A later call must NOT repoint a profile the user logged in through.
+        second = ensure_default_profile(db, profile_dir=tmp_path / "other")
+        assert second == first
+
+    def test_set_profile_dir_upserts(self, tmp_path):
+        from database.profiles import ensure_default_profile, get_profile_dir, set_profile_dir
+
+        db = DatabaseManager(tmp_path / "profiles.db")
+        ensure_default_profile(db, profile_dir=tmp_path / "prof")
+        moved = set_profile_dir(tmp_path / "new-home", db=db)
+        assert moved == (tmp_path / "new-home").resolve()
+        assert get_profile_dir(db) == str(moved)
+
+    def test_env_override_wins_over_db(self, tmp_path, monkeypatch):
+        from database.profiles import PROFILE_DIR_ENV, ensure_default_profile, get_profile_dir
+
+        db = DatabaseManager(tmp_path / "profiles.db")
+        ensure_default_profile(db, profile_dir=tmp_path / "prof")
+        monkeypatch.setenv(PROFILE_DIR_ENV, str(tmp_path / "override"))
+        assert get_profile_dir(db) == str((tmp_path / "override").resolve())
+
+    def test_blank_value_counts_as_unregistered(self, tmp_path):
+        from database.profiles import get_profile_dir
+
+        db = DatabaseManager(tmp_path / "profiles.db")
+        db.execute(
+            "INSERT INTO browser_profiles (name, value, created_at, updated_at) "
+            "VALUES ('default', '', datetime('now'), datetime('now'))"
+        )
+        assert get_profile_dir(db) is None

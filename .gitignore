@@ -155,8 +155,9 @@ results/
 # ==========================================
 
 Backend/skills/automation_engine/ai_chain/calibration.json
-# Persistent automation Chrome profile (logins — personal data)
+# Persistent automation Chrome profiles (logins — personal data)
 Backend/skills/automation_engine/ai_chain/.chrome-profile/
+Backend/skills/browser_awareness/.chrome-profile/
 
 # ==========================================
 # Desktop client build artifacts (PyInstaller)

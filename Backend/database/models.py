@@ -140,6 +140,23 @@ CREATE TABLE IF NOT EXISTS connectors (
 """
 
 # =============================================================================
+# Browser Automation Profile Registry
+# =============================================================================
+
+# Where automated browsing (Browser Awareness) keeps its Chrome profile.
+# value is an absolute profile directory path; reusing the same directory
+# across runs means the user logs in once and stays logged in for every
+# later browser session, while the user's real Chrome profile is untouched.
+CREATE_BROWSER_PROFILES = """
+CREATE TABLE IF NOT EXISTS browser_profiles (
+    name TEXT PRIMARY KEY,
+    value TEXT,
+    created_at TEXT,
+    updated_at TEXT
+)
+"""
+
+# =============================================================================
 # Indexes
 # =============================================================================
 
@@ -174,6 +191,7 @@ ALL_TABLES: dict[str, str] = {
     "conversation_messages": CREATE_CONVERSATION_MESSAGES,
     "chat_messages": CREATE_CHAT_MESSAGES,
     "connectors": CREATE_CONNECTORS,
+    "browser_profiles": CREATE_BROWSER_PROFILES,
 }
 
 # Canonical indexes, also created automatically at connect time.

@@ -155,6 +155,33 @@ class GoogleCalendarConnector(BaseConnector):
         result = exchange_code(code, client_config)
         return result
 
+    def connect_via_web_interface(self) -> dict[str, Any]:
+        """Connect through the web interface: Google's consent page opens in
+        Sarthi's own automation browser (the persistent-profile Chrome),
+        the user signs in there, and the Google login persists in the
+        automation profile for future browser runs.
+
+        Unlike connect(), this does not short-circuit when a token already
+        exists — it can be used to re-authenticate or to plant the Google
+        login in the automation profile deliberately.
+
+        Returns:
+            Dict with success status and any error message.
+        """
+        client_config = self._load_client_config()
+        if not client_config:
+            return {
+                "success": False,
+                "error": (
+                    "Google credentials not found. "
+                    "Please place your google_credentials.json in the secrets/ directory."
+                ),
+            }
+
+        from connectors.google_calendar.connector_web import connect_via_web_interface
+
+        return connect_via_web_interface(client_config)
+
     def handle_auth_callback(self, callback_url: str) -> dict[str, Any]:
         """Handle an OAuth callback URL (for manual/programmatic use)."""
         from urllib.parse import parse_qs, urlparse

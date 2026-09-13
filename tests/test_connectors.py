@@ -4,6 +4,7 @@ Uses mocks for Google API calls — no real OAuth credentials needed.
 """
 
 import json
+import os
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -228,6 +229,155 @@ class TestGoogleCalendarConnector:
             result = gc.execute_tool("nonexistent_tool")
             assert result["success"] is False
             assert "unknown" in result["error"].lower()
+
+
+# ---------------------------------------------------------------------------
+# Web-interface connect flow (mocked — no browser, no real OAuth)
+# ---------------------------------------------------------------------------
+
+
+class TestWebInterfaceConnect:
+    def test_connect_via_web_interface_no_credentials(self):
+        from connectors.google_calendar.connector import GoogleCalendarConnector
+
+        gc = GoogleCalendarConnector()
+        with patch.object(gc, "_load_client_config", return_value=None):
+            result = gc.connect_via_web_interface()
+            assert result["success"] is False
+            assert "credentials" in result["error"].lower()
+
+    def test_connect_via_web_interface_opens_session_and_exchanges(self):
+        from connectors.google_calendar import connector_web
+        from connectors.google_calendar.connector import GoogleCalendarConnector
+
+        gc = GoogleCalendarConnector()
+        captured = {}
+
+        class _FakeSession:
+            def close(self):
+                captured["closed"] = True
+
+        def _fake_open_session(url):
+            captured["url"] = url
+            assert "accounts.google.com/o/oauth2/v2/auth" in url
+            return _FakeSession()
+
+        def _fake_exchange(code, config):
+            captured["code"] = code
+            return {"success": True, "token": {"access_token": "web-token"}}
+
+        # connector_web imports these lazily at call time — patch them at
+        # their source modules.
+        with (
+            patch.object(gc, "_load_client_config", return_value={"installed": {"client_id": "x"}}),
+            patch(
+                "skills.browser_awareness.driver.open_session",
+                side_effect=_fake_open_session,
+            ),
+            patch(
+                "connectors.google_calendar.auth.OAuthCallbackHandler"
+            ) as mock_handler_cls,
+            patch(
+                "connectors.google_calendar.auth.exchange_code",
+                side_effect=_fake_exchange,
+            ),
+        ):
+            mock_handler = mock_handler_cls.return_value
+            mock_handler.start_server_and_wait.return_value = ("web-auth-code", None)
+            result = gc.connect_via_web_interface()
+
+        assert result["success"] is True
+        assert result["token"] == {"access_token": "web-token"}
+        assert captured["code"] == "web-auth-code"
+        assert captured["closed"] is True  # the automation session was closed
+        # The callback server got a generous wait — the user signs in by hand.
+        assert mock_handler.start_server_and_wait.call_args.kwargs["timeout"] >= 300
+
+    def test_web_flow_visible_even_when_headless_env_set(self):
+        from connectors.google_calendar import connector_web
+
+        class _FakeSession:
+            def close(self):
+                pass
+
+        with (
+            patch(
+                "skills.browser_awareness.driver.open_session",
+                return_value=_FakeSession(),
+            ),
+            patch(
+                "connectors.google_calendar.auth.OAuthCallbackHandler"
+            ) as mock_handler_cls,
+            patch(
+                "connectors.google_calendar.auth.exchange_code",
+                return_value={"success": True},
+            ),
+            patch.dict(os.environ, {"BROWSER_AWARENESS_HEADLESS": "1"}),
+        ):
+            mock_handler = mock_handler_cls.return_value
+            mock_handler.start_server_and_wait.return_value = ("code", None)
+            result = connector_web.connect_via_web_interface({"installed": {}})
+
+        assert result["success"] is True
+        assert os.environ.get("BROWSER_AWARENESS_HEADLESS") == "1"  # restored
+
+    def test_web_flow_browser_failure_returns_error(self):
+        from connectors.google_calendar import connector_web
+
+        with (
+            patch(
+                "skills.browser_awareness.driver.open_session",
+                side_effect=RuntimeError("no chrome"),
+            ),
+            patch("connectors.google_calendar.auth.OAuthCallbackHandler"),
+        ):
+            result = connector_web.connect_via_web_interface({"installed": {}})
+
+        assert result["success"] is False
+        assert "automation browser" in result["error"]
+
+    def test_web_flow_callback_error_surfaces(self):
+        from connectors.google_calendar import connector_web
+
+        class _FakeSession:
+            def close(self):
+                pass
+
+        with (
+            patch(
+                "skills.browser_awareness.driver.open_session",
+                return_value=_FakeSession(),
+            ),
+            patch(
+                "connectors.google_calendar.auth.OAuthCallbackHandler"
+            ) as mock_handler_cls,
+        ):
+            mock_handler = mock_handler_cls.return_value
+            mock_handler.start_server_and_wait.return_value = (None, "access_denied")
+            result = connector_web.connect_via_web_interface({"installed": {}})
+
+        assert result["success"] is False
+        assert result["error"] == "access_denied"
+
+
+class TestWebInterfaceEndpoint:
+    def test_connect_web_endpoint_error_passthrough(self):
+        from fastapi.testclient import TestClient
+
+        from api import app
+        from connectors.registry import get_registry
+
+        gc = get_registry().get("google_calendar")
+        with patch.object(
+            type(gc), "connect_via_web_interface",
+            return_value={"success": False, "error": "Google credentials not found"},
+        ):
+            client = TestClient(app)
+            response = client.post("/connectors/google_calendar/connect-web")
+            assert response.status_code == 200
+            data = response.json()
+            assert data["success"] is False
+            assert "credentials" in data["error"].lower()
 
 
 # ---------------------------------------------------------------------------

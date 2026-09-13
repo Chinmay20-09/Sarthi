@@ -11,6 +11,8 @@ interpreter routing (URL sentences -> browse, known sites stay fast),
 and the Brain 'browse' handler delegation.
 """
 
+from pathlib import Path
+
 import pytest
 
 from brain.intent import Intent
@@ -420,13 +422,19 @@ class TestSeleniumDriverSessions:
     def test_launch_mode_owns_browser_and_quits(self, monkeypatch, tmp_path):
         from skills.browser_awareness import driver as driver_mod
 
+        # Env override keeps the profile registry (and the real sarthi.db)
+        # out of this test entirely.
+        monkeypatch.setenv(
+            driver_mod.PROFILE_DIR_ENV, str(tmp_path / "profile")
+        )
         driver = _FakeSeleniumDriver()
         _install_fake_selenium(monkeypatch, chrome_factory=_capture_options(driver))
         monkeypatch.delenv("BROWSER_AWARENESS_CDP_URL", raising=False)
         monkeypatch.delenv("BROWSER_AWARENESS_HEADLESS", raising=False)
         session = driver_mod.open_session("https://example.com/x")
         user_data_args = [a for a in driver.options.arguments if a.startswith("--user-data-dir=")]
-        assert len(user_data_args) == 1  # isolated temporary profile
+        assert len(user_data_args) == 1  # exactly one profile dir
+        assert user_data_args[0] == f"--user-data-dir={tmp_path / 'profile'}"
         assert session.inspector_factory is not None
         session.close()
         assert driver.quit_calls == 1  # we own this browser — quit it
@@ -443,6 +451,104 @@ class TestSeleniumDriverSessions:
         monkeypatch.setenv("BROWSER_AWARENESS_CDP_URL", "http://127.0.0.1:9222")
         driver_mod.open_session("https://example.com/x")
         assert calls == [("http://127.0.0.1:9222", "https://example.com/x")]
+
+
+class TestLaunchProfileResolution:
+    """Launch-mode profile selection: DB-registered persistent profile,
+    env override, and the temporary fallback when nothing is registered.
+    All DB access is pointed at a temp SQLite file — never the real sarthi.db.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _isolated_profile_db(self, monkeypatch, tmp_path):
+        """database.profiles.get_database -> a temp-file DatabaseManager."""
+        from database.manager import DatabaseManager
+        from skills.browser_awareness import driver as driver_mod
+
+        db = DatabaseManager(tmp_path / "profiles.db")
+        monkeypatch.setattr("database.profiles.get_database", lambda: db)
+        monkeypatch.delenv(driver_mod.PROFILE_DIR_ENV, raising=False)
+        self.db = db
+        self.tmp_path = tmp_path
+
+    def _launch(self, monkeypatch):
+        from skills.browser_awareness import driver as driver_mod
+
+        driver = _FakeSeleniumDriver()
+        _install_fake_selenium(monkeypatch, chrome_factory=_capture_options(driver))
+        monkeypatch.delenv("BROWSER_AWARENESS_CDP_URL", raising=False)
+        session = driver_mod.open_session("https://example.com/x")
+        return session, driver
+
+    @staticmethod
+    def _user_data_dir(options):
+        args = [a for a in options.arguments if a.startswith("--user-data-dir=")]
+        assert len(args) == 1
+        return args[0].removeprefix("--user-data-dir=")
+
+    def test_registered_profile_is_reused(self, monkeypatch):
+        from database.profiles import ensure_default_profile
+        from skills.browser_awareness import driver as driver_mod
+
+        profile_dir = ensure_default_profile(self.db, profile_dir=self.tmp_path / "prof")
+        session, driver = self._launch(monkeypatch)
+        assert self._user_data_dir(driver.options) == str(profile_dir)
+        assert session._temp_owner is None  # persistent — nothing to clean up
+        session.close()
+        assert driver.quit_calls == 1  # we still own this browser
+
+    def test_first_run_registers_default_profile(self, monkeypatch):
+        from skills.browser_awareness import driver as driver_mod
+
+        session, driver = self._launch(monkeypatch)
+        user_data = self._user_data_dir(driver.options)
+        # The first launch registered the persistent profile and used it.
+        assert session._temp_owner is None
+        assert Path(user_data).name == ".chrome-profile"
+        row = self.db.fetch_one(
+            "SELECT value FROM browser_profiles WHERE name = 'default'"
+        )
+        assert row["value"] == user_data
+        session.close()
+        assert driver.quit_calls == 1
+
+    def test_env_override_wins_over_db(self, monkeypatch):
+        from database.profiles import PROFILE_DIR_ENV, ensure_default_profile
+        from skills.browser_awareness import driver as driver_mod
+
+        ensure_default_profile(self.db, profile_dir=self.tmp_path / "prof")
+        override = self.tmp_path / "custom-profile"
+        monkeypatch.setenv(PROFILE_DIR_ENV, str(override))
+        session, driver = self._launch(monkeypatch)
+        assert self._user_data_dir(driver.options) == str(override)
+        assert session._temp_owner is None
+        session.close()
+
+    def test_resolve_prefers_env_then_db_then_registers(self, monkeypatch):
+        from database.profiles import PROFILE_DIR_ENV, set_profile_dir
+        from skills.browser_awareness import driver as driver_mod
+
+        # Nothing registered yet -> first-use registration kicks in.
+        registered = driver_mod._resolve_profile_dir()
+        assert Path(registered).name == ".chrome-profile"
+        assert driver_mod._resolve_profile_dir() == registered  # stable
+
+        # A moved entry (set_profile_dir) is what future launches use.
+        moved = set_profile_dir(self.tmp_path / "new-home", db=self.db)
+        assert driver_mod._resolve_profile_dir() == str(moved)
+
+        # And the env override wins over everything.
+        monkeypatch.setenv(PROFILE_DIR_ENV, str(self.tmp_path / "override"))
+        assert driver_mod._resolve_profile_dir() == str(self.tmp_path / "override")
+
+    def test_db_failure_falls_back_to_temp(self, monkeypatch):
+        from skills.browser_awareness import driver as driver_mod
+
+        def _boom():
+            raise RuntimeError("db unavailable")
+
+        monkeypatch.setattr("database.profiles.get_database", _boom)
+        assert driver_mod._resolve_profile_dir() is None
 
 
 class TestManagerInspectorPairing:

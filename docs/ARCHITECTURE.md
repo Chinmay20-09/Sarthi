@@ -425,9 +425,13 @@ BrowserAwarenessManager   (MAX_STEPS = 8, per-run temporary context)
 - **Hermes never controls the browser** — it only observes and recommends;
   malformed recommendations become `blocked` before the executor runs.
 - **Session lifecycle:** default mode launches the installed Chrome with a
-  throwaway profile (deleted on every exit path); `BROWSER_AWARENESS_CDP_URL`
-  attaches to an already-running Chrome and closes only its own tab. Voice
-  progress announcements follow `docs/ABSOLUTE.md` (dry runs stay silent).
+  persistent automation profile registered in the `browser_profiles` table
+  (sarthi.db; `BROWSER_AWARENESS_PROFILE_DIR` overrides the directory) so
+  logins survive across runs; when the database is unreachable it falls
+  back to a throwaway profile (deleted on every exit path);
+  `BROWSER_AWARENESS_CDP_URL` attaches to an already-running Chrome and
+  closes only its own tab. Voice progress announcements follow
+  `docs/ABSOLUTE.md` (dry runs stay silent).
 - **Related but separate:** the automation engine's `ai_chain` module (v1.5)
   also does DOM-regex locating through a DevTools endpoint and a screen-state
   classifier for its RPA loop; its transcript extraction uses the same local
@@ -604,7 +608,7 @@ Two small, distinct layers — there is deliberately no bigger framework:
 | App config | `config.py` (plain module constants) | paths, `API_HOST`/`API_PORT` (8000), Whisper settings, log format |
 | Hermes config | `.env` → `hermes/config/loader.py` → `HermesConfig` (cached) | `HERMES_PROVIDER`, `HERMES_MODEL`, `HERMES_TEMPERATURE`, `HERMES_TIMEOUT`, `HERMES_SANDBOX_PATH`, `LOCAL_HERMES_*`, `OPENROUTER_*`, `OPENAI_COMPATIBLE_*` |
 | ai_chain tuning | env vars + `calibration.json` (git-ignored) | `AI_CHAIN_*` (CDP URL, DOM switches, per-site overrides) |
-| Browser Awareness | env vars | `BROWSER_AWARENESS_CDP_URL`, `BROWSER_AWARENESS_HEADLESS` |
+| Browser Awareness | env vars | `BROWSER_AWARENESS_CDP_URL`, `BROWSER_AWARENESS_HEADLESS`, `BROWSER_AWARENESS_PROFILE_DIR` |
 
 Canonical references: `.env.example` (copy to `.env`; never commit) and
 `README_ENV.md`. Hardcoded values that are intentional: port 8000 in

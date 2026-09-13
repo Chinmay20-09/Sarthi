@@ -959,6 +959,27 @@ def google_calendar_connect():
     return result
 
 
+@app.post("/connectors/google_calendar/connect-web")
+def google_calendar_connect_web():
+    """Connect Google Calendar through the web interface.
+
+    Opens Google's consent page in Sarthi's own automation browser (the
+    persistent-profile Chrome the browser automation uses) so the user
+    signs in there; the OAuth callback is captured on the same local
+    server as the desktop flow. Unlike /connect this does not
+    short-circuit when already connected — the Google login is planted in
+    the automation profile for future browser runs.
+    """
+    from connectors.registry import get_registry
+
+    registry = get_registry()
+    gc = registry.get("google_calendar")
+    if gc is None:
+        return {"success": False, "error": "Google Calendar connector not available"}
+
+    return gc.connect_via_web_interface()
+
+
 @app.get("/connectors/google_calendar/callback")
 def google_calendar_callback(code: str | None = None, error: str | None = None):
     """Handle the Google OAuth2 callback.

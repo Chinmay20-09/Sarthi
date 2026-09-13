@@ -58,11 +58,15 @@ Selenium fetches its chromedriver automatically (Selenium Manager); the
 page HTML is inspected with **BeautifulSoup** (`inspector.py`), no
 page-side JavaScript.
 
-- **Default:** the automation launches Chrome with a brand-new
-  **temporary profile**. It opens
-  a visible window of its own so you can watch it work; nothing it does
-  can touch your normal browsing profile, cookies or session. The
-  temporary profile is deleted when the run ends.
+- **Default:** the automation launches Chrome with its own **persistent
+  profile** — a directory of its own, registered in the
+  `browser_profiles` table of sarthi.db on first use (default:
+  `Backend/skills/browser_awareness/.chrome-profile`, git-ignored; move
+  it with `BROWSER_AWARENESS_PROFILE_DIR`). Log in once inside the
+  automation window and every later run reuses that session — no more
+  guest-like runs. Nothing it does can touch your normal Chrome profile
+  or cookies. It opens a visible window of its own so you can watch it
+  work.
 - **Same Chrome window, new tabs:** start your Chrome with remote
   debugging and set the attach mode — the automation then opens a **new
   tab** inside the already-running Chrome (the window where Sarthi's chat
@@ -81,6 +85,10 @@ page-side JavaScript.
   instead of opening a fresh tab each time.
 
 - `BROWSER_AWARENESS_HEADLESS=1` hides the automation window.
+- `BROWSER_AWARENESS_PROFILE_DIR=C:\path\to\dir` chooses where the
+  persistent automation profile lives (wins over the database entry).
+  If the database is unavailable the run falls back to a temporary
+  profile, deleted when the run ends.
 
 ## Voice feedback (live progress)
 

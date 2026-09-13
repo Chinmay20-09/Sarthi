@@ -5,8 +5,9 @@ Browser session lifecycle for Browser Awareness.
 
 Two stacks, one interface (env-selectable via BROWSER_AWARENESS_DRIVER):
 
-    selenium   — the PRIMARY stack. webdriver.Chrome either launches an
-                 isolated Chrome (temporary profile) or, when
+    selenium   — the PRIMARY stack. webdriver.Chrome either launches Chrome
+                 with the automation profile (persistent when registered,
+                 temporary otherwise) or, when
                  BROWSER_AWARENESS_CDP_URL is set, ATTACHES to an
                  already-running Chrome via the debuggerAddress
                  capability. Selenium Manager fetches the matching
@@ -17,10 +18,15 @@ Two stacks, one interface (env-selectable via BROWSER_AWARENESS_DRIVER):
 
 Two connection modes (either stack):
 
-1. DEFAULT — an isolated browser with a brand-new temporary profile, so
-   nothing the automation does can touch the user's real browsing
-   profile, cookies or session. The profile directory is deleted when
-   the run ends. A visible window opens so the user can watch the
+1. DEFAULT — a PERSISTENT automation profile so the user logs in once and
+   stays logged in across runs (the directory is registered in the
+   ``browser_profiles`` table of sarthi.db; see database/profiles.py). The
+   user's real Chrome profile is never touched. On the very first launch
+   the default profile directory is registered automatically; set
+   BROWSER_AWARENESS_PROFILE_DIR to point it somewhere else. When the
+   database is unavailable the run falls back to a brand-new temporary
+   profile — still isolated from the user's real browsing profile, cookies
+   and session. A visible window opens so the user can watch the
    automation work; set BROWSER_AWARENESS_HEADLESS=1 to hide it
    (launch mode only).
 
@@ -43,6 +49,7 @@ import os
 import tempfile
 from urllib.parse import urlparse
 
+from database.profiles import PROFILE_DIR_ENV, ensure_default_profile, get_profile_dir
 from utils.logger import get_logger
 
 from .inspector import BeautifulSoupInspector, PlaywrightInspector
@@ -165,7 +172,7 @@ def open_session(url: str) -> BrowserSession:
         logger.info(f"[BROWSER] attaching to running Chrome at {cdp_url} (playwright)")
         return _attach_session(cdp_url, url)
 
-    logger.info("[BROWSER] launching isolated Chrome (playwright, channel=chrome)")
+    logger.info("[BROWSER] launching Chrome (playwright, channel=chrome)")
     return _launch_playwright_session(url)
 
 
@@ -200,12 +207,17 @@ def open_selenium_session(url: str, cdp_url: str = "") -> BrowserSession:
         session._original_handle = original
         return session
 
-    temp_owner = tempfile.TemporaryDirectory(prefix="sarthi_awareness_")
+    temp_owner = None
+    profile_dir = _resolve_profile_dir()
+    if profile_dir is None:
+        temp_owner = tempfile.TemporaryDirectory(prefix="sarthi_awareness_")
+        profile_dir = temp_owner.name
+        logger.info("[BROWSER] no persistent profile registered — using a temporary profile for this run")
     try:
-        options.add_argument(f"--user-data-dir={temp_owner.name}")
+        options.add_argument(f"--user-data-dir={profile_dir}")
         if headless:
             options.add_argument("--headless=new")
-        logger.info("[BROWSER] launching isolated Chrome (selenium)")
+        logger.info("[BROWSER] launching Chrome (selenium, user-data-dir=%s)", profile_dir)
         driver = _make_chrome(webdriver, options)
         driver.get(url)
         session = BrowserSession(
@@ -217,7 +229,8 @@ def open_selenium_session(url: str, cdp_url: str = "") -> BrowserSession:
         session._temp_owner = temp_owner
         return session
     except Exception:
-        temp_owner.cleanup()
+        if temp_owner is not None:
+            temp_owner.cleanup()
         raise
 
 
@@ -245,15 +258,52 @@ def _cdp_host_port(cdp_url: str) -> str:
 # ----------------------------------------------------------------------
 
 
+def _resolve_profile_dir() -> str | None:
+    """Directory for the launch profile, or None for a throwaway temp one.
+
+    Resolution order (see database/profiles.py):
+
+    1. ``BROWSER_AWARENESS_PROFILE_DIR`` env var — explicit override.
+    2. The ``default`` row of the ``browser_profiles`` table (sarthi.db) —
+       the persistent automation profile the user has logged into.
+    3. First run (no row yet): register the default persistent profile and
+       use it — log in once, stay logged in. Still never the user's real
+       Chrome profile, just a dedicated one for the automation.
+    4. None — only when the database is unavailable: fall back to an
+       isolated temporary profile deleted when the run ends.
+    """
+    override = os.environ.get(PROFILE_DIR_ENV, "").strip()
+    if override:
+        return override
+    try:
+        profile_dir = get_profile_dir()
+        if not profile_dir:
+            # First run: register the persistent automation profile so this
+            # run's logins survive into every later run.
+            profile_dir = str(ensure_default_profile())
+            logger.info("[BROWSER] registered persistent automation profile: %s", profile_dir)
+        else:
+            logger.info("[BROWSER] using persistent automation profile: %s", profile_dir)
+        return profile_dir
+    except Exception as exc:  # DB unavailable — never block a browser run
+        logger.warning("[BROWSER] could not resolve a persistent profile (%s) — using a temporary profile", exc)
+        return None
+
+
 def _launch_playwright_session(url: str) -> BrowserSession:
-    temp_owner = tempfile.TemporaryDirectory(prefix="sarthi_awareness_")
+    temp_owner = None
+    profile_dir = _resolve_profile_dir()
+    if profile_dir is None:
+        temp_owner = tempfile.TemporaryDirectory(prefix="sarthi_awareness_")
+        profile_dir = temp_owner.name
+        logger.info("[BROWSER] no persistent profile registered — using a temporary profile for this run")
     try:
         from playwright.sync_api import sync_playwright
 
         playwright = sync_playwright().start()
         try:
             context = playwright.chromium.launch_persistent_context(
-                user_data_dir=temp_owner.name,
+                user_data_dir=profile_dir,
                 channel="chrome",
                 headless=os.environ.get("BROWSER_AWARENESS_HEADLESS", "").strip() == "1",
                 args=["--no-first-run", "--no-default-browser-check"],
@@ -272,7 +322,8 @@ def _launch_playwright_session(url: str) -> BrowserSession:
         session._temp_owner = temp_owner
         return session
     except Exception:
-        temp_owner.cleanup()
+        if temp_owner is not None:
+            temp_owner.cleanup()
         raise
 
 
