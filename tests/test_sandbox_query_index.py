@@ -9,7 +9,6 @@ import json
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
-
 from hermes.models import Task
 from hermes.orchestrator import HermesOrchestrator
 from hermes.providers.base import AIProvider, ProviderResponse
@@ -231,8 +230,9 @@ def test_orchestrator_saves_task_indexed_by_query(tmp_path):
     assert records[0]["provider"] == "Fake"
 
 
-def test_orchestrator_records_decision_trace(tmp_path):
-    """The saved trace contains the decision step from the planner."""
+def test_orchestrator_records_the_hermes_loop_trace(tmp_path):
+    """process() persists the canonical Hermes loop trace under the caller's
+    task id: retrieval first, then the model decision that produced the reply."""
     orchestrator, sandbox = _orchestrator_with_sandbox(tmp_path)
 
     orchestrator.process(Task(id="task_trace", prompt="Hello Hermes"))
@@ -240,9 +240,11 @@ def test_orchestrator_records_decision_trace(tmp_path):
     trace = json.loads(
         (tmp_path / "tasks" / "task_trace" / "trace.json").read_text(encoding="utf-8")
     )
-    assert trace[0]["step"] == "decision"
-    assert trace[0]["provider"] == "Fake"
-    assert trace[0]["success"] is True
+    assert trace[0]["step"] == "retrieval"
+    model_steps = [step for step in trace if step["step"] == "model"]
+    assert model_steps, "the model decision must be recorded"
+    assert model_steps[0]["provider"] == "Fake"
+    assert model_steps[0]["success"] is True
 
 
 def test_orchestrator_without_sandbox_does_not_write(tmp_path):

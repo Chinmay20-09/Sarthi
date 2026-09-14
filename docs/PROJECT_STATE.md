@@ -1,16 +1,20 @@
 # Project state (observed)
 
-Snapshot of the repository as of this documentation reset (2026-09-13).
-Facts only; plans are clearly separated.
+Snapshot of the repository, updated after the 2026-09-14 architectural
+consolidation pass (see CONSOLIDATION_REPORT.md). Facts only; plans are
+clearly separated.
 
 ## Current architecture (one paragraph)
 
 FastAPI backend (`Backend/api.py`, 46 endpoints) serving a tkinter desktop
 client and a static web dashboard. Commands flow through a deterministic
 pipeline — interpreter → pass-through planner → fuzzy resolver →
-handler/skill executor — and, when that fails and a heuristic router calls
-the request complex, through a bounded Hermes agent loop (retrieval → model →
-validated tools). Ten manifest-discovered skills provide apps, browser,
+handler/skill executor — and reach Hermes in two cases: before execution when
+a task-shaped sentence's only reading is a plain web search, and after a
+failure when the heuristic router calls the request complex. Hermes is one
+bounded loop (`hermes/agent.py`: retrieval → model → validated tool call,
+≤3 iterations) behind one validator and one tool registry; it never controls
+the machine directly. Ten manifest-discovered skills provide apps, browser,
 browser-awareness, project tracking, speech, scanning, personal context,
 user config, conversational fallback, and AI chaining. LLM access is
 provider-abstracted with a local Ollama default.
@@ -35,10 +39,12 @@ provider-abstracted with a local Ollama default.
 ## Partially implemented
 
 - Multi-step planning: `brain/planner.py` is a locked pass-through
-- AutomationEngine assistant generation: `analyze` stub, `run(event)` unused
+- AutomationEngine: assistant registration + `assistant.json` generation only;
+  the unreachable event pipeline was removed, and a trigger-based lifecycle is
+  planned (AD-14)
 - Browser extension bridge: `/browser/action` placeholder, no extension
-- Desktop hand: production use limited to `close`; standalone agent has no
-  IPC server (manual CLI only)
+- Desktop hand: production use limited to close/launch; standalone agent has
+  no IPC server (manual CLI only)
 
 ## Current entry points
 
@@ -54,43 +60,58 @@ app_launcher, automation_engine, browser, browser_awareness,
 natural_language_processor, personal_context, project_tracker, scanner,
 speech, user_config — all registered and enabled.
 
-## Current agents (4)
+## Current agents (3)
 
-HermesAgent (production loop), HermesOrchestrator+ToolPlanner (chat/task
-processor), BrainAssistant (assistant.json generator), Browser Awareness
-manager loop.
+HermesAgent (the one reasoning loop, used by `/command` and `/hermes/chat`),
+BrainAssistant (assistant.json generator), Browser Awareness manager loop.
+`HermesOrchestrator` is provider wiring + the plain-chat path — it delegates
+to HermesAgent and implements no loop of its own.
 
 ## Current storage
 
 SQLite `Backend/database/sarthi.db` (10 tables), Hermes sandbox
-(`sandbox/tasks` + index.json), knowledge JSON files, ai_chain run folders,
-skill manifests, calibration files.
+(**one canonical root** `Backend/sandbox`, resolved cwd-independently by
+`hermes.sandbox.resolve_sandbox_root`; `tasks/` + `index.json`), knowledge
+JSON files, ai_chain run folders, skill manifests, calibration files.
+A stray gitignored repo-root `sandbox/` (4 stale queries) is left in place but
+no longer written to.
 
 ## Current tests
 
-52 files / 1021 tests, all passing at documentation time. See TESTING.md for
-the untested surface (real RPA runs, real LLM/browser I/O, CLIs, /test/run).
+54 files / 1059 tests, all passing (283 s). See TESTING.md for the untested
+surface (real RPA runs, real LLM/browser I/O, CLIs, /test/run).
 
 ## Known limitations
 
 - Voice CLI and /listen require the undeclared sounddevice/faster-whisper
   stack; voice output requires Windows.
 - Real AI-chain runs need one-time logins in the automation Chrome profile
-  and site calibration; UI changes can degrade to coordinate-scan fallback.
-- The complexity router keys the fast-path verdict on the first word; polite
-  prefixes ("please open chrome") route to Hermes (costs a retrieval, not a
-  failure).
-- `HERMES_SANDBOX_PATH` is cwd-relative → two sandbox roots can exist.
+  and site calibration; UI changes can degrade to the page-copy fallback
+  (the coordinate scan grid is disabled unless `AI_CHAIN_COORDINATE_SCAN=1`).
+- The complexity router keys part of its verdict on the first word; polite
+  prefixes ("please open chrome") score as complex, but the deterministic
+  pipeline handles them first, so the verdict never costs a model call.
+- A long search query that mentions task verbs ("…and rename them") is
+  escalated to Hermes by the task-shaped gate rather than searched literally;
+  Sarthi has no filesystem/file tool yet, so Hermes can reason about such a
+  task but not execute it (AD-04).
 - LAN exposure (0.0.0.0 bind) has no authentication by design decision
   recorded in api.py CORS comments.
 
 ## Known divergence & dead/unused components
 
-See [DIVERGENCE.md](DIVERGENCE.md) (12 items) and
-[DEAD_CODE.md](DEAD_CODE.md) (9 items). Highlights: two model-driven tool
-loops in production; chain-default misfires on AI-mentioning commands; two
-conversation tables; two live sandbox roots; pystray declared but unimported;
-v1.7 DOM chain engine production-dead.
+See [DIVERGENCE.md](DIVERGENCE.md) (12 items, now carrying a status per row),
+[DEAD_CODE&Duplicate.md](DEAD_CODE&Duplicate.md) and
+[ARCHITECTURAL_DECISIONS.md](ARCHITECTURAL_DECISIONS.md). After the
+2026-09-14 pass: one Hermes loop (the duplicate ToolPlanner loop removed),
+one sandbox root, the chain-intent misfire closed as not reproducible, the
+unreachable automation event pipeline + `analyze` stub + pystray removed.
+Still open (deferred, with reasons): the chain's private control layer vs
+Hands, browser DOM-reader unification, sandbox→knowledge promotion, the
+automation lifecycle, the unified observation contract, `handled` vs
+`success` skill semantics, and the `sarthi.bat` bind-address duplication.
+Remaining candidates for removal: `ai_chain/browser_automation.py` (v1.7) and
+`assistants/brain_assistant/analyzer.py`.
 
 ## PLANNED (not implemented — placeholder evidence only)
 

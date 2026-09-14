@@ -239,8 +239,11 @@ def hermes_chat(request: HermesChatRequest) -> HermesChatResponse:
 
     Flow:
     1. Accept message from frontend
-    2. Create Task
-    3. Process through HermesOrchestrator
+    2. Create Task (with session history + /remember facts)
+    3. Process through the single Hermes reasoning loop
+       (HermesOrchestrator.process → HermesAgent: retrieval, validated tools,
+       bounded retries, sandbox record). This is the same loop the /command
+       complexity fallback uses — there is no second tool loop.
     4. Return structured response
 
     Args:

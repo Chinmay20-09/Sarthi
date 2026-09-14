@@ -1,7 +1,23 @@
 # Dead code (observed)
 
-Suspected dead or orphaned systems. **Nothing was deleted** — source is
-untouched. Confidence reflects the strength of the caller/import evidence.
+Suspected dead or orphaned systems, with the status after the 2026-09-14
+consolidation pass. Confidence reflects the strength of the caller/import
+evidence. **REMOVED** items were deleted only after the full §19 checklist
+(callers, imports, tests, config, dynamic loading, string references) came back
+empty; everything else was left in place.
+
+## 0. Removed in this pass
+
+| Item | Replacement | Evidence |
+| ---- | ----------- | -------- |
+| `skills/automation_engine/events.py` (`AutomationEvent`, `SkillTestPassedEvent`) | none needed | no callers, no tests, no config |
+| `skills/automation_engine/context.py` (`ProjectScanner`) | none needed | only built the unreachable `AutomationContext` |
+| `skills/automation_engine/preview.py` (`PreviewGenerator`) | none needed | stub printer |
+| `contracts.py::AutomationEvent` + `AutomationContext` | none needed | zero remaining references repo-wide |
+| `AutomationEngine.run/_request_approval/_apply_requests/_validate` | registry (`register_assistant`, `run_assistant`) | `skill.py` never called `run` |
+| `AutomationSkill._handle_analyze` + `analyze` branch | none needed | returned a fixed empty `capabilities` list |
+| `pystray` (pyproject dependency) | none needed | zero imports |
+| `hermes/tool_planner.py::ToolPlanner` (+ `MAX_TOOL_CALLS_PER_TASK`) | `hermes/agent.py::HermesAgent` | duplicate model/tool loop; see DUPLICATION #1 |
 
 ## 1. `ai_chain/browser_automation.py` + `run_browser_chain` (v1.7 DOM engine)
 
@@ -17,6 +33,10 @@ untouched. Confidence reflects the strength of the caller/import evidence.
 - **Tests**: extensive (test_browser_automation.py) — so it is maintained but
   unused in production.
 - **Confidence**: HIGH (as *production-dead*; it is a live library).
+- **Status**: CANDIDATE FOR REMOVAL — **kept** in this pass: it is the only
+  place its DOM-resolver paths (`resolve_element`, `BrowserAutomation`) are
+  tested, so removing it would delete unique coverage before the browser
+  consolidation (AD-11).
 
 ## 2. `pystray` dependency
 
@@ -25,6 +45,7 @@ untouched. Confidence reflects the strength of the caller/import evidence.
 - **Evidence**: no `import pystray` anywhere in Backend/, Desktop/, tests.
 - **Confidence**: HIGH (unused import-wise; may be a leftover from a removed
   tray feature).
+- **Status**: REMOVED from `pyproject.toml`.
 
 ## 3. `AutomationEngine.run(event)` pipeline
 
@@ -35,6 +56,7 @@ untouched. Confidence reflects the strength of the caller/import evidence.
   `skill.py`; nothing constructs `AutomationEvent` or calls `run()` outside
   the engine module itself.
 - **Confidence**: MEDIUM (scaffolding for a future flow; imports resolve).
+- **Status**: REMOVED (`run` and its helpers; the assistant registry remains).
 
 ## 4. `analyze` command branch (automation skill)
 
@@ -42,6 +64,8 @@ untouched. Confidence reflects the strength of the caller/import evidence.
 - **Purpose**: "analyze skill capabilities".
 - **Evidence**: returns a fixed stub `{capabilities: []}` — no analysis.
 - **Confidence**: HIGH (stub, not dead code — dead path in a live file).
+- **Status**: REMOVED (the branch and handler are gone; `analyze` is no longer
+  advertised as supported).
 
 ## 5. `/browser/action` endpoint
 
@@ -74,6 +98,10 @@ untouched. Confidence reflects the strength of the caller/import evidence.
   store's role (see DIVERGENCE.md #6). Not dead code, but one of the two
   locations is unintended.
 - **Confidence**: MEDIUM (which one is "real" depends on launch mode).
+- **Status**: RESOLVED — one canonical root (`Backend/sandbox`) via
+  `hermes.sandbox.resolve_sandbox_root`; the repo-root `sandbox/` was left in
+  place (gitignored) by explicit decision and simply stops receiving records.
+  See [ARCHITECTURAL_DECISIONS.md](ARCHITECTURAL_DECISIONS.md) AD-01.
 
 ## 9. `_DETERMINISTIC_DOMAINS` partial coverage
 
@@ -84,6 +112,17 @@ untouched. Confidence reflects the strength of the caller/import evidence.
   token is a bare domain — named sites ("open youtube") work because they are
   not domains. Behaviour quirk rather than dead code; recorded for review.
 - **Confidence**: LOW (design nuance, flagged during audit).
+
+## 10. `assistants/brain_assistant/analyzer.py` (`BrainAnalyzer`)
+
+- **Path**: `skills/automation_engine/assistants/brain_assistant/analyzer.py`
+- **Purpose**: propose skill changes as `ChangeRequest`/`AssistantResponse`
+  objects (the assistant protocol).
+- **Evidence**: no caller anywhere (`grep -rn "analyzer|Analyzer"` finds only
+  its own module + docs); `BrainAssistant` uses `generator.py`, not this file.
+- **Status**: CANDIDATE FOR REMOVAL — kept because it is the only consumer of
+  `contracts.ProjectState` / `ChangeRequest` / `AssistantResponse`; deleting it
+  would make those contracts dead too (AD-06).
 
 ## Not counted (verified alive)
 
@@ -96,17 +135,15 @@ untouched. Confidence reflects the strength of the caller/import evidence.
 Systems with overlapping responsibilities. Each entry documents the overlap
 and the observed relationship — no judgement about which should survive.
 
-## 1. Two model-driven tool loops
+## 1. Two model-driven tool loops — RESOLVED
 
-- **A**: `hermes/agent.py` HermesAgent loop
-- **B**: `hermes/tool_planner.py` + `hermes/orchestrator.py` loop
+- **A**: `hermes/agent.py` HermesAgent loop — the survivor
+- **B**: `hermes/tool_planner.py` + `hermes/orchestrator.py` loop — removed
 - **Overlap**: both take a user query, ask the model for a final answer or a
   tool call, execute via `hermes/tool_registry.py`, and iterate.
-- **Callers**: A ← /command complexity fallback (`run_task`). B ←
-  `POST /hermes/chat`, `hermes/main.py`, and indirectly the NLP fallback's
-  provider stack.
-- **Relationship**: unclear — B predates A (A is "Phase 3d", B has its own
-  bounded-loop contract); both remain wired to production endpoints.
+- **Resolution**: `HermesOrchestrator.process` delegates to `HermesAgent`;
+  the `ToolPlanner` class is deleted and `hermes/tool_planner.py` keeps only
+  the shared protocol (prompts + parser). See AD-02/AD-03.
 
 ## 2. Two browser automation stacks with DOM reading
 
@@ -132,23 +169,24 @@ and the observed relationship — no judgement about which should survive.
   domains), decided in the interpreter (`_DETERMINISTIC_DOMAINS`,
   `_extract_bare_domain`). Session/login state differs between them.
 
-## 4. Two conversation persistence tables
+## 4. Two conversation persistence tables — INTENTIONAL
 
-- **A**: `chat_messages` — written by `POST /chat` (UI renders first).
-- **B**: `conversation_messages` — written by `hermes/conversation.py`.
-- **Overlap**: both store role/content session turns; `DELETE /chat` clears
-  both for a session.
-- **Relationship**: unclear — the UI mirror may exist to render exactly what
-  the dashboard displayed (including cards), but the split is undocumented.
+- **A**: `chat_messages` — written by `POST /chat` (the rendered UI payload:
+  text, cards, provider, tool_used, stored as JSON).
+- **B**: `conversation_messages` — written by `hermes/conversation.py`
+  (`{role, content}` turns replayed to the model as history).
+- **Relationship**: two states of one exchange — UI transcript vs model
+  context. Neither shape can represent the other, and merging them would break
+  the `/chat` contract. Boundary documented (AD-09).
 
-## 5. Two sandbox locations (same system, two roots)
+## 5. Two sandbox locations (same system, two roots) — RESOLVED
 
-- **A**: `Backend/sandbox/` — created when the server runs with Backend/ as
-  cwd (sarthi.bat dev mode).
-- **B**: `sandbox/` (project root) — when run from the root / pytest.
-- **Overlap**: same TaskSandbox code, `HERMES_SANDBOX_PATH` is relative; both
-  index.json files exist with different histories.
-- **Relationship**: accidental path-resolution artefact, not two designs.
+- **A**: `Backend/sandbox/` (34 queries) — the canonical root now.
+- **B**: `sandbox/` (project root, 4 queries) — the artefact, left in place
+  (gitignored) but no longer written to.
+- **Resolution**: `hermes.sandbox.resolve_sandbox_root` resolves a relative
+  configured path against the backend root, so the launch directory no longer
+  changes the store (AD-01).
 
 ## 6. Two config sources for the API bind address
 
@@ -164,12 +202,12 @@ and the observed relationship — no judgement about which should survive.
 - **Relationship**: intentional (B is a smoke/telemetry dashboard), but B is
   untested and duplicates prompt coverage A already has.
 
-## 8. Two GitHub data paths
+## 8. Two GitHub data paths — NOT REPRODUCIBLE (already delegated)
 
 - **A**: `skills/project_tracker/github.py` — GitHub API client for the
   tracker skill.
 - **B**: `hermes/tools/github.py` — Hermes tool exposing GitHub data.
-- **Overlap**: both fetch GitHub data for the configured username.
-- **Callers**: A ← project_tracker skill sync. B ← Hermes agent.
-- **Relationship**: unclear whether B delegates to A (it re-implements a
-  thin fetch; both read `settings.github_username`).
+- **Current source**: B instantiates `GitHubProjectSkill`, resolves the
+  username through the skill's own logic and calls *its* `GitHubClient` — the
+  tool delegates, it does not re-implement the fetch. Verified during the
+  2026-09-14 pass; this entry was stale.

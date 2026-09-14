@@ -3,8 +3,10 @@ contracts.py
 
 Shared contracts for the Automation Engine.
 
-Every assistant, engine component, and operation
-communicates using these models.
+Assistants read an immutable ProjectState and answer with an
+AssistantResponse carrying ChangeRequests. Assistants never modify files
+themselves. (The event/context machinery that used to wrap these models was
+unreachable and has been removed.)
 """
 
 from __future__ import annotations
@@ -12,22 +14,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
-
-# ==========================================================
-# Events
-# ==========================================================
-
-
-@dataclass(frozen=True)
-class AutomationEvent:
-    """
-    Base event.
-
-    Every automation event inherits from this.
-    """
-
-    event_name: str
-
 
 # ==========================================================
 # Project Snapshot
@@ -106,28 +92,3 @@ class AssistantResponse:
 
     warnings: list[str] = field(default_factory=list)
 
-
-# ==========================================================
-# Automation Context
-# ==========================================================
-
-
-@dataclass
-class AutomationContext:
-    """
-    Shared runtime context.
-
-    Passed to every assistant.
-
-    Unlike ProjectState, this CAN change during execution.
-    """
-
-    event: AutomationEvent
-
-    project_state: ProjectState
-
-    requests: list[ChangeRequest] = field(default_factory=list)
-
-    diagnostics: list[str] = field(default_factory=list)
-
-    metadata: dict[str, Any] = field(default_factory=dict)

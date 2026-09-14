@@ -3,7 +3,7 @@
 Covers: the provider interface, config-driven selection (registry),
 request normalization (Task -> ModelRequest), response normalization,
 capability declaration, failure handling, structured-output flags,
-tool-call normalization through the Tool Planner, Browser Awareness
+tool-call handling through the single Hermes loop, Browser Awareness
 independence, and the /hermes/status endpoint.
 
 No live model or API key is required — providers are exercised with fake
@@ -13,7 +13,6 @@ the network.
 
 import httpx
 import pytest
-
 from hermes.config.settings import HermesConfig
 from hermes.models import ModelRequest, Task
 from hermes.providers.base import AIProvider, ModelCapabilities, ProviderResponse
@@ -503,34 +502,51 @@ def test_provider_status_snapshot():
 # ----------------------------------------------------------------------
 
 
-def test_tool_planner_sends_normalized_requests_and_parses_tool_calls():
-    """The planner converts the Task to ModelRequest and the model's JSON
-    tool-call decision is still parsed and routed to the registry."""
-    from hermes.tool_planner import ToolPlanner
+def test_agent_sends_decision_prompt_and_refuses_unregistered_tools():
+    """The single Hermes loop offers the registered tools and refuses a
+    hallucinated tool name without ever dispatching it."""
+    from hermes.agent import HermesAgent
     from hermes.tool_registry import ToolRegistry
+
+    class FakeRetriever:
+        class _Context:
+            text = ""
+
+            def as_dict(self) -> dict:
+                return {"sources": 0}
+
+        def retrieve(self, query, session_id=None):
+            return FakeRetriever._Context()
 
     captured: list = []
 
     def fake_generate(request):
         captured.append(request)
+        if len(captured) == 1:
+            return ProviderResponse(
+                success=True,
+                provider="Fake",
+                model="m",
+                text='{"tool_call": {"tool": "ghost_tool", "arguments": {}}}',
+            )
         return ProviderResponse(
-            success=True,
-            provider="Fake",
-            model="m",
-            text='{"tool_call": {"tool": "ghost_tool", "arguments": {}}}',
+            success=True, provider="Fake", model="m", text="That capability is not available."
         )
 
-    planner = ToolPlanner(ToolRegistry(), fake_generate)
-    response = planner.run(Task(prompt="do the thing", id="task_1", context={"k": "v"}))
+    agent = HermesAgent(
+        generate=fake_generate,
+        tool_registry=ToolRegistry(),
+        retriever=FakeRetriever(),
+        fast_path=False,
+    )
+    result = agent.run("do the thing")
 
-    assert len(captured) == 1
-    assert isinstance(captured[0], ModelRequest)
     assert captured[0].prompt == "do the thing"
     assert "Available tools" in captured[0].instructions
     # Unregistered tools are never executed — a graceful answer is returned.
-    assert response.success is True
-    assert response.text == "That capability is not available."
-    assert response.tool_used == "ghost_tool"
+    assert result["success"] is True
+    assert result["text"] == "That capability is not available."
+    assert result["tool_used"] is None
 
 
 # ----------------------------------------------------------------------
@@ -569,9 +585,8 @@ def test_create_local_provider_returns_ollama_adapter():
 def test_status_endpoint_reports_active_provider(monkeypatch):
     from unittest.mock import patch
 
-    from fastapi.testclient import TestClient
-
     from api import app
+    from fastapi.testclient import TestClient
 
     client = TestClient(app)
 

@@ -23,14 +23,17 @@ Two tables, two writers:
 | `conversation_messages` | `hermes/conversation.py::ConversationStore` (used by plain chat + agent history) | retriever (recent turns), /hermes flows | Hermes' own session continuity |
 | `chat_messages` | `POST /chat` (api.py:732) — the UI persists what it rendered | `GET /chat` | dashboard transcript mirror |
 
-Both are cleared together by `DELETE /chat` for a session. The duality is
-documented in DUPLICATION.md #6.
+Both are cleared together by `DELETE /chat` for a session. **Not a
+duplication**: one is the rendered UI transcript, the other is the model's
+session context — different shapes of the same exchange, kept separate on
+purpose (AD-09, DIVERGENCE D-05).
 
 ## 3. Task memory (Hermes sandbox)
 
 - **Where**: `hermes/sandbox.py` → `sandbox/tasks/<task_id>/` +
-  `sandbox/index.json` query index (also a `Backend/sandbox/` copy created
-  when the API runs with Backend as cwd).
+  `sandbox/index.json` query index, under the **one canonical root**
+  `Backend/sandbox` (a relative `HERMES_SANDBOX_PATH` is resolved against the
+  backend root, never the cwd — AD-01).
 - **Content**: every Hermes/ai_chain task with prompt, response, trace,
   provider/model/status/duration.
 - **Readers**: sandbox query retrieval in the agent (`retriever.py`), the

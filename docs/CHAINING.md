@@ -59,6 +59,12 @@ clipboard is treated as scratch space that verification copies overwrite.
 | Brain pipeline | chain intent → executor skill walk → `AutomationSkill._handle_chain` |
 | (no other production caller) | `run_ai_chain` is importable (`ai_chain/__init__.py`) but only the skill invokes it |
 
+The chain is therefore a **capability**, not a second brain: Hermes/tools never
+call it directly, and it never executes arbitrary commands (no shell path
+exists). Its private control layer (`ai_chain/control.py`) duplicates the
+low-level input boundary in `hands/desktop/input.py`; merging them is deferred
+because real (non-dry-run) control is untested by the suite — AD-12.
+
 ## State & artifacts
 
 - Run folders: `Backend/results/ai_chain/<timestamp>_<query-slug>/`

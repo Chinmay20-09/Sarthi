@@ -11,6 +11,12 @@ client or a browser dashboard, runs them through a deterministic NLP pipeline
 (`Backend/brain/`), and falls back to a bounded LLM agent (`Backend/hermes/`)
 when the deterministic pipeline cannot handle the request.
 
+> **2026-09-14 consolidation:** Sarthi owns execution and Hermes provides
+> intelligence. There is exactly one Hermes reasoning loop (`HermesAgent`),
+> one tool-call gate (`hermes/validator.py`) and one sandbox root
+> (`Backend/sandbox`). See [CONSOLIDATION_REPORT.md](CONSOLIDATION_REPORT.md)
+> and [ARCHITECTURAL_DECISIONS.md](ARCHITECTURAL_DECISIONS.md).
+
 ## Runtime architecture (real request flow)
 
 ```
@@ -29,11 +35,13 @@ BrainEngine.process(text)         (Backend/brain/engine.py)
  │           ├── built-in handlers: open, close, browse, remember, recall, forget, clean
  │           └── registered skills (skills/registry.py), fallback skill LAST
  ▼
-complexity fallback               (api.py:374-404; hermes/router.py)
- │    runs ONLY when the pipeline failed/refused AND the router classifies
- │    the raw text as complex (heuristic score, no model)
+complexity gate / fallback        (api.py; hermes/router.py)
+ │    (a) BEFORE execution: a task-shaped instruction whose only reading is
+ │        a plain web search goes straight to Hermes (fast path disabled)
+ │    (b) AFTER a failure: the router classifies the raw text and, when it is
+ │        complex, the same Hermes loop runs (heuristic score, no model)
  ▼
-HermesAgent.run(query)            (Backend/hermes/agent.py)
+HermesAgent.run(query)            (Backend/hermes/agent.py — the ONE loop)
  │    1. deterministic fast path (BrainEngine again)
  │    2. hybrid retrieval (hermes/retriever.py — SQL + knowledge + sandbox + history)
  │    3. bounded loop: model → tool call → validate (hermes/validator.py)
@@ -105,7 +113,7 @@ or backend internals. It talks HTTP only through
 | Multi-step planning | `brain/planner.py` — **pass-through**, returns `[intent]` | `planner.py:36-48` |
 | Entity resolution | `knowledge/entity_resolver.py` (rapidfuzz) | `resolve()` |
 | Execution dispatch | `brain/executor.py`: built-in handlers → default handler → skills (fallback NLP last) | `execute()` |
-| Complexity routing | `hermes/router.py` heuristics; consulted **only after** a failed deterministic run (`api.py:374`) | `route_command()` |
+| Complexity routing | `hermes/router.py` heuristics; consulted before execution for task-shaped instructions and after a failed deterministic run (`api.py`) | `route_command()`, `looks_like_task_instruction()` |
 | Tool selection (complex path) | the LLM, parsed by `hermes/agent.py` (`parse_tool_call`), validated by `hermes/validator.py` | `_loop()` |
 | Failure handling | pipeline: fail-fast per step (`engine._execute_plan`); agent: bounded retries + refusal feedback | `agent.py:305-315` |
 | Conversation mode | `brain/modes.py` — skips the brain pipeline entirely | `api.py:355-360` |

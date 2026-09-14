@@ -11,7 +11,7 @@ Sources: `pyproject.toml`, actual imports in `Backend/` and
 | uvicorn | yes | api.py server start, sarthi.bat background mode | runtime |
 | httpx | yes | Desktop client backend.py, project_tracker github/notion, connectors | runtime |
 | python-dotenv | yes | hermes/config/loader.py | runtime |
-| pystray | yes | **no import found anywhere** | apparently unused |
+| pystray | **removed** | no import anywhere; declared but unused | removed in the 2026-09-14 pass (AD-06) |
 | pillow | yes | api.py (dashboard image generation in test runner) | runtime |
 | psutil | yes | hands/desktop/processes.py, scanner, reading.py, telemetry | runtime |
 | rapidfuzz | yes | knowledge/entity_resolver.py (+ retriever) | runtime |
@@ -71,7 +71,7 @@ imports nothing else from third parties.
 
 ## Summary counts
 
-- declared runtime: 9 (1 apparently unused: pystray)
+- declared runtime: 8 (pystray was removed as unused)
 - declared optional: automation 4, browser 3
 - undeclared-but-imported: sounddevice, faster-whisper (voice features)
 - dev: 2

@@ -3,6 +3,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from hermes.sandbox import resolve_sandbox_root
+
 from .settings import HermesConfig
 
 
@@ -37,7 +39,11 @@ class ConfigLoader:
             model=os.getenv("HERMES_MODEL", HermesConfig.model),
             temperature=float(os.getenv("HERMES_TEMPERATURE", HermesConfig.temperature)),
             timeout=float(os.getenv("HERMES_TIMEOUT", HermesConfig.timeout)),
-            sandbox_path=os.getenv("HERMES_SANDBOX_PATH", HermesConfig.sandbox_path),
+            sandbox_path=str(
+                resolve_sandbox_root(
+                    os.getenv("HERMES_SANDBOX_PATH", HermesConfig.sandbox_path)
+                )
+            ),
             openrouter_api_key=os.getenv("OPENROUTER_API_KEY", HermesConfig.openrouter_api_key),
             openrouter_url=os.getenv("OPENROUTER_URL", HermesConfig.openrouter_url),
             openrouter_http_referer=os.getenv(

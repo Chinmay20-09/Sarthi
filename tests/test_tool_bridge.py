@@ -8,14 +8,14 @@ the tool loop, registry, and argument validation are exercised directly.
 
 from unittest.mock import MagicMock, patch
 
-from fastapi.testclient import TestClient
-
 from brain.intent import Intent
+from fastapi.testclient import TestClient
+from hermes.agent import DEFAULT_MAX_ITERATIONS, HermesAgent
 from hermes.models import ModelRequest, Task
 from hermes.orchestrator import HermesOrchestrator
 from hermes.providers.base import AIProvider, ProviderResponse
 from hermes.providers.manager import ProviderManager
-from hermes.tool_planner import MAX_TOOL_CALLS_PER_TASK, ToolPlanner, parse_tool_call
+from hermes.tool_planner import parse_tool_call
 from hermes.tool_registry import ToolRegistry
 from hermes.tools import GitHubTool, OpenAppTool, OpenWebsiteTool
 from hermes.tools.base import BaseTool, ToolResult
@@ -63,13 +63,43 @@ class SpyTool(BaseTool):
         return self.result
 
 
-def make_planner(responses: list[str], name: str = "spy", result: ToolResult | None = None):
-    """Build a ToolPlanner with a FakeProvider and a registered SpyTool."""
+class FakeRetriever:
+    """Deterministic retriever stand-in — no database, no disk."""
+
+    class _Context:
+        text = ""
+
+        def as_dict(self) -> dict:
+            return {"sources": 0}
+
+    def retrieve(self, query: str, session_id: str | None = None):
+        return FakeRetriever._Context()
+
+
+def make_agent(
+    responses: list[str],
+    name: str = "spy",
+    result: ToolResult | None = None,
+    max_iterations: int = DEFAULT_MAX_ITERATIONS,
+):
+    """Build the canonical Hermes loop with a FakeProvider + registered SpyTool.
+
+    The deterministic fast path is disabled so these tests exercise ONLY the
+    model/tool loop (otherwise the real brain pipeline would answer first).
+    """
     fake = FakeProvider(responses)
     registry = ToolRegistry()
     spy = SpyTool(name=name, result=result)
     registry.register(spy)
-    return ToolPlanner(registry, fake.generate), fake, spy
+    agent = HermesAgent(
+        generate=fake.generate,
+        tool_registry=registry,
+        retriever=FakeRetriever(),
+        sandbox=None,
+        fast_path=False,
+        max_iterations=max_iterations,
+    )
+    return agent, fake, spy
 
 
 # ----------------------------------------------------------------------
@@ -211,13 +241,13 @@ def test_open_app_delegation_failure_is_graceful(monkeypatch):
 
 def test_conversation_does_not_use_tools():
     """'Hello Hermes' is answered directly — no tool is executed."""
-    planner, fake, spy = make_planner(["Hello! I'm Hermes."])
+    agent, fake, spy = make_agent(["Hello! I'm Hermes."])
 
-    response = planner.run(Task(prompt="Hello Hermes"))
+    result = agent.run("Hello Hermes")
 
-    assert response.success is True
-    assert response.text == "Hello! I'm Hermes."
-    assert response.tool_used is None
+    assert result["success"] is True
+    assert result["text"] == "Hello! I'm Hermes."
+    assert result["tool_used"] is None
     assert spy.calls == []
     assert len(fake.tasks) == 1  # only the decision call
 
@@ -229,13 +259,13 @@ def test_conversation_does_not_use_tools():
 
 def test_hermes_requests_tool_for_actionable_request():
     """'Open Chrome' produces an open_app tool request that is executed."""
-    planner, fake, spy = make_planner([TOOL_CALL_JSON, "Chrome is open."], name="open_app")
+    agent, fake, spy = make_agent([TOOL_CALL_JSON, "Chrome is open."], name="open_app")
 
-    response = planner.run(Task(prompt="Open Chrome"))
+    result = agent.run("Open Chrome")
 
-    assert response.success is True
-    assert response.text == "Chrome is open."
-    assert response.tool_used == "open_app"
+    assert result["success"] is True
+    assert result["text"] == "Chrome is open."
+    assert result["tool_used"] == "open_app"
     assert spy.calls == [{"target": "Chrome"}]
     assert len(fake.tasks) == 2  # decision call + follow-up call
 
@@ -287,21 +317,25 @@ def test_decision_prompt_uses_single_braces():
 def test_tool_loop_result_flows_back_to_hermes():
     """The tool result is fed back to Hermes for the final response."""
     spy_result = ToolResult(success=True, tool="open_app", result="Chrome launched")
-    planner, fake, spy = make_planner(
+    agent, fake, spy = make_agent(
         [TOOL_CALL_JSON, "Chrome is open."], name="open_app", result=spy_result
     )
 
-    response = planner.run(Task(prompt="Open Chrome"))
+    result = agent.run("Open Chrome")
 
-    assert response.success is True
-    assert response.text == "Chrome is open."
-    assert response.tool_used == "open_app"
+    assert result["success"] is True
+    assert result["text"] == "Chrome is open."
+    assert result["tool_used"] == "open_app"
     assert spy.calls == [{"target": "Chrome"}]
 
     # The follow-up prompt carries the actual tool result back to Hermes.
     followup = fake.tasks[1]
     assert "Chrome launched" in followup.instructions
     assert "open_app" in followup.instructions
+
+    # The persisted trace records the whole loop: model → validation → tool.
+    kinds = [step.get("step") for step in result["trace"]]
+    assert kinds == ["retrieval", "model", "validation", "tool_result", "model"]
 
 
 # ----------------------------------------------------------------------
@@ -314,33 +348,42 @@ def test_tool_failure_produces_graceful_response():
     spy_result = ToolResult(
         success=False, tool="open_app", error="Application 'Chrome' could not be found."
     )
-    planner, fake, spy = make_planner(
+    agent, fake, spy = make_agent(
         [TOOL_CALL_JSON, "I couldn't find Chrome on this system."],
         name="open_app",
         result=spy_result,
     )
 
-    response = planner.run(Task(prompt="Open Chrome"))
+    result = agent.run("Open Chrome")
 
-    assert response.success is True  # Hermes still replied gracefully
-    assert response.tool_used == "open_app"
-    assert "couldn't find Chrome" in response.text
+    assert result["success"] is True  # Hermes still replied gracefully
+    assert result["tool_used"] == "open_app"
+    assert "couldn't find Chrome" in result["text"]
     assert "could not be found" in fake.tasks[1].instructions
 
 
 def test_hermes_unknown_tool_is_graceful():
-    """Hermes requesting an unregistered tool yields a graceful answer."""
-    planner, fake, spy = make_planner(
-        ['{"tool_call": {"tool": "nope", "arguments": {}}}', "unused"], name="open_app"
+    """Hermes requesting an unregistered tool yields a graceful answer.
+
+    The validator refuses the call before the registry ever sees it, the
+    refusal is fed back once, and no tool is recorded as used.
+    """
+    agent, fake, spy = make_agent(
+        ['{"tool_call": {"tool": "nope", "arguments": {}}}', "That capability is not available."],
+        name="open_app",
     )
 
-    response = planner.run(Task(prompt="Do something odd"))
+    result = agent.run("Do something odd")
 
-    assert response.success is True
-    assert response.text == "That capability is not available."
-    assert response.tool_used == "nope"
+    assert result["success"] is True
+    assert result["text"] == "That capability is not available."
+    assert result["tool_used"] is None
     assert spy.calls == []
-    assert len(fake.tasks) == 1  # no follow-up call needed
+    assert len(fake.tasks) == 2  # decision call + corrected final answer
+    assert any(
+        step.get("step") == "validation" and step.get("valid") is False
+        for step in result["trace"]
+    )
 
 
 # ----------------------------------------------------------------------
@@ -349,17 +392,22 @@ def test_hermes_unknown_tool_is_graceful():
 
 
 def test_tool_call_limit_prevents_infinite_loop():
-    """A model that keeps requesting tools is stopped at the hard limit."""
+    """A model that keeps requesting tools is stopped at the retry bound.
+
+    Three automatic iterations is the architectural bound: the loop may not
+    execute a fourth tool call, no matter what the model keeps asking for.
+    """
     many_calls = [TOOL_CALL_JSON] * 20
-    planner, fake, spy = make_planner(many_calls, name="open_app")
+    agent, fake, spy = make_agent(many_calls, name="open_app")
 
-    response = planner.run(Task(prompt="Open Chrome"))
+    result = agent.run("Open Chrome")
 
-    assert response.success is True
-    assert response.tool_used == "open_app"
-    assert "too many steps" in response.text
-    assert len(spy.calls) == MAX_TOOL_CALLS_PER_TASK
-    assert len(fake.tasks) == 1 + MAX_TOOL_CALLS_PER_TASK
+    assert result["success"] is True
+    assert result["tool_used"] == "open_app"
+    assert result["reason"] == "iteration_cap"
+    assert result["iterations"] == DEFAULT_MAX_ITERATIONS
+    assert len(spy.calls) == DEFAULT_MAX_ITERATIONS
+    assert len(fake.tasks) == 1 + DEFAULT_MAX_ITERATIONS
 
 
 # ----------------------------------------------------------------------

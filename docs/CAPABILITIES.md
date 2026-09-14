@@ -31,7 +31,7 @@ IMPLEMENTED, PARTIAL, PLANNED, EXPERIMENTAL, UNUSED.
 | Test (dry-run) mode | Yes | POST /test-mode, get_test_mode() | brain/modes, skills honour it | — | test_chat_modes | IMPLEMENTED |
 | Skill registry (manifest discovery, enable/disable) | Yes | /skills API, engine startup | skills/registry.py | manifest.json files | test_skill_base, test_backend_api | IMPLEMENTED |
 | Event bus | Yes | imports | events/bus.py | — | test_backend_api (indirect) | IMPLEMENTED |
-| Automation assistant generation (BrainAssistant → assistant.json) | Partial | "generate assistant for <skill>" | automation_engine engine + assistants | manifest analysis | test_brain_assistant (smoke) | PARTIAL (analyze is a stub returning empty capabilities) |
+| Automation assistant generation (BrainAssistant → assistant.json) | Partial | "generate assistant for <skill>" | automation_engine engine + assistants | manifest analysis | test_brain_assistant (smoke) | PARTIAL (assistant generation only; no automation lifecycle — AD-14) |
 | Multi-step planner (real decomposition) | No | — | brain/planner.py pass-through | — | test_planner (locks pass-through) | PLANNED |
 | Flutter client | No | — | flutter/README only | — | — | PLANNED |
 | Android APK | No | — | apk/README only | — | — | PLANNED |

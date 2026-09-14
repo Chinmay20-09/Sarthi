@@ -1,7 +1,12 @@
 # Agents (observed)
 
 "Agent" here means a component that runs a model-driven loop until a goal is
-met. Four exist.
+met. **Three** exist — and only one of them is a Hermes reasoning loop.
+
+> **2026-09-14:** the former `HermesOrchestrator + ToolPlanner` loop was
+> removed (DM-012/D-01). `HermesAgent` is the single Hermes reasoning loop;
+> `HermesOrchestrator` survives only as provider wiring + the plain-chat path.
+> See [ARCHITECTURAL_DECISIONS.md](ARCHITECTURAL_DECISIONS.md) AD-02/AD-03.
 
 ## 1. HermesAgent (the production complex-task agent)
 
@@ -16,16 +21,16 @@ met. Four exist.
 | Lifecycle | constructed per task from config (`get_agent`); engine singleton for fast path |
 | Tests | test_hermes_agent, test_hermes_pipeline_integration |
 
-## 2. HermesOrchestrator + ToolPlanner (task processor)
+## 2. HermesOrchestrator (provider wiring + plain chat — NOT a loop)
 
 | Property | Value |
 | --- | --- |
-| Location | `hermes/orchestrator.py`, `hermes/tool_planner.py` |
-| Trigger | `POST /hermes/chat` (routes.py:275), Hermes `main.py`; also underlies NLP skill's provider calls |
-| Loop | Task → ToolPlanner decision (final answer vs tool call) → ProviderManager (primary + local fallback) → sandbox save; bounded by MAX_TOOL_CALLS_PER_TASK=5 |
-| Tools | same ToolRegistry |
-| Outputs | ProviderResponse + sandbox task (`chat_*`/`task_*` ids) |
-| Tests | test_fallback, test_provider_abstraction, test_hermes_api |
+| Location | `hermes/orchestrator.py` |
+| Trigger | `hermes.service.chat` (conversation mode + NLP fallback), `POST /hermes/chat`, `hermes/main.py` |
+| `process(task)` | Delegates to `HermesAgent` (the one loop) with the fast path disabled, then maps the result to a `ProviderResponse` |
+| `chat(task)` | Plain conversational call: no tool planning, no tool fetching, no loop; still sandbox-recorded |
+| Responsibilities | provider manager + primary/local fallback (shared by both paths) |
+| Tests | test_fallback, test_fallback_integration, test_hermes_api, test_sandbox_query_index |
 
 ## 3. BrainAssistant (automation engine)
 
@@ -36,7 +41,7 @@ met. Four exist.
 | Responsibilities | Read-only skill analysis → generates `assistant.json` from manifest.json |
 | Tools | none (filesystem read/write of assistant.json only) |
 | Outputs | assistant.json path |
-| Status | analyzer works (smoke test); `analyze` command path is a stub returning empty capabilities (skill.py:171-180) |
+| Status | the generator works (smoke test). The non-functional `analyze` command was removed in the 2026-09-14 pass; `assistants/brain_assistant/analyzer.py` is unreachable and listed as a removal candidate |
 | Tests | test_brain_assistant |
 
 ## 4. Browser Awareness manager loop

@@ -28,6 +28,38 @@ from pathlib import Path
 from .models import Task
 from .providers.base import ProviderResponse
 
+# The backend package root (Backend/) — the anchor every relative sandbox
+# path is resolved against. Never the current working directory: the server
+# is launched from Backend/ (sarthi.bat) as well as from the repo root
+# (pytest, `python Backend/api.py`), and the same task must land in the same
+# sandbox in both cases.
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+
+# The one canonical sandbox root, used when no path is configured.
+DEFAULT_SANDBOX_ROOT = BACKEND_ROOT / "sandbox"
+
+
+def resolve_sandbox_root(path: str | Path | None = None) -> Path:
+    """Resolve a configured sandbox path to one absolute, cwd-independent root.
+
+    - ``None``/empty → the canonical default (``Backend/sandbox``).
+    - relative path → resolved against the backend root (``Backend/``), so
+      the launch directory never changes where task history is written.
+    - absolute path → used as given (tests, custom deployments).
+
+    Args:
+        path: The configured ``HERMES_SANDBOX_PATH`` value, or None.
+
+    Returns:
+        An absolute Path to the sandbox root (nothing is created here).
+    """
+    if path is None or str(path).strip() == "":
+        return DEFAULT_SANDBOX_ROOT
+    candidate = Path(path)
+    if candidate.is_absolute():
+        return candidate
+    return (BACKEND_ROOT / candidate).resolve()
+
 
 def normalize_query(query: str) -> str:
     """Normalize a query for stable indexing: lowercase, collapse whitespace."""
@@ -35,10 +67,15 @@ def normalize_query(query: str) -> str:
 
 
 class TaskSandbox:
-    """Stores task artifacts under sandbox/tasks/<task_id>/ with a query index."""
+    """Stores task artifacts under sandbox/tasks/<task_id>/ with a query index.
 
-    def __init__(self, root: str | Path = "sandbox"):
-        self._root = Path(root)
+    The root is always absolute and resolved against the backend root (see
+    :func:`resolve_sandbox_root`), so the same task resolves to the same
+    store no matter where the process was started.
+    """
+
+    def __init__(self, root: str | Path | None = None):
+        self._root = resolve_sandbox_root(root)
         self._tasks_dir = self._root / "tasks"
         self._index_path = self._root / "index.json"
 

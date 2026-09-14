@@ -1,33 +1,26 @@
 """
-Tool Planner — Hermes' decision layer for the Sarthi Tool Bridge.
+Tool-call protocol — the Hermes <-> Sarthi tool bridge contract.
 
-Flow:
-    User request
-      -> Hermes (LLM) decides: final answer OR structured tool call
-      -> Sarthi Tool Registry executes the registered tool
-      -> Tool result is fed back to Hermes
-      -> Hermes produces the final response
+This module owns the *interfaces* of the tool bridge and nothing else:
 
-The LLM produces a structured, machine-readable tool request
+    - the decision prompt that offers the registered tools to the model
+      (``build_decision_instructions``)
+    - the follow-up prompt that feeds a tool result back
+      (``build_followup_instructions``)
+    - the structured parser for the model's tool request
+      (``parse_tool_call``)
+
+Hermes produces a structured, machine-readable tool request
 ({"tool_call": {"tool": ..., "arguments": {...}}}) — natural language is
-never parsed with fragile string matching. The loop is bounded by
-MAX_TOOL_CALLS_PER_TASK so Hermes can never loop forever.
+never parsed with fragile string matching. The loop that drives these calls,
+bounds the iterations, validates each request and persists the run lives in
+one place: ``hermes/agent.py`` (HermesAgent). There is no second loop here.
 """
 
 import json
-import logging
-from collections.abc import Callable
 from typing import Any
 
-from hermes.models import ModelRequest, Task
-from hermes.providers.base import ProviderResponse
-from hermes.tool_registry import ToolRegistry
 from hermes.tools.base import ToolResult
-
-logger = logging.getLogger(__name__)
-
-# Hard limit on tool executions per task — prevents infinite tool loops.
-MAX_TOOL_CALLS_PER_TASK = 5
 
 _DECISION_HEADER = """You are Hermes, the reasoning and orchestration layer of Sarthi.
 
@@ -164,133 +157,3 @@ def _extract_tool_call(parsed: dict[str, Any]) -> dict[str, Any] | None:
     if not isinstance(arguments, dict):
         arguments = {}
     return {"tool": tool, "arguments": arguments}
-
-
-class ToolPlanner:
-    """
-    Runs the bounded Hermes <-> Sarthi tool loop for one task.
-
-    Args:
-        tool_registry: Registry of tools Hermes may request.
-        generate: Callable that sends a ModelRequest to the providers and
-                  returns a ProviderResponse (primary + fallback handled by
-                  the caller). The planner normalizes its Task into
-                  provider-neutral requests, so providers never see the
-                  orchestration record.
-    """
-
-    def __init__(
-        self,
-        tool_registry: ToolRegistry,
-        generate: Callable[[ModelRequest], ProviderResponse],
-        trace: list[dict] | None = None,
-    ) -> None:
-        self._tool_registry = tool_registry
-        self._generate = generate
-        self._trace = trace
-
-    def _record(self, **step: Any) -> None:
-        """Append an execution step to the trace when one was provided."""
-        if self._trace is not None:
-            self._trace.append(step)
-
-    def run(self, task: Task) -> ProviderResponse:
-        """
-        Process the task: decide, (optionally) run tools, produce the final answer.
-
-        Args:
-            task: The user's chat task.
-
-        Returns:
-            ProviderResponse. When a tool was used, tool_used is set to the
-            last tool that executed.
-        """
-        # Phase 1 — decision: ask the model whether a tool is needed.
-        # The task's content (prompt, history, memory) becomes a
-        # provider-neutral ModelRequest; the decision prompt goes in as
-        # system instructions.
-        request = task.to_request()
-        decision_request = request.with_instructions(
-            build_decision_instructions(task.prompt, self._tool_registry.list_tools())
-        )
-        response = self._generate(decision_request)
-        self._record(
-            step="decision",
-            provider=response.provider,
-            model=response.model,
-            success=response.success,
-            text=response.text,
-            error=response.error,
-        )
-        if not response.success:
-            return response
-
-        decision = parse_tool_call(response.text)
-        if decision is None:
-            # Normal conversational answer — no tool involved.
-            return response
-
-        last_tool: str | None = None
-        for _ in range(MAX_TOOL_CALLS_PER_TASK):
-            tool = decision["tool"]
-            arguments = decision["arguments"]
-            last_tool = tool
-            self._record(step="tool_call", tool=tool, arguments=arguments)
-
-            result = self._tool_registry.execute(tool, arguments)
-            self._record(
-                step="tool_result",
-                tool=tool,
-                success=result.success,
-                result=result.result,
-                error=result.error,
-            )
-            if result.unknown:
-                # Hermes requested a tool that is not registered.
-                return ProviderResponse(
-                    success=True,
-                    provider=response.provider,
-                    model=response.model,
-                    text="That capability is not available.",
-                    tool_used=tool,
-                )
-
-            # Phase 2 — feed the result back and get the next decision/answer.
-            followup_request = request.with_instructions(
-                build_followup_instructions(task.prompt, tool, result)
-            )
-            response = self._generate(followup_request)
-            self._record(
-                step="response",
-                provider=response.provider,
-                model=response.model,
-                success=response.success,
-                text=response.text,
-                error=response.error,
-            )
-            if not response.success:
-                return response
-
-            decision = parse_tool_call(response.text)
-            if decision is None:
-                # Hermes' final response based on the tool result.
-                return ProviderResponse(
-                    success=True,
-                    provider=response.provider,
-                    model=response.model,
-                    text=response.text,
-                    tool_used=last_tool,
-                )
-
-        # Hard limit reached — stop gracefully with an explanatory response.
-        logger.warning("Tool call limit (%d) reached for task %s", MAX_TOOL_CALLS_PER_TASK, task.id)
-        return ProviderResponse(
-            success=True,
-            provider=response.provider,
-            model=response.model,
-            text=(
-                "I could not complete that request because it needed too many steps. "
-                "Please ask for one action at a time."
-            ),
-            tool_used=last_tool,
-        )

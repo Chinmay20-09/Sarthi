@@ -1,26 +1,30 @@
 import time
 
+from .agent import HermesAgent
 from .models import ModelRequest, Task
 from .providers.base import ProviderResponse
 from .providers.manager import ProviderManager
 from .sandbox import TaskSandbox
-from .tool_planner import ToolPlanner
 from .tool_registry import ToolRegistry
 
 
 class HermesOrchestrator:
-    """
-    Hermes is the orchestrator, not a complete handler.
+    """Hermes' provider wiring plus the two things the model can be asked for.
 
-    For every task it:
-      1. Runs the Tool Planner (Hermes decides text vs registered Sarthi tool)
-      2. Attempts the primary provider, falling back per model call
-      3. Records the full execution trace (decision, tool calls, results)
-      4. Saves the task to the sandbox, indexed by the user's query, so the
-         sandbox is the durable reference for what was asked and how it ran.
+    There is exactly ONE model-driven reasoning loop in Sarthi — HermesAgent
+    (``hermes/agent.py``), which owns retrieval, validated tool calls, the
+    retry bound and sandbox persistence. The orchestrator does not implement a
+    second loop; it only decides *what kind* of call the caller wants:
 
-    Tool execution is always delegated to the Sarthi Tool Registry — Hermes
-    never executes tools itself.
+      1. ``chat(task)``    — plain conversation. NO tool planning, NO tool
+         fetching, NO loop; the model is asked directly (the "natural language
+         processor" path behind conversation mode and the NLP fallback skill).
+      2. ``process(task)`` — a reasoning task. Delegates to HermesAgent, so
+         tool validation, retrieval and persistence are identical to the
+         /command complexity fallback.
+
+    Provider selection and fallback (primary + local) stay here, because both
+    paths must fail over the same way.
     """
 
     def __init__(
@@ -32,6 +36,7 @@ class HermesOrchestrator:
         self._provider_manager = provider_manager
         self._tool_registry = tool_registry
         self._sandbox = sandbox
+        self._agent: HermesAgent | None = None
 
     @property
     def provider_manager(self) -> ProviderManager:
@@ -40,32 +45,55 @@ class HermesOrchestrator:
 
     def process(self, task: Task) -> ProviderResponse:
         """
-        Process a Hermes task through the tool loop with provider fallback,
-        then persist the task + execution trace to the sandbox.
+        Run one reasoning task through the single Hermes loop, then report it
+        as a ProviderResponse.
+
+        HermesAgent retrieves bounded Sarthi context, lets the model answer or
+        request one validated tool, repeats within the bounded iteration/time
+        budget, and persists the run to the sandbox. The deterministic fast
+        path is deliberately disabled here: every caller of ``process``
+        (the /hermes/chat endpoint and the dev CLI) has already given Sarthi's
+        pipeline the first chance.
 
         Args:
-            task: Task to execute.
+            task: The orchestration record (prompt, id, task_type, history,
+                memory) to reason about.
 
         Returns:
             ProviderResponse from primary or fallback provider, with
             tool_used set when a registered Sarthi tool was executed.
         """
-        if self._tool_registry is None:
-            from .tool_registry import get_tool_registry
+        result = self._get_agent().run(
+            task.prompt,
+            history=task.history,
+            memory=task.memory,
+            task_id=task.id,
+            task_type=task.task_type,
+        )
+        return ProviderResponse(
+            success=bool(result.get("success")),
+            provider=result.get("provider") or "Hermes",
+            model=result.get("model") or "",
+            text=result.get("text") or "",
+            tool_used=result.get("tool_used"),
+            error=result.get("error"),
+        )
 
-            self._tool_registry = get_tool_registry()
+    def _get_agent(self) -> HermesAgent:
+        """The shared reasoning loop for this orchestrator (built once)."""
+        if self._agent is None:
+            from .config.loader import ConfigLoader
 
-        trace: list[dict] = []
-        planner = ToolPlanner(self._tool_registry, self._generate_with_fallback, trace=trace)
-
-        started = time.perf_counter()
-        response = planner.run(task)
-        duration_ms = (time.perf_counter() - started) * 1000
-
-        if self._sandbox is not None:
-            self._sandbox.save(task, response, duration_ms, trace=trace)
-
-        return response
+            config = ConfigLoader().load()
+            self._agent = HermesAgent(
+                generate=self._generate_with_fallback,
+                tool_registry=self._tool_registry,
+                sandbox=self._sandbox,
+                fast_path=False,
+                max_iterations=getattr(config, "agent_max_iterations", 3),
+                timeout_seconds=getattr(config, "agent_timeout", 300.0),
+            )
+        return self._agent
 
     def chat(self, task: Task) -> ProviderResponse:
         """
@@ -109,8 +137,8 @@ class HermesOrchestrator:
     def _generate_with_fallback(self, task_or_request: Task | ModelRequest) -> ProviderResponse:
         """Call the primary provider, falling back to the fallback provider.
 
-        Accepts the Task handed in by ``chat()`` or the ModelRequest built by
-        the Tool Planner; the ProviderManager normalizes either into a
+        Accepts the Task handed in by ``chat()`` or the ModelRequest built
+        inside the agent loop; the ProviderManager normalizes either into a
         provider-neutral ModelRequest before any adapter sees it.
         """
         response = self._provider_manager.generate(task_or_request)

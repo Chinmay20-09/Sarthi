@@ -8,7 +8,7 @@ FastAPI app in `Backend/api.py`, served by Uvicorn on `0.0.0.0:8000`
 
 | Endpoint | Method | Purpose |
 | --- | --- | --- |
-| `/command` | POST | Main pipeline. Accepts `{"query"}` (clients) or `{"text"}` (legacy UI). Returns the client envelope `{success, response, data}` + legacy fields. Runs the deterministic pipeline; on failure consults the complexity router and may run the Hermes agent |
+| `/command` | POST | Main pipeline. Accepts `{"query"}` (clients) or `{"text"}` (legacy UI). Returns the client envelope `{success, response, data}` + legacy fields. Handles mode commands and conversation mode; hands task-shaped instructions to Hermes *before* execution (AD-04); otherwise runs the deterministic pipeline and, on failure, consults the complexity router and may run the Hermes agent |
 | `/health` | GET | Liveness + version (`{"assistant": "Sarthi", "status": "Running"}`) |
 | `/` | GET | Redirects to /ui |
 
@@ -99,7 +99,7 @@ FastAPI app in `Backend/api.py`, served by Uvicorn on `0.0.0.0:8000`
 | `/hermes/sandbox/tasks/{id}` | GET | One task with trace |
 | `/hermes/status` | GET | Provider stack status |
 | `/hermes/tools` | GET | Registered tools |
-| `/hermes/chat` | POST | Plain chat via HermesOrchestrator (ToolPlanner loop) |
+| `/hermes/chat` | POST | Chat + reasoning through the single Hermes loop (`HermesOrchestrator.process` → `HermesAgent`, fast path disabled) with session history and `/remember` facts attached. Schema unchanged |
 
 ## Browser router (`/browser`, skills/browser/routes.py)
 

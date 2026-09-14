@@ -11,7 +11,7 @@ these 10 skills, all enabled.
 | # | Skill (id) | Version | Manifest | Entry | What it does | Called by | Tests |
 | - | ---------- | ------- | -------- | ----- | ------------ | --------- | ----- |
 | 1 | app_launcher | 1.2.0 | ✓ | `skills/app_launcher/main.py` | Launch desktop applications; favourites gate; needs_decision cards | executor open handler; Hermes OpenAppTool | test_app_launcher |
-| 2 | automation_engine | 1.1.0 | ✓ | `skills/automation_engine/main.py` → skill.py | (a) chain intents → ai_chain; (b) "generate assistant" → BrainAssistant | executor skill walk (chain/automate/generate/analyze actions) | test_ai_chain, test_brain_assistant |
+| 2 | automation_engine | 1.1.0 | ✓ | `skills/automation_engine/main.py` → skill.py | (a) chain intents → ai_chain; (b) "generate assistant" → BrainAssistant | executor skill walk (chain/automate/generate actions) | test_ai_chain, test_brain_assistant |
 | 3 | browser | 1.1.0 | ✓ | `skills/browser/main.py` | Open/search/play websites via Knowledge Layer + webbrowser | executor open handler; Hermes OpenWebsiteTool, SearchWebTool | test_browser |
 | 4 | browser_awareness | 1.0.0 | ✓ | `skills/browser_awareness/main.py` | DOM-level inspection + action loop on arbitrary sites; announces progress | executor browse handler; Hermes BrowserAskTool | test_browser_awareness |
 | 5 | natural_language_processor | 1.1.0 | ✓ | `skills/natural_language_processor/main.py` | Conversational fallback via `hermes.service.chat`; `fallback = True` (registered last) | executor skill walk (last resort) | test_nlp_skill, test_fallback* |

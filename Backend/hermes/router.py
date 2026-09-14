@@ -15,10 +15,11 @@ Design rules (locked by tests/test_hermes_router.py):
   still tries the deterministic pipeline first regardless of the verdict.
 
 Public API:
-    Route (dataclass)             — {route, reason, score, signals}
-    route_command(text) -> Route  — classify one command
-    is_compound(text) -> bool     — "then/after that/and then" detection
+    Route (dataclass)                        — {route, reason, score, signals}
+    route_command(text) -> Route             — classify one command
+    is_compound(text) -> bool                — "then/after that/and then" detection
     looks_like_url(text) -> bool
+    looks_like_task_instruction(text) -> bool — multi-step task, not a command
 """
 
 from __future__ import annotations
@@ -119,6 +120,46 @@ _DATAFLOW_VERBS = frozenset(
         "translate",
     }
 )
+
+# File/document/data work verbs. A sentence that names this kind of work
+# ("find all assignment PDFs and rename them") is a task, not a command —
+# and definitely not a web-search query to run literally.
+_TASK_VERBS = frozenset(
+    {
+        "rename",
+        "organize",
+        "organise",
+        "categorize",
+        "categorise",
+        "sort",
+        "merge",
+        "combine",
+        "convert",
+        "deduplicate",
+        "archive",
+        "download",
+        "upload",
+        "attach",
+        "fill",
+        "submit",
+        "copy",
+        "paste",
+        "move",
+        "extract",
+        "summarize",
+        "summarise",
+        "translate",
+    }
+)
+
+# A task sentence is usually long. A single task verb in a short sentence
+# ("search for sort algorithms") is left alone; two task verbs, or one task
+# verb in a sentence of this length or more, is a multi-step instruction.
+_TASK_INSTRUCTION_MIN_WORDS = 6
+
+# Signals that describe the shape of a verdict rather than its cause — never
+# reported as the route reason when a more specific signal fired.
+_GENERIC_SIGNALS = frozenset({"simple_action_word", "long_command"})
 
 # Research/knowledge-work nouns that usually require DB context + reasoning.
 _RESEARCH_NOUNS = frozenset(
@@ -238,6 +279,30 @@ def is_compound(text: str) -> bool:
     return bool(_COMPOUND_RE.search(text or ""))
 
 
+def looks_like_task_instruction(text: str) -> bool:
+    """True when a sentence describes multi-step work instead of one command.
+
+    Used by the /command gate: "find all assignment PDFs and rename them
+    according to subject" must not be answered by literally searching the web
+    for its own words. Two task verbs, or one task verb in a sentence of
+    ``_TASK_INSTRUCTION_MIN_WORDS`` words or more, marks a task instruction.
+    Plain commands ("open youtube and search lofi") are never affected.
+
+    Args:
+        text: The raw user input.
+
+    Returns:
+        True when the sentence reads as a task, not a single command.
+    """
+    tokens = _strip_leading_slash(_tokens(text))
+    if not tokens:
+        return False
+    task_verbs = set(tokens) & _TASK_VERBS
+    if not task_verbs:
+        return False
+    return len(task_verbs) >= 2 or len(tokens) >= _TASK_INSTRUCTION_MIN_WORDS
+
+
 def route_command(text: str) -> Route:
     """Classify one command for the fast/complex gate.
 
@@ -301,6 +366,14 @@ def route_command(text: str) -> Route:
         score += 2
         signals.append("followup_clause")
 
+    # A task-shaped sentence (file/document work) is never a literal command.
+    # It is also the shape the interpreter most often mis-reads as a web
+    # search, so the router must call it complex even when its first word is
+    # a known action ("find all assignment PDFs and rename them").
+    if looks_like_task_instruction(raw):
+        score += 2
+        signals.append("task_instruction")
+
     # "<imperative X> and <imperative Y>" — two app clauses the interpreter
     # cannot decompose (it only chains open→search/play), so it is a genuine
     # two-step task. "open X and search/play Q" stays fast.
@@ -326,7 +399,13 @@ def route_command(text: str) -> Route:
 
     # --- verdict ----------------------------------------------------------
     if score >= 1:
-        reason = signals[0].split(":")[0] if signals else "complex_task"
+        # Report the most specific signal as the reason: "simple_action_word"
+        # on a hermes verdict only says the first word looked like a command,
+        # which is exactly the case that confuses operators.
+        reason = next(
+            (s.split(":")[0] for s in signals if s.split(":")[0] not in _GENERIC_SIGNALS),
+            signals[0].split(":")[0] if signals else "complex_task",
+        )
         return Route(route="hermes", reason=reason, score=score, signals=signals)
 
     return Route(route="fast", reason="simple_command", score=0, signals=signals)

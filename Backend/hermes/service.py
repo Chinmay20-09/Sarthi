@@ -135,7 +135,12 @@ def route_command(text: str):
     return route
 
 
-def run_task(query: str, session_id: str | None = None) -> dict:
+def run_task(
+    query: str,
+    session_id: str | None = None,
+    *,
+    allow_fast_path: bool = True,
+) -> dict:
     """Execute a complex task through the bounded Hermes agent loop.
 
     This is the complex-path entry point for callers that have already
@@ -146,6 +151,12 @@ def run_task(query: str, session_id: str | None = None) -> dict:
     Args:
         query: The user's request.
         session_id: Optional conversation session for history/memory.
+        allow_fast_path: When False, the agent skips the deterministic
+            shortcut entirely. Set by the /command gate for requests whose
+            deterministic reading is known to be wrong (a task-shaped
+            sentence the interpreter can only mis-read as a web search), so
+            Hermes reasons about the request instead of re-running the same
+            literal action.
 
     Returns:
         Agent result dict: {success, text, tool_used, iterations,
@@ -154,7 +165,8 @@ def run_task(query: str, session_id: str | None = None) -> dict:
     config = ConfigLoader().load()
     agent = HermesAgent(
         sandbox=get_sandbox(),
-        max_iterations=getattr(config, "agent_max_iterations", 5),
+        fast_path=None if allow_fast_path else False,
+        max_iterations=getattr(config, "agent_max_iterations", 3),
         timeout_seconds=getattr(config, "agent_timeout", 300.0),
     )
     return agent.run(query, session_id=session_id)

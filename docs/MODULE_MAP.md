@@ -47,12 +47,12 @@ Every package and significant file, what it does, and who calls it.
 | `service.py` | Wiring: orchestrator/sandbox singletons, `chat`, `route_command`, `run_task` |
 | `agent.py` | Bounded agent loop (fast path → retrieval → model/tool loop) |
 | `router.py` | Fast/complex heuristic gate |
-| `orchestrator.py` | Task processing: tool planner + provider fallback + sandbox save |
-| `tool_planner.py` | LLM structured tool-call decision layer (MAX_TOOL_CALLS_PER_TASK=5) |
+| `orchestrator.py` | Provider wiring + two call kinds: `chat()` (plain, no tools) and `process()` (delegates to HermesAgent with the fast path disabled) |
+| `tool_planner.py` | Tool-call **protocol** only: decision/follow-up prompts + `parse_tool_call` (the loop lives in `agent.py`; the duplicate ToolPlanner loop was removed) |
 | `tool_registry.py` | Whitelist registry + argument validation for Hermes tools |
 | `validator.py` | Phase 3c validation gate for tool calls |
 | `retriever.py` | Hybrid RAG over SQL/knowledge/sandbox/history (no vector DB) |
-| `sandbox.py` | TaskSandbox: `sandbox/tasks/<id>/` + query index |
+| `sandbox.py` | TaskSandbox + `resolve_sandbox_root` (one canonical root: `Backend/sandbox`, cwd-independent) |
 | `conversation.py` | Session history in conversation_messages table |
 | `models.py` | Task, ModelRequest, ProviderResponse API models |
 | `routes.py` | `/hermes/*` router: sandbox, status, tools, chat |
@@ -69,6 +69,7 @@ Ten skills with `manifest.json` + `main.py` (see SKILLS.md). Plus:
 | --- | --- |
 | `registry.py` | Manifest-based discovery, instantiation, enable/disable |
 | `base.py` | `BaseSkill` ABC (execute(intent) → dict) |
+| `automation_engine/engine.py` | Assistant registry (`register_assistant`, `run_assistant`); the unreachable `run(event)` event pipeline was removed |
 
 ## Backend/hands/desktop/ — physical layer
 

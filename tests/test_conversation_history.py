@@ -6,9 +6,8 @@ current prompt, and both hermes.service.chat and POST /hermes/chat record
 each exchange.
 """
 
-from fastapi.testclient import TestClient
-
 from database.manager import DatabaseManager
+from fastapi.testclient import TestClient
 from hermes.config.settings import HermesConfig
 from hermes.conversation import DEFAULT_SESSION, ConversationStore, get_conversation_store
 from hermes.models import Task
@@ -368,26 +367,36 @@ def test_hermes_chat_default_session_when_omitted():
 
 
 # ----------------------------------------------------------------------
-# ToolPlanner preserves history through decision/follow-up tasks
+# The Hermes loop preserves history through the model call
 # ----------------------------------------------------------------------
 
 
-def test_tool_planner_preserves_history_in_decision_task():
-    from hermes.tool_planner import ToolPlanner
+def test_agent_preserves_history_in_the_model_task():
+    """An explicit history (what /hermes/chat passes) reaches the model."""
+    from hermes.agent import HermesAgent
 
     captured = {}
 
+    class FakeRetriever:
+        class _Context:
+            text = ""
+
+            def as_dict(self) -> dict:
+                return {"sources": 0}
+
+        def retrieve(self, query, session_id=None):
+            return FakeRetriever._Context()
+
     def fake_generate(task):
         captured["history"] = task.history
-        return ProviderResponse(
-            success=True,
-            provider="Fake",
-            model="m",
-            text='{"tool_call": {"tool": "x", "arguments": {}}}',
-        )
+        return ProviderResponse(success=True, provider="Fake", model="m", text="ok")
 
-    registry = ToolRegistry()
-    planner = ToolPlanner(registry, fake_generate)
-    planner.run(Task(prompt="do it", history=[{"role": "user", "content": "earlier"}]))
+    agent = HermesAgent(
+        generate=fake_generate,
+        tool_registry=ToolRegistry(),
+        retriever=FakeRetriever(),
+        fast_path=False,
+    )
+    agent.run("do it", history=[{"role": "user", "content": "earlier"}])
 
     assert captured["history"] == [{"role": "user", "content": "earlier"}]

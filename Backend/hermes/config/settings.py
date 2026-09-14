@@ -10,6 +10,10 @@ class HermesConfig:
     model: str = "openai/gpt-5"
     temperature: float = 0.2
     timeout: float = 60.0
+    # Sandbox root. A relative value (the default) is resolved against the
+    # backend root by hermes.sandbox.resolve_sandbox_root, so the same task
+    # lands in the same store regardless of the launch directory. Absolute
+    # values (HERMES_SANDBOX_PATH, tests) are used as given.
     sandbox_path: str = "sandbox"
     # OpenRouter settings (only used when provider=openrouter)
     openrouter_api_key: str = ""
@@ -33,8 +37,10 @@ class HermesConfig:
     # ------------------------------------------------------------------
     # Agent loop bounds (Phase 3f) — how long/many steps one complex task
     # may take. The loop is bounded by iterations AND wall-clock time.
+    # Three automatic iterations is the architectural retry bound: a complex
+    # task may take at most three model turns that request a tool.
     # ------------------------------------------------------------------
-    agent_max_iterations: int = 5
+    agent_max_iterations: int = 3
     agent_timeout: float = 300.0
     # ------------------------------------------------------------------
     # Router knobs (Phase 3f) — the complexity gate in front of Hermes.

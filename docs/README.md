@@ -27,10 +27,12 @@ repository, not from plans or claims.
 | [CONFIGURATION.md](CONFIGURATION.md) | Config files, environment variables, settings table |
 | [DEPENDENCIES.md](DEPENDENCIES.md) | Dependency audit |
 | [TESTING.md](TESTING.md) | Test suite reality check |
-| [DIVERGENCE.md](DIVERGENCE.md) | Architectural inconsistencies (evidence-based) |
-| [DUPLICATION.md](DUPLICATION.md) | Overlapping responsibilities |
-| [DEAD_CODE.md](DEAD_CODE.md) | Suspected dead/orphaned systems |
+| [DIVERGENCE.md](DIVERGENCE.md) | Architectural inconsistencies + post-consolidation status (evidence-based) |
+| [DEAD_CODE&Duplicate.md](DEAD_CODE&Duplicate.md) | Dead/orphaned systems + overlapping responsibilities |
 | [PROJECT_STATE.md](PROJECT_STATE.md) | Current implementation state |
+| [ARCHITECTURAL_DECISIONS.md](ARCHITECTURAL_DECISIONS.md) | Decision log (problem, evidence, choice, rejected alternatives, risk, tests) |
+| [CONSOLIDATION_PLAN.md](CONSOLIDATION_PLAN.md) | Pre-change plan and observations for the consolidation pass |
+| [CONSOLIDATION_REPORT.md](CONSOLIDATION_REPORT.md) | What the consolidation changed, before/after, remaining divergence |
 | [DOCUMENTATION_RULES.md](DOCUMENTATION_RULES.md) | Rules this documentation follows |
 | [FORENSIC_SUMMARY.md](FORENSIC_SUMMARY.md) | Counts, findings, top risks |
 

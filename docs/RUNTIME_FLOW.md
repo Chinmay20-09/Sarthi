@@ -15,7 +15,13 @@ Input: `POST /command {"query": "open youtube and search lofi"}`
 4. **Conversation mode short-circuit** — when conversation mode is active the
    brain pipeline is never invoked; the text goes to `hermes.service.chat`
    (plain LLM chat, no tools) via `_conversation_response` (api.py:353-360).
-5. **BrainEngine.process** — `brain/engine.py:129`:
+5. **Complexity gate (pre-execution)** — `api.py::_is_task_shaped_search`:
+   when the router says the sentence is a task instruction AND the
+   interpreter's only reading is a single `search` intent (e.g. "Find all
+   assignment PDFs and rename them according to subject"), the request goes
+   straight to Hermes with the deterministic fast path disabled — nothing is
+   executed, so no browser is opened for a nonsense query. See AD-04.
+6. **BrainEngine.process** — `brain/engine.py:129`:
    - `split_queries` splits on `.` while protecting domain tokens
      (`brain/interpreter.py:185`).
    - each sentence → `_interpret_query`:
@@ -36,9 +42,9 @@ Input: `POST /command {"query": "open youtube and search lofi"}`
      3. every registered skill in turn; first success wins; a skill with
         `handled=True` owns the failure (executor.py:154-171). The NLP
         fallback skill is sorted LAST (`engine._load_skills`).
-6. **Response** — `BrainResponse.to_api_dict()` plus `input`, `mode`,
+7. **Response** — `BrainResponse.to_api_dict()` plus `input`, `mode`,
    `routing` (from `_detect_response_mode`, api.py:237).
-7. **Event** — `bus.publish("command_completed", result)` → the voice
+8. **Event** — `bus.publish("command_completed", result)` → the voice
    responder speaks the reply aloud when enabled (`utils/spoken_replies.py`,
    subscribed at api.py import time).
 
@@ -54,7 +60,9 @@ Reached only when Path 1 returns `success: false` **or** `routing == "hermes"`
      deterministic AI-chain veto.
    - config knobs: `HERMES_ROUTER_MODE` (auto/always/off) and
      `HERMES_ROUTER_MIN_SCORE` (`hermes/service.py:112-133`).
-2. When the route is `hermes`: **HermesAgent.run** (`hermes/agent.py:99`):
+2. When the route is `hermes`: **HermesAgent.run** (`hermes/agent.py`) — the
+   single reasoning loop, also used by `POST /hermes/chat` via
+   `HermesOrchestrator.process` (there with the fast path disabled):
    1. deterministic fast path again (cheap safety net; NLP-source results are
       deliberately NOT short-circuited — agent.py:135-140)
    2. hybrid retrieval — `hermes/retriever.py` pulls bounded context from

@@ -1,5 +1,13 @@
 # Forensic summary
 
+> **Historical snapshot.** This report describes the repository as observed on
+> 2026-09-13, before the consolidation pass. Several findings it lists have
+> since been resolved or reclassified (two tool loops, sandbox roots, chain
+> intent collision, pystray, unreachable automation scaffolding). Current
+> status: [DIVERGENCE.md](DIVERGENCE.md), [CONSOLIDATION_REPORT.md](CONSOLIDATION_REPORT.md)
+> and [ARCHITECTURAL_DECISIONS.md](ARCHITECTURAL_DECISIONS.md). The audit trail
+> is preserved deliberately.
+
 Final report of the 2026-09-13 documentation reset. Method: repository-wide
 inspection (source, configs, manifests, tests, runtime data), execution-path
 tracing of the two command paths, live registry/sandbox/schema dumps, and a

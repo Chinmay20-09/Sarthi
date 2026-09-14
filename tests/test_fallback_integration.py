@@ -52,13 +52,15 @@ class SuccessfulLocalProvider(AIProvider):
         )
 
 
-def test_fallback_integration():
+def test_fallback_integration(tmp_path):
     """Integration test: Cloud fails -> Local succeeds."""
     print("\n=== INTEGRATION TEST: Cloud Failure to Local Fallback ===\n")
 
+    # An absolute sandbox root: the store must never depend on the working
+    # directory (a relative path now resolves against the backend root).
     config = HermesConfig(
         model="hermes3:8b",
-        sandbox_path="sandbox_test",
+        sandbox_path=str(tmp_path / "sandbox_test"),
     )
 
     # Setup providers

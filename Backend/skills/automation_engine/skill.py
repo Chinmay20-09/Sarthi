@@ -19,6 +19,7 @@ from typing import Any
 from brain.intent import Intent
 from brain.modes import get_test_mode
 from config import SKILLS_DIR
+
 from skills.base import BaseSkill
 
 from .ai_chain.chain import run_ai_chain
@@ -49,6 +50,10 @@ class AutomationSkill(BaseSkill):
 
         Currently supports:
             - "generate assistant for <skill>" — generate assistant.json
+            - "chain/automate <query> from <AI> to <AI>" — AI chain run
+
+        An "analyze" command is deliberately NOT handled: no capability
+        analysis is implemented, so it is not advertised.
 
         Args:
             intent: Parsed Intent from the brain pipeline
@@ -67,9 +72,6 @@ class AutomationSkill(BaseSkill):
 
         if "generate" in action or "generate" in target:
             return self._handle_generate(target)
-
-        if "analyze" in action:
-            return self._handle_analyze(target)
 
         return {
             "success": False,
@@ -151,12 +153,4 @@ class AutomationSkill(BaseSkill):
             "success": True,
             "status": "generated",
             "result": {"path": str(result)},
-        }
-
-    def _handle_analyze(self, target: str) -> dict[str, Any]:
-        """Analyze a skill's capabilities (stub)."""
-        return {
-            "success": True,
-            "status": "analyzed",
-            "result": {"target": target, "capabilities": []},
         }

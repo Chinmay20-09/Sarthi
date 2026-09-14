@@ -23,16 +23,19 @@ are validated (`tool_registry.validate_arguments`) and every call passes the
 ## Mechanics
 
 - The LLM sees `name`/`description`/`parameters` (JSON-schema subset) via
-  `build_decision_instructions` (`hermes/agent.py`).
+  `build_decision_instructions` (`hermes/tool_planner.py`).
 - Model output is parsed by `parse_tool_call`; a `tool_call` object triggers
-  validation → execution → follow-up prompt; plain text ends the task.
-- Hard caps: 5 iterations (default `HERMES_AGENT_MAX_ITERATIONS`), 300 s wall
-  clock, plus `MAX_TOOL_CALLS_PER_TASK = 5` in the (separate) ToolPlanner.
+  validation (`hermes/validator.py`, the only gate) → execution → follow-up
+  prompt; plain text ends the task.
+- Hard caps: **3 iterations** (default `HERMES_AGENT_MAX_ITERATIONS`) and
+  300 s wall clock. A refused tool call is fed back to the model exactly once.
 
-## Related but distinct
+## One loop, one protocol
 
-`hermes/tool_planner.py` + `hermes/orchestrator.py` form an **older,
-parallel** decision loop (HermesOrchestrator.process → ToolPlanner) used by
-`POST /hermes/chat` and the NLP fallback's provider stack. It uses the same
-ToolRegistry but a different loop implementation than the HermesAgent. See
-DUPLICATION.md #3.
+`hermes/agent.py` (HermesAgent) is the **only** model-driven tool loop;
+`POST /hermes/chat` and the `/command` complex fallback both run it
+(`HermesOrchestrator.process` delegates). `hermes/tool_planner.py` is the
+shared tool-call *protocol* — the decision/follow-up prompts and
+`parse_tool_call` — with no loop of its own. The former parallel ToolPlanner
+loop was removed; see [ARCHITECTURAL_DECISIONS.md](ARCHITECTURAL_DECISIONS.md)
+AD-02/AD-03.

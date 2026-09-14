@@ -2,9 +2,17 @@
 
 ## Suite facts (verified by running it)
 
-- **52 test files** in `tests/`, **1021 tests collected and run**.
-- **Full-suite result at documentation time: `1021 passed`** in ~252 s
-  (`pytest`, pyproject: testpaths=tests, addopts=-q).
+- **54 test files** in `tests/`, **1059 tests collected and run**.
+- **Full-suite result after the 2026-09-14 consolidation: `1059 passed`** in
+  ~283 s (`pytest`, pyproject: testpaths=tests, addopts=-q). Baselines:
+  1021 passing before the pass; +38 new tests, 0 deleted (every test that
+  exercised the removed duplicate Hermes loop was migrated to the canonical
+  loop with the same fakes and assertions).
+- `tests/test_consolidation_routing.py` is the characterization suite for the
+  boundaries this pass established: routing (simple vs complex), chain-intent
+  collision (both directions), the task-shaped escalation gate, the
+  single-Hermes-loop invariants, sandbox root resolution from both launch
+  directories, and browser semantic targeting (no real browser started).
 - pythonpath bootstraps `Backend/` and `Desktop/client/` so flat imports work.
 
 ## What is actually tested (evidence)
@@ -15,7 +23,7 @@
 | API contract | test_backend_api, test_chat_modes, test_chat_memory_api, test_projects_api, test_connectors, test_api_db_threads | real FastAPI TestClient |
 | Hermes agent loop | test_hermes_agent, test_hermes_validator, test_hermes_tools, test_hermes_router, test_hermes_retriever, test_sandbox_query_index, test_conversation_history | fake providers (no network) |
 | Provider abstraction | test_provider_abstraction, test_local_provider, test_fallback, test_fallback_integration | fake/queued providers |
-| Pipeline boundaries | test_hermes_pipeline_integration, test_pipeline_compatibility, test_architecture_boundaries | locks routing + client/backend import rules |
+| Pipeline boundaries | test_hermes_pipeline_integration, test_pipeline_compatibility, test_architecture_boundaries, test_consolidation_routing | locks routing + escalation + client/backend import rules + consolidated boundaries |
 | ai_chain | test_ai_chain (dry-run plan path), test_browser_automation (DOM resolver) | no real browser/mouse in tests |
 | Browser awareness | test_browser_awareness | manager loop with injected fakes |
 | Desktop hand | test_desktop_hand | validation gate + fake actions |

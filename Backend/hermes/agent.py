@@ -51,7 +51,10 @@ from hermes.validator import validate_tool_call
 logger = logging.getLogger(__name__)
 
 # Fallback bounds when no config is available (tests, embedding callers).
-DEFAULT_MAX_ITERATIONS = 5
+# Three automatic iterations is the architectural retry bound: a complex task
+# may take at most three model turns that request a tool before Hermes stops
+# and hands control back to the user.
+DEFAULT_MAX_ITERATIONS = 3
 DEFAULT_AGENT_TIMEOUT = 300.0  # seconds
 
 
@@ -67,7 +70,10 @@ class HermesAgent:
         sandbox: TaskSandbox the run is persisted to (None disables saving).
         fast_path: Callable(str) -> dict | None. The deterministic brain
             pipeline. None (or a None return) skips the fast path. Default
-            wires Sarthi's BrainEngine lazily.
+            wires Sarthi's BrainEngine lazily. Pass ``False`` to disable the
+            deterministic shortcut entirely — used by callers that already
+            ran it (e.g. the /hermes/chat endpoint, which the dashboard only
+            reaches after /command could not handle the input).
         max_iterations: Cap on tool-requesting model turns.
         timeout_seconds: Wall-clock budget for the whole task.
     """
@@ -86,7 +92,11 @@ class HermesAgent:
         self._tool_registry = tool_registry
         self._retriever = retriever
         self._sandbox = sandbox
-        self._fast_path = fast_path or _default_fast_path
+        # ``fast_path=False`` disables the shortcut, None selects the default.
+        if fast_path is False:
+            self._fast_path = None
+        else:
+            self._fast_path = fast_path or _default_fast_path
         self._max_iterations = max(1, int(max_iterations))
         # Floor of 1ms — a zero/negative budget means "do not run the loop".
         self._timeout_seconds = max(0.001, float(timeout_seconds))
@@ -95,10 +105,35 @@ class HermesAgent:
     # Public entry point
     # ------------------------------------------------------------------
 
-    def run(self, query: str, session_id: str | None = None) -> dict[str, Any]:
+    def run(
+        self,
+        query: str,
+        session_id: str | None = None,
+        *,
+        history: list[dict] | None = None,
+        memory: str | None = None,
+        task_id: str | None = None,
+        task_type: str = "agent",
+    ) -> dict[str, Any]:
         """Execute one complex query through the bounded agent loop.
 
-        Returns a plain dict (API-friendly):
+        This is the single Hermes reasoning loop: every caller that wants
+        Hermes to think about something (the /command complexity fallback and
+        the /hermes/chat endpoint) goes through here, so tool validation,
+        retrieval, retry bounds and sandbox persistence are identical for all
+        of them.
+
+        Args:
+            query: The user's request.
+            session_id: Optional session whose prior turns ground the task.
+            history: Explicit prior turns (overrides the session lookup);
+                used by callers that already loaded a conversation.
+            memory: Optional system-prompt block of remembered user facts
+                (``knowledge.memory.build_memory_prompt``).
+            task_id: Sandbox task id; generated when omitted.
+            task_type: Sandbox task type ("agent" for complex tasks).
+
+        Returns:
             {success, text, tool_used, iterations, duration_ms, timed_out,
              route, reason, provider, model, trace, error}
         """
@@ -119,6 +154,8 @@ class HermesAgent:
                 model="",
                 tool_used=None,
                 query_for_sandbox="",
+                task_id=task_id,
+                task_type=task_type,
             )
 
         # --- 1. deterministic fast path (cheap safety net) -----------------
@@ -136,15 +173,32 @@ class HermesAgent:
                 model="",
                 tool_used=None,
                 query_for_sandbox=query,
+                task_id=task_id,
+                task_type=task_type,
             )
 
         # --- 2. retrieval ---------------------------------------------------
         context_text = self._retrieve(query, session_id, trace)
 
         # --- 3. bounded reasoning loop --------------------------------------
-        response = self._loop(query, context_text, session_id, trace)
+        response = self._loop(
+            query,
+            context_text,
+            session_id,
+            trace,
+            history=history,
+            memory=memory,
+            task_type=task_type,
+        )
 
-        return self._final(query_for_sandbox=query, trace=trace, started=started, **response)
+        return self._final(
+            query_for_sandbox=query,
+            trace=trace,
+            started=started,
+            task_id=task_id,
+            task_type=task_type,
+            **response,
+        )
 
     # ------------------------------------------------------------------
     # Fast path
@@ -214,11 +268,17 @@ class HermesAgent:
         context_text: str,
         session_id: str | None,
         trace: list[dict[str, Any]],
+        *,
+        history: list[dict] | None = None,
+        memory: str | None = None,
+        task_type: str = "agent",
     ) -> dict[str, Any]:
         registry = self._tool_registry or get_tool_registry()
         generate = self._generate or self._default_generate
         deadline = time.monotonic() + self._timeout_seconds
-        history = self._session_history(session_id)
+        # An explicit history from the caller wins; otherwise the session's
+        # prior turns ground the task.
+        resolved_history = history if history is not None else self._session_history(session_id)
 
         tools = registry.list_tools()
         instructions = build_decision_instructions(query, tools)
@@ -238,9 +298,10 @@ class HermesAgent:
 
             task = Task(
                 prompt=query,
-                task_type="agent",
+                task_type=task_type,
                 instructions=instructions,
-                history=history,
+                history=resolved_history,
+                memory=memory,
             )
             try:
                 response = generate(task)
@@ -409,6 +470,8 @@ class HermesAgent:
         trace = kwargs.pop("trace")
         started = kwargs.pop("started")
         query = kwargs.pop("query_for_sandbox", "")
+        task_id = kwargs.pop("task_id", None)
+        task_type = kwargs.pop("task_type", "agent")
         duration_ms = (time.perf_counter() - started) * 1000
         result = {
             "success": kwargs.get("success", False),
@@ -424,18 +487,25 @@ class HermesAgent:
             "trace": trace,
             "error": kwargs.get("error"),
         }
-        self._persist(query, result)
+        self._persist(query, result, task_id=task_id, task_type=task_type)
         return result
 
-    def _persist(self, query: str, result: dict[str, Any]) -> None:
+    def _persist(
+        self,
+        query: str,
+        result: dict[str, Any],
+        *,
+        task_id: str | None = None,
+        task_type: str = "agent",
+    ) -> None:
         """Save the run to the sandbox (best-effort, never raises)."""
         if self._sandbox is None or not query:
             return
         try:
             task = Task(
-                id=f"agent_{uuid4().hex[:6]}",
+                id=task_id or f"agent_{uuid4().hex[:6]}",
                 prompt=query,
-                task_type="agent",
+                task_type=task_type,
             )
             response = ProviderResponse(
                 success=result["success"],

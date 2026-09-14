@@ -325,6 +325,66 @@ def _conversation_response(text: str, session_id: str | None) -> dict:
     }
 
 
+def _hermes_task_result(agent_result: dict, text: str) -> dict:
+    """Shape one Hermes agent result into the /command response payload.
+
+    Single place where a complex-task answer becomes a client response, so
+    the pre-execution gate and the post-failure fallback cannot drift apart.
+    """
+    return {
+        "action": "hermes_task",
+        "target": None,
+        "status": "completed" if agent_result.get("success") else "error",
+        "success": bool(agent_result.get("success")),
+        "text": agent_result.get("text", ""),
+        "result": {
+            "source": "hermes",
+            "message": agent_result.get("text", ""),
+            "provider": agent_result.get("provider", ""),
+            "model": agent_result.get("model", ""),
+            "tool_used": agent_result.get("tool_used"),
+            "iterations": agent_result.get("iterations", 0),
+        },
+        "error": agent_result.get("error"),
+        "input": text,
+        "mode": get_mode(),
+        "routing": "hermes",
+        "hermes": {
+            "reason": agent_result.get("reason", ""),
+            "iterations": agent_result.get("iterations", 0),
+            "timed_out": agent_result.get("timed_out", False),
+            "tool_used": agent_result.get("tool_used"),
+        },
+    }
+
+
+def _is_task_shaped_search(text: str) -> bool:
+    """True when the only deterministic reading is a web search of a task.
+
+    "Find all assignment PDFs and rename them according to subject" is not a
+    search query, but a literal search of those words is the only thing the
+    interpreter can make of it — which would open a browser for nonsense and
+    never let Hermes reason about the request. Such a request is handed to
+    Hermes before anything executes.
+
+    Requires BOTH signals: the router's task-instruction heuristic (task
+    verbs + sentence shape) and an interpreter reading that is a single
+    ``search`` intent. Open/close/play/browse/chain commands and Sarthi's own
+    compound shapes are never affected.
+    """
+    from hermes.router import looks_like_task_instruction
+
+    if not looks_like_task_instruction(text):
+        return False
+    try:
+        from brain.interpreter import interpret_many
+
+        intents = interpret_many(text)
+    except Exception:  # interpretation is best-effort here
+        return False
+    return len(intents) == 1 and intents[0].action == "search"
+
+
 def _process_command_text(text: str, session_id: str | None) -> dict:
     """Shared /command pipeline: mode handling + brain execution.
 
@@ -365,6 +425,22 @@ def _process_command_text(text: str, session_id: str | None) -> dict:
         bus.publish("command_completed", result, source="api")
         return result
 
+    # Complexity gate (Phase 4a) — task-shaped instructions go to Hermes
+    # BEFORE anything runs. The deterministic reading is dropped on purpose:
+    # the router says the request is complex, and the interpreter's only
+    # reading is a literal search of the sentence's own words.
+    if _is_task_shaped_search(text):
+        try:
+            from hermes.service import run_task
+
+            agent_result = run_task(text, session_id=session_id, allow_fast_path=False)
+        except Exception as e:  # Hermes must never break /command
+            logger.warning("Hermes task-shaped gate failed: %s", e)
+        else:
+            result = _hermes_task_result(agent_result, text)
+            bus.publish("command_completed", result, source="api")
+            return result
+
     response = engine.process(text)
     result = response.to_api_dict()
     result["input"] = text
@@ -389,31 +465,7 @@ def _process_command_text(text: str, session_id: str | None) -> dict:
 
                 agent_result = run_task(text, session_id=session_id)
                 if agent_result.get("success"):
-                    result = {
-                        "action": "hermes_task",
-                        "target": None,
-                        "status": "completed",
-                        "success": True,
-                        "text": agent_result.get("text", ""),
-                        "result": {
-                            "source": "hermes",
-                            "message": agent_result.get("text", ""),
-                            "provider": agent_result.get("provider", ""),
-                            "model": agent_result.get("model", ""),
-                            "tool_used": agent_result.get("tool_used"),
-                            "iterations": agent_result.get("iterations", 0),
-                        },
-                        "error": None,
-                        "input": text,
-                        "mode": get_mode(),
-                        "routing": "hermes",
-                        "hermes": {
-                            "reason": agent_result.get("reason", ""),
-                            "iterations": agent_result.get("iterations", 0),
-                            "timed_out": agent_result.get("timed_out", False),
-                            "tool_used": agent_result.get("tool_used"),
-                        },
-                    }
+                    result = _hermes_task_result(agent_result, text)
             except Exception as e:  # Hermes must never break /command
                 logger.warning("Hermes agent path failed: %s", e)
 
