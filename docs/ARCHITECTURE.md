@@ -16,6 +16,11 @@ when the deterministic pipeline cannot handle the request.
 > one tool-call gate (`hermes/validator.py`) and one sandbox root
 > (`Backend/sandbox`). See [CONSOLIDATION_REPORT.md](CONSOLIDATION_REPORT.md)
 > and [ARCHITECTURAL_DECISIONS.md](ARCHITECTURAL_DECISIONS.md).
+>
+> **2026-09-15 Brain/Hand boundary (AD-16):** Backend = Brain, Desktop = Hand.
+> The Brain programs against the `Hand` interface (`hands.base.Hand`); the
+> local implementation is `DesktopHand`. See
+> [BRAIN_HAND_BOUNDARY_REPORT.md](BRAIN_HAND_BOUNDARY_REPORT.md).
 
 ## Runtime architecture (real request flow)
 
@@ -116,4 +121,41 @@ or backend internals. It talks HTTP only through
 | Complexity routing | `hermes/router.py` heuristics; consulted before execution for task-shaped instructions and after a failed deterministic run (`api.py`) | `route_command()`, `looks_like_task_instruction()` |
 | Tool selection (complex path) | the LLM, parsed by `hermes/agent.py` (`parse_tool_call`), validated by `hermes/validator.py` | `_loop()` |
 | Failure handling | pipeline: fail-fast per step (`engine._execute_plan`); agent: bounded retries + refusal feedback | `agent.py:305-315` |
+
+## Backend = Brain, Desktop = Hand
+
+Sarthi thinks through the Backend and acts through the Desktop Hand:
+
+| | Backend / Brain | Desktop / Hand |
+| --- | --- | --- |
+| **Owns** | interpretation, complexity routing, Hermes reasoning, memory/knowledge/retrieval, planning, task state, tool selection, action validation, deciding the next step, producing the final response | executing authorized actions (mouse, keyboard, files, apps, browser, processes) and observing device state (windows, processes, clipboard, execution outcomes) |
+| **Must never** | touch the OS directly | interpret natural language, call Hermes/LLMs, plan, decide complexity or the next step, accept un-authorized actions |
+| **Code** | `brain/`, `hermes/`, `knowledge/`, `skills/` (capability logic), `api.py` | `hands/` (validated OS backends), `Desktop/client/` (HTTP-only shell) |
+
+The contract between them is the **`Hand` interface** (`hands/base.py`):
+`execute(action, target, **kwargs) -> dict`, `capabilities()`,
+`find_application_process(exe_name)`. Every action is allow-listed and
+argument-validated by the hand before anything runs; results are structured
+`DesktopResult`-shaped dicts — failures are returned as observations, never
+raised.
+
+**Current (local) and target (network) topology** — the Brain's code does not
+differ between them:
+
+```
+CURRENT:  Backend Brain ──in-process──► DesktopHand ──► same computer
+TARGET:   Backend Brain ──network protocol──► RemoteDesktopHand ──► target device
+```
+
+A `RemoteDesktopHand` is **not implemented**; the interface and the import
+boundary (`hands/` imports nothing from `brain`/`hermes`/`knowledge`/`skills` —
+locked by `tests/test_brain_hand_boundary.py`) are the prepared ground. Future
+protocol work will need: authenticated, authorized request→execution→result
+semantics, pairing/registration of a device, and transport security — none of
+which exists yet.
+
+Known, documented divergences from the pure boundary: the AI chain keeps its
+own low-level control layer (AD-12, deferred) and `webbrowser.open` is called
+directly by `skills/browser` and `hermes/tools/open_website.py` (both
+validated capability surfaces, neither a second hand).
 | Conversation mode | `brain/modes.py` — skips the brain pipeline entirely | `api.py:355-360` |

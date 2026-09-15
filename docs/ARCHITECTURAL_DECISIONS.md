@@ -23,6 +23,7 @@ Status values: **ACCEPTED** (implemented) · **DEFERRED** (documented only).
 | AD-13 | Sandbox → Knowledge promotion lifecycle | DEFERRED |
 | AD-14 | AutomationEngine as a trigger-based, Sarthi-owned automation lifecycle | DEFERRED |
 | AD-15 | Unified execution-observation contract (DM-050) | DEFERRED |
+| AD-16 | Brain/Hand boundary: `Hand` interface, `DesktopHand` is the local implementation | ACCEPTED |
 
 ---
 
@@ -420,3 +421,48 @@ inconsistent feedback.
 `hermes/tools/base.ToolResult`, the hands result model and both browser
 stacks at once; the tool boundary already normalizes the Hermes-facing view
 (`ToolResult`), so the divergence is internal rather than user-visible.
+
+---
+
+## AD-16 — Brain/Hand boundary: the `Hand` interface
+
+**Problem**: the architectural rule "Backend = Brain, Desktop = Hand" was
+real in the code (the Brain never touches the OS; `hands/` holds the only
+input/process/filesystem backends) but had no named contract and no import
+lock. A future remote device hand would have had nothing concrete to
+implement, and nothing prevented a reasoning dependency from creeping into
+`hands/`.
+
+**Evidence**
+- `hands/desktop/hand.py` already exposes exactly the right surface:
+  `execute()` (allow-listed, argument-validated, structured result),
+  `capabilities()`, `find_application_process()` — called by the executor's
+  close flow, the app launcher and the standalone `desktop_agent.py` seam.
+- `grep` verified: zero `brain|hermes|knowledge|skills|api` imports under
+  `Backend/hands/`; zero `subprocess`/`os.system` under `hermes/`.
+- AI-chain's separate control layer is already adjudicated (AD-12).
+
+**Chosen**: introduce `hands/base.py::Hand` — a `runtime_checkable`
+structural Protocol with exactly the three members `DesktopHand` already
+has (`execute`, `capabilities`, `find_application_process`). No inheritance,
+no runtime indirection, no behaviour change: the executor's close handler
+now annotates `hand: Hand = get_desktop_hand()`. `DesktopHand` conforms
+(asserted at import and in tests). The local path stays in-process; a
+`RemoteDesktopHand` would implement the same contract over a network
+protocol — deliberately **not** built now.
+
+**Rejected**: (a) a `hand_manager.py`/`desktop_executor.py`-style second
+abstraction — the hand already exists and works; (b) exposing new Hand
+methods (screenshots, arbitrary shell) — no capability exists behind them;
+(c) an IPC/WebSocket server for the hand — speculative infrastructure the
+brief forbids.
+
+**Risk**: low. Typing-only change to the executor; everything else is a new
+module plus tests/docs.
+
+**Tests**: `tests/test_brain_hand_boundary.py` — protocol conformance,
+Backend-issues-through-the-interface, authority flow (explicit authorized
+action + explicit pid, observation returned), allow-list refusal,
+structured-failure contract, the `hands/` import lock (no brain modules,
+no LLM/server references), tool-bridge-only Hermes→OS path, single Hermes
+loop, single hand implementation, deterministic-vs-Hermes routing intact.

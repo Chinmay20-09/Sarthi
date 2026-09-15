@@ -9,9 +9,9 @@ The Executor maintains a registry of handlers:
     - Skill handlers (loaded from skills/ directory and registered by action)
     - Fallback: tries all registered skills when no direct handler matches
 
-OS-level execution (launching, closing) delegates to the Desktop hand
-(hands/desktop/) — Sarthi's physical execution layer. The Brain decides;
-the hand performs.
+OS-level execution (launching, closing) delegates to the Hand interface
+(hands.base.Hand; local implementation: hands/desktop/) — Sarthi's
+physical execution layer. The Brain decides; the hand performs.
 """
 
 import logging
@@ -285,6 +285,7 @@ class BrainExecutor:
                 if not target:
                     return {"success": False, "status": "error", "error": "No target specified"}
 
+                from hands.base import Hand
                 from hands.desktop import get_desktop_hand
                 from knowledge.manager import get_manager as get_knowledge_manager
 
@@ -298,7 +299,10 @@ class BrainExecutor:
                     }
 
                 exe_name = Path(app.get("path", "")).name
-                hand = get_desktop_hand()
+                # Program against the Hand interface, not the concrete local
+                # hand — the Brain issues authorized actions; the hand (local
+                # today, remote tomorrow) performs them and reports back.
+                hand: Hand = get_desktop_hand()
                 matched = hand.find_application_process(exe_name)
                 if matched is None:
                     return {
