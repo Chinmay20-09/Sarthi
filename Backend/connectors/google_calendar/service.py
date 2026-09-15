@@ -1,7 +1,7 @@
 """
 Google Calendar API service — fetches real calendar data.
 
-Uses the Google Calendar API v3 via httpx (no google-api-python-client dependency
+Uses the Google Calendar API v3 via httpx2 (no google-api-python-client dependency
 for the API calls themselves — only google-auth-oauthlib is needed for the OAuth flow).
 """
 
@@ -9,7 +9,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-import httpx
+import httpx2
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ def list_upcoming_events(
 
         url = f"{CALENDAR_API_BASE}/calendars/{calendar_id}/events"
 
-        resp = httpx.get(url, headers=headers, params=params, timeout=30)
+        resp = httpx2.get(url, headers=headers, params=params, timeout=30)
         resp.raise_for_status()
         data = resp.json()
 
@@ -73,7 +73,7 @@ def list_upcoming_events(
 
         return {"success": True, "events": events}
 
-    except httpx.HTTPStatusError as e:
+    except httpx2.HTTPStatusError as e:
         status = e.response.status_code
         if status == 401:
             return {"success": False, "error": "Token expired — please reconnect", "events": []}
@@ -95,7 +95,7 @@ def get_calendar_info(token_data: dict) -> dict[str, Any]:
     try:
         headers = _headers(token_data)
         url = f"{CALENDAR_API_BASE}/calendars/primary"
-        resp = httpx.get(url, headers=headers, timeout=30)
+        resp = httpx2.get(url, headers=headers, timeout=30)
         resp.raise_for_status()
         data = resp.json()
         return {

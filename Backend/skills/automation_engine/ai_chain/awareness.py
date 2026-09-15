@@ -131,7 +131,7 @@ _local_provider_instance = None
 
 
 def _local_provider():
-    """The cached local Ollama Hermes provider (shared httpx client).
+    """The cached local Ollama Hermes provider (shared httpx2 client).
 
     Built through the provider registry so the ai_chain depends on the
     configured Hermes provider stack, never on a concrete adapter import.

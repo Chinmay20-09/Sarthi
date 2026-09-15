@@ -10,7 +10,7 @@ requires-python = ">=3.10"
 dependencies = [
     "fastapi",
     "uvicorn",
-    "httpx",
+    "httpx2",
     "python-dotenv",
     "pillow",
     "psutil",

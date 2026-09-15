@@ -11,7 +11,7 @@ HTTP responses, and adapter clients are monkeypatched so nothing reaches
 the network.
 """
 
-import httpx
+import httpx2
 import pytest
 from hermes.config.settings import HermesConfig
 from hermes.models import ModelRequest, Task
@@ -35,7 +35,7 @@ from hermes.providers.registry import (
 
 
 class FakeOllamaResponse:
-    """Stand-in for httpx.Response with Ollama's chat payload."""
+    """Stand-in for httpx2.Response with Ollama's chat payload."""
 
     def __init__(self, content: str = "Hello from Ollama"):
         self._content = content
@@ -48,7 +48,7 @@ class FakeOllamaResponse:
 
 
 class FakeOpenAIResponse:
-    """Stand-in for httpx.Response with a chat-completions payload."""
+    """Stand-in for httpx2.Response with a chat-completions payload."""
 
     def __init__(self, content: str = "Hello", usage: dict | None = None):
         self._content = content
@@ -61,8 +61,8 @@ class FakeOpenAIResponse:
         return {"choices": [{"message": {"content": self._content}}], "usage": self._usage}
 
 
-def _timeout_error() -> httpx.ReadTimeout:
-    return httpx.ReadTimeout("timed out", request=httpx.Request("POST", "http://example.test"))
+def _timeout_error() -> httpx2.ReadTimeout:
+    return httpx2.ReadTimeout("timed out", request=httpx2.Request("POST", "http://example.test"))
 
 
 class CaptureProvider(AIProvider):
@@ -244,9 +244,9 @@ def test_openai_compatible_error_mapping(monkeypatch):
     provider = _openai_provider()
 
     def raise_status(url, **kwargs):
-        request = httpx.Request("POST", url)
-        raise httpx.HTTPStatusError(
-            "Not Found", request=request, response=httpx.Response(404, request=request)
+        request = httpx2.Request("POST", url)
+        raise httpx2.HTTPStatusError(
+            "Not Found", request=request, response=httpx2.Response(404, request=request)
         )
 
     monkeypatch.setattr(provider._client, "post", raise_status)
@@ -271,7 +271,7 @@ def test_openai_compatible_connection_error_maps_to_error(monkeypatch):
     provider = _openai_provider()
 
     def raise_connect(url, **kwargs):
-        raise httpx.ConnectError("refused")
+        raise httpx2.ConnectError("refused")
 
     monkeypatch.setattr(provider._client, "post", raise_connect)
     response = provider.generate(ModelRequest(prompt="hi"))

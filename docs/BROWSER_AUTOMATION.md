@@ -57,7 +57,7 @@ recommendations.
 | Playwright | — | ✓ fallback | ✓ fallback reader |
 | BeautifulSoup | — | ✓ | ✓ |
 | PyAutoGUI | — | — | ✓ (input) + hands/desktop input |
-| requests | — | — | — (httpx used elsewhere) |
+| requests | — | — | — (httpx2 used elsewhere) |
 | screenshots | — | — | — (reads DOM, not pixels) |
 | coordinates | — | — | window-fraction points derived from DOM boxes (legacy fallback: estimates + grid scan) |
 

@@ -61,7 +61,7 @@ class TestRequestConstruction:
             captured["json"] = json
             return FakeHttpResponse(200, successful_body())
 
-        monkeypatch.setattr(client_backend.httpx, "post", fake_post)
+        monkeypatch.setattr(client_backend.httpx2, "post", fake_post)
         result = client_backend.send_query("open chrome", base_url="http://127.0.0.1:8000")
 
         assert captured["url"] == "http://127.0.0.1:8000/command"
@@ -76,7 +76,7 @@ class TestRequestConstruction:
             seen["url"] = url
             return FakeHttpResponse(200, successful_body())
 
-        monkeypatch.setattr(client_backend.httpx, "post", fake_post)
+        monkeypatch.setattr(client_backend.httpx2, "post", fake_post)
         client_backend.send_query("hi", base_url="http://127.0.0.1:8000/")
         assert seen["url"] == "http://127.0.0.1:8000/command"
 
@@ -89,7 +89,7 @@ class TestRequestConstruction:
 class TestResponseHandling:
     def test_success_envelope_fields(self, monkeypatch):
         monkeypatch.setattr(
-            client_backend.httpx,
+            client_backend.httpx2,
             "post",
             lambda *a, **k: FakeHttpResponse(200, successful_body()),
         )
@@ -101,14 +101,14 @@ class TestResponseHandling:
     def test_success_false_still_parsed(self, monkeypatch):
         body = successful_body(success=False, response="Please enter a command.")
         monkeypatch.setattr(
-            client_backend.httpx, "post", lambda *a, **k: FakeHttpResponse(200, body)
+            client_backend.httpx2, "post", lambda *a, **k: FakeHttpResponse(200, body)
         )
         result = client_backend.send_query("")
         assert result["success"] is False
         assert result["response"] == "Please enter a command."
 
     def test_http_error_status_is_structured_failure(self, monkeypatch):
-        monkeypatch.setattr(client_backend.httpx, "post", lambda *a, **k: FakeHttpResponse(422))
+        monkeypatch.setattr(client_backend.httpx2, "post", lambda *a, **k: FakeHttpResponse(422))
         result = client_backend.send_query("open chrome")
         assert result["success"] is False
         assert result["error"] == "bad_response"
@@ -116,7 +116,7 @@ class TestResponseHandling:
 
     def test_non_json_body_is_structured_failure(self, monkeypatch):
         monkeypatch.setattr(
-            client_backend.httpx,
+            client_backend.httpx2,
             "post",
             lambda *a, **k: FakeHttpResponse(200, not_json=True),
         )
@@ -126,14 +126,14 @@ class TestResponseHandling:
 
     def test_non_object_json_is_structured_failure(self, monkeypatch):
         monkeypatch.setattr(
-            client_backend.httpx, "post", lambda *a, **k: FakeHttpResponse(200, ["nope"])
+            client_backend.httpx2, "post", lambda *a, **k: FakeHttpResponse(200, ["nope"])
         )
         result = client_backend.send_query("open chrome")
         assert result["success"] is False
         assert result["error"] == "bad_response"
 
     def test_missing_fields_tolerated(self, monkeypatch):
-        monkeypatch.setattr(client_backend.httpx, "post", lambda *a, **k: FakeHttpResponse(200, {}))
+        monkeypatch.setattr(client_backend.httpx2, "post", lambda *a, **k: FakeHttpResponse(200, {}))
         result = client_backend.send_query("open chrome")
         assert result["success"] is False  # bool({}.get("success", False))
         assert result["response"] == ""
@@ -142,7 +142,7 @@ class TestResponseHandling:
     def test_legacy_text_field_used_as_response_fallback(self, monkeypatch):
         body = {"success": True, "text": "Opening Chrome.", "result": None}
         monkeypatch.setattr(
-            client_backend.httpx, "post", lambda *a, **k: FakeHttpResponse(200, body)
+            client_backend.httpx2, "post", lambda *a, **k: FakeHttpResponse(200, body)
         )
         result = client_backend.send_query("open chrome")
         assert result["response"] == "Opening Chrome."
@@ -155,12 +155,12 @@ class TestResponseHandling:
 
 class TestBackendUnavailable:
     def test_connection_error_is_structured_failure(self, monkeypatch):
-        import httpx
+        import httpx2
 
         def refused(*_a, **_k):
-            raise httpx.ConnectError("connection refused")
+            raise httpx2.ConnectError("connection refused")
 
-        monkeypatch.setattr(client_backend.httpx, "post", refused)
+        monkeypatch.setattr(client_backend.httpx2, "post", refused)
         result = client_backend.send_query("open chrome")
         assert result["success"] is False
         assert result["error"] == "unavailable"
@@ -168,12 +168,12 @@ class TestBackendUnavailable:
         assert "127.0.0.1" in result["detail"] or "backend" in result["detail"].lower()
 
     def test_timeout_is_structured_failure(self, monkeypatch):
-        import httpx
+        import httpx2
 
         def slow(*_a, **_k):
-            raise httpx.ReadTimeout("timed out")
+            raise httpx2.ReadTimeout("timed out")
 
-        monkeypatch.setattr(client_backend.httpx, "post", slow)
+        monkeypatch.setattr(client_backend.httpx2, "post", slow)
         result = client_backend.send_query("open chrome")
         assert result["success"] is False
         assert result["error"] == "unavailable"
@@ -182,7 +182,7 @@ class TestBackendUnavailable:
         def broken(*_a, **_k):
             raise OSError("network is down")
 
-        monkeypatch.setattr(client_backend.httpx, "post", broken)
+        monkeypatch.setattr(client_backend.httpx2, "post", broken)
         result = client_backend.send_query("open chrome")
         assert result["success"] is False
         assert result["error"] == "unavailable"
@@ -198,7 +198,7 @@ class TestController:
         def boom(*_a, **_k):  # pragma: no cover - must not be called
             raise AssertionError("network must not be used for an empty query")
 
-        monkeypatch.setattr(client_backend.httpx, "post", boom)
+        monkeypatch.setattr(client_backend.httpx2, "post", boom)
         result = SarthiController("http://x").send("   ")
         assert result.display_text == ""
         assert "enter a command" in result.status_text.lower()
@@ -207,7 +207,7 @@ class TestController:
         def boom(*_a, **_k):  # pragma: no cover
             raise AssertionError("network must not be used for None query")
 
-        monkeypatch.setattr(client_backend.httpx, "post", boom)
+        monkeypatch.setattr(client_backend.httpx2, "post", boom)
         result = SarthiController("http://x").send(None)
         assert result.display_text == ""
 
@@ -216,7 +216,7 @@ class TestController:
             assert json == {"query": "open chrome"}
             return FakeHttpResponse(200, successful_body())
 
-        monkeypatch.setattr(client_backend.httpx, "post", ok)
+        monkeypatch.setattr(client_backend.httpx2, "post", ok)
         result = SarthiController("http://x").send("open chrome")
         assert result.display_text == "Opening Chrome."
         assert result.status_text == "Backend: http://x"
@@ -225,14 +225,14 @@ class TestController:
         def refused(*_a, **_k):
             raise OSError("no route")
 
-        monkeypatch.setattr(client_backend.httpx, "post", refused)
+        monkeypatch.setattr(client_backend.httpx2, "post", refused)
         result = SarthiController("http://x").send("open chrome")
         assert result.display_text == ""
         assert result.status_text == client_controller.STATUS_OFFLINE
 
     def test_bad_response_renders_invalid_response_status(self, monkeypatch):
         monkeypatch.setattr(
-            client_backend.httpx,
+            client_backend.httpx2,
             "post",
             lambda *a, **k: FakeHttpResponse(200, not_json=True),
         )
@@ -243,7 +243,7 @@ class TestController:
     def test_failed_command_renders_failure_text(self, monkeypatch):
         body = successful_body(success=False, response="No matching application.")
         monkeypatch.setattr(
-            client_backend.httpx, "post", lambda *a, **k: FakeHttpResponse(200, body)
+            client_backend.httpx2, "post", lambda *a, **k: FakeHttpResponse(200, body)
         )
         result = SarthiController("http://x").send("open nosuchapp")
         assert result.display_text == "No matching application."
@@ -256,7 +256,7 @@ class TestController:
             seen["json"] = json
             return FakeHttpResponse(200, successful_body())
 
-        monkeypatch.setattr(client_backend.httpx, "post", ok)
+        monkeypatch.setattr(client_backend.httpx2, "post", ok)
         SarthiController("http://x").send("   open chrome  ")
         assert seen["json"] == {"query": "open chrome"}
 

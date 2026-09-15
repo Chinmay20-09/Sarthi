@@ -1,4 +1,4 @@
-import httpx
+import httpx2
 
 from hermes.config.settings import HermesConfig
 from hermes.models import ModelRequest, Task
@@ -27,7 +27,7 @@ class OpenAICompatibleProvider(AIProvider):
         self._config = config
         # Persistent client for connection pooling — avoids a new TCP
         # handshake on every generate() call.
-        self._client = httpx.Client(timeout=config.timeout)
+        self._client = httpx2.Client(timeout=config.timeout)
         self._endpoint = self._resolve_endpoint(config)
         self._api_key = self._resolve_api_key(config)
 
@@ -111,7 +111,7 @@ class OpenAICompatibleProvider(AIProvider):
                 text=content,
                 usage=data.get("usage"),
             )
-        except httpx.TimeoutException:
+        except httpx2.TimeoutException:
             return ProviderResponse(
                 success=False,
                 provider=self.name,
@@ -119,7 +119,7 @@ class OpenAICompatibleProvider(AIProvider):
                 text="",
                 error="Connection timeout",
             )
-        except httpx.HTTPStatusError as exc:
+        except httpx2.HTTPStatusError as exc:
             reason = exc.response.reason_phrase or ""
             message = f"HTTP {exc.response.status_code} {reason}".strip()
             return ProviderResponse(
@@ -129,7 +129,7 @@ class OpenAICompatibleProvider(AIProvider):
                 text="",
                 error=message,
             )
-        except httpx.HTTPError as exc:
+        except httpx2.HTTPError as exc:
             return ProviderResponse(
                 success=False,
                 provider=self.name,
@@ -154,7 +154,7 @@ class OpenAICompatibleProvider(AIProvider):
                 error="Unexpected error",
             )
 
-    def _post(self, request: ModelRequest) -> httpx.Response:
+    def _post(self, request: ModelRequest) -> httpx2.Response:
         """Post to the OpenAI-compatible chat completions endpoint."""
         headers = {"Content-Type": "application/json"}
         if self._api_key:

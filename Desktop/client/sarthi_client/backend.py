@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import Any
 
-import httpx
+import httpx2
 
 from .config import REQUEST_TIMEOUT, get_backend_url
 
@@ -53,8 +53,8 @@ def send_query(
     payload = build_command_payload(query)
 
     try:
-        http_response = httpx.post(url, json=payload, timeout=timeout)
-    except (httpx.HTTPError, OSError) as exc:
+        http_response = httpx2.post(url, json=payload, timeout=timeout)
+    except (httpx2.HTTPError, OSError) as exc:
         return {
             FIELD_SUCCESS: False,
             FIELD_RESPONSE: "",

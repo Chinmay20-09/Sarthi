@@ -1,6 +1,6 @@
 import logging
 
-import httpx
+import httpx2
 
 from hermes.config.settings import HermesConfig
 from hermes.models import ModelRequest, Task
@@ -27,7 +27,7 @@ class LocalHermesProvider(AIProvider):
         # CPU-only inference on large models can take 60-120s+, so we use
         # a dedicated, longer timeout for the local provider.
         local_timeout = getattr(config, "local_timeout", None) or (config.timeout * 3)
-        self._client = httpx.Client(timeout=local_timeout)
+        self._client = httpx2.Client(timeout=local_timeout)
 
     @property
     def model(self) -> str:
@@ -85,7 +85,7 @@ class LocalHermesProvider(AIProvider):
                 model=self.model,
                 text=content,
             )
-        except httpx.TimeoutException:
+        except httpx2.TimeoutException:
             return ProviderResponse(
                 success=False,
                 provider=self.name,
@@ -93,7 +93,7 @@ class LocalHermesProvider(AIProvider):
                 text="",
                 error="Connection timeout",
             )
-        except httpx.HTTPStatusError as exc:
+        except httpx2.HTTPStatusError as exc:
             reason = self._error_reason(exc.response)
             return ProviderResponse(
                 success=False,
@@ -102,7 +102,7 @@ class LocalHermesProvider(AIProvider):
                 text="",
                 error=reason,
             )
-        except httpx.HTTPError as exc:
+        except httpx2.HTTPError as exc:
             return ProviderResponse(
                 success=False,
                 provider=self.name,
@@ -127,7 +127,7 @@ class LocalHermesProvider(AIProvider):
                 error="Unexpected error",
             )
 
-    def _post(self, request: ModelRequest) -> httpx.Response:
+    def _post(self, request: ModelRequest) -> httpx2.Response:
         """Post to Ollama chat API."""
         url = f"{self._config.local_hermes_url}/api/chat"
         headers = {
@@ -147,7 +147,7 @@ class LocalHermesProvider(AIProvider):
         return self._client.post(url, headers=headers, json=payload)
 
     @staticmethod
-    def _error_reason(response: httpx.Response) -> str:
+    def _error_reason(response: httpx2.Response) -> str:
         """Build a readable error message, including Ollama's error body when present."""
         message = f"HTTP {response.status_code} {response.reason_phrase or ''}".strip()
         try:

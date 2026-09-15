@@ -21,7 +21,7 @@ IMPLEMENTED, PARTIAL, PLANNED, EXPERIMENTAL, UNUSED.
 | Hermes tools (open app/website, close, search web, browser_ask, history/memory/project/github/personal context) | Yes | agent loop | hermes/tools/* (10 tools) | delegate to skills/connectors | test_hermes_tools | IMPLEMENTED |
 | Long-term memory (/remember /recall /forget) | Yes | slash commands | brain/executor memory handlers, knowledge/memory | SQLite | test_chat_memory_api | IMPLEMENTED |
 | Conversation history (session store, chat UI persistence) | Yes | /hermes/chat, /chat | hermes/conversation.py, api /chat endpoints | SQLite | test_conversation_history, test_chat_memory_api | IMPLEMENTED |
-| Project tracker (GitHub-backed projects + prompts) | Yes | project_tracker skill, /projects API | skills/project_tracker/* | httpx, GitHub API | test_project_tracker, test_projects_api | IMPLEMENTED |
+| Project tracker (GitHub-backed projects + prompts) | Yes | project_tracker skill, /projects API | skills/project_tracker/* | httpx2, GitHub API | test_project_tracker, test_projects_api | IMPLEMENTED |
 | Google Calendar connector | Yes | /connectors endpoints | connectors/google_calendar/* | google-auth-oauthlib | test_connectors | IMPLEMENTED (single connector) |
 | Voice input (record + whisper STT) | Yes | POST /listen, main.py CLI | speech/, skills/speech | sounddevice, faster-whisper | test_recorder, test_stt | IMPLEMENTED |
 | Voice output (TTS announcements + spoken replies) | Yes | event bus, automation | utils/voice, utils/spoken_replies | pywin32 SAPI / PowerShell | test_spoken_replies | IMPLEMENTED |

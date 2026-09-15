@@ -4,7 +4,7 @@ Sits between the GUI (presentation) and the backend module (network).
 Responsibilities: validate input, trigger the send, translate the
 structured result into a display line and a status message.
 
-No tkinter here and no httpx here — this file stays testable without a
+No tkinter here and no httpx2 here — this file stays testable without a
 display and without a network.
 """
 

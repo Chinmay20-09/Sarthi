@@ -1,13 +1,13 @@
 """Tests for LocalHermesProvider (Ollama), verifying it uses the local model name."""
 
-import httpx
+import httpx2
 from hermes.config.settings import HermesConfig
 from hermes.models import Task
 from hermes.providers.local_provider import LocalHermesProvider
 
 
 class FakeOllamaResponse:
-    """Minimal stand-in for httpx.Response with a successful chat payload."""
+    """Minimal stand-in for httpx2.Response with a successful chat payload."""
 
     def __init__(self, content: str = "Hello from Ollama"):
         self._content = content
@@ -23,9 +23,9 @@ def _make_response_success() -> FakeOllamaResponse:
     return FakeOllamaResponse()
 
 
-def _make_response_404() -> httpx.Response:
-    request = httpx.Request("POST", "http://localhost:11434/api/chat")
-    return httpx.Response(
+def _make_response_404() -> httpx2.Response:
+    request = httpx2.Request("POST", "http://localhost:11434/api/chat")
+    return httpx2.Response(
         404, request=request, json={"error": "model 'x' not found, try pulling it first"}
     )
 
@@ -84,8 +84,8 @@ def test_404_reports_ollama_error_body(monkeypatch):
     provider = LocalHermesProvider(config)
 
     def fake_post(url, **kwargs):
-        request = httpx.Request("POST", url)
-        raise httpx.HTTPStatusError("Not Found", request=request, response=_make_response_404())
+        request = httpx2.Request("POST", url)
+        raise httpx2.HTTPStatusError("Not Found", request=request, response=_make_response_404())
 
     monkeypatch.setattr(provider._client, "post", fake_post)
 
@@ -97,9 +97,9 @@ def test_404_reports_ollama_error_body(monkeypatch):
     assert "model 'x' not found" in response.error
 
 
-def _timeout_error(url: str) -> httpx.ReadTimeout:
-    """A ReadTimeout shaped like httpx raises on an over-budget generation."""
-    return httpx.ReadTimeout("timed out", request=httpx.Request("POST", url))
+def _timeout_error(url: str) -> httpx2.ReadTimeout:
+    """A ReadTimeout shaped like httpx2 raises on an over-budget generation."""
+    return httpx2.ReadTimeout("timed out", request=httpx2.Request("POST", url))
 
 
 def test_retries_once_on_timeout_then_succeeds(monkeypatch):
@@ -154,8 +154,8 @@ def test_non_timeout_errors_are_not_retried(monkeypatch):
 
     def fake_post(url, **kwargs):
         calls["n"] += 1
-        request = httpx.Request("POST", url)
-        raise httpx.HTTPStatusError("Not Found", request=request, response=_make_response_404())
+        request = httpx2.Request("POST", url)
+        raise httpx2.HTTPStatusError("Not Found", request=request, response=_make_response_404())
 
     monkeypatch.setattr(provider._client, "post", fake_post)
 

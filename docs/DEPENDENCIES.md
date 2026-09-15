@@ -9,7 +9,7 @@ Sources: `pyproject.toml`, actual imports in `Backend/` and
 | --- | --- | --- | --- |
 | fastapi | yes | api.py, routes | runtime |
 | uvicorn | yes | api.py server start, sarthi.bat background mode | runtime |
-| httpx | yes | Desktop client backend.py, project_tracker github/notion, connectors | runtime |
+| httpx2 | yes | Desktop client backend.py, project_tracker github/notion, connectors | runtime |
 | python-dotenv | yes | hermes/config/loader.py | runtime |
 | pystray | **removed** | no import anywhere; declared but unused | removed in the 2026-09-14 pass (AD-06) |
 | pillow | yes | api.py (dashboard image generation in test runner) | runtime |
@@ -50,8 +50,8 @@ Sources: `pyproject.toml`, actual imports in `Backend/` and
 | pytest | tests/ | dev |
 
 **Also observed in the environment but not declared**: pytest-cov plugins not
-present; `httpx2` referenced only by a starlette deprecation warning (not a
-dependency of this project).
+present. (The `httpx`-vs-`httpx2` starlette TestClient deprecation warning was
+resolved by migrating the project to `httpx2` in September 2026.)
 
 ## System dependencies
 
@@ -66,7 +66,7 @@ dependency of this project).
 
 ## Client (Desktop) dependencies
 
-tkinter (stdlib) + httpx only — verified: `Desktop/client/sarthi_client/`
+tkinter (stdlib) + httpx2 only — verified: `Desktop/client/sarthi_client/`
 imports nothing else from third parties.
 
 ## Summary counts

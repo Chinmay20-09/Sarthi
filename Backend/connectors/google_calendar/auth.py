@@ -250,7 +250,7 @@ def exchange_code(code: str, client_config: dict) -> dict[str, Any]:
     Returns:
         Dict with token data or error.
     """
-    import httpx
+    import httpx2
 
     client_info = client_config.get("installed") or client_config.get("web", {})
 
@@ -263,7 +263,7 @@ def exchange_code(code: str, client_config: dict) -> dict[str, Any]:
     }
 
     try:
-        resp = httpx.post(
+        resp = httpx2.post(
             "https://oauth2.googleapis.com/token",
             data=data,
             timeout=30,
@@ -273,7 +273,7 @@ def exchange_code(code: str, client_config: dict) -> dict[str, Any]:
         # Store the token
         store_token(token_data)
         return {"success": True, "token": token_data}
-    except httpx.HTTPStatusError as e:
+    except httpx2.HTTPStatusError as e:
         logger.error(f"Token exchange failed: {e.response.status_code} {e.response.text}")
         return {"success": False, "error": f"Token exchange failed: {e.response.status_code}"}
     except Exception as e:
@@ -290,7 +290,7 @@ def refresh_token(client_config: dict) -> dict[str, Any] | None:
     Returns:
         Updated token dict or None if refresh failed.
     """
-    import httpx
+    import httpx2
 
     token_data = load_stored_token()
     if not token_data or "refresh_token" not in token_data:
@@ -306,7 +306,7 @@ def refresh_token(client_config: dict) -> dict[str, Any] | None:
     }
 
     try:
-        resp = httpx.post(
+        resp = httpx2.post(
             "https://oauth2.googleapis.com/token",
             data=data,
             timeout=30,

@@ -46,7 +46,7 @@ BACKEND_INTERNALS = {
 }
 
 # Modules the client's GUI/controller may use for its own presentation.
-ALLOWED_STDLIB_AND_THIRD_PARTY = {"tkinter", "httpx", "sarthi_client"}
+ALLOWED_STDLIB_AND_THIRD_PARTY = {"tkinter", "httpx2", "sarthi_client"}
 
 
 def _python_files(root: Path) -> list[Path]:
@@ -116,7 +116,7 @@ class TestDesktopDoesNotImportBackend:
                     )
 
     def test_http_talks_only_in_backend_module(self):
-        """Only sarthi_client/backend.py may import httpx (the network
+        """Only sarthi_client/backend.py may import httpx2 (the network
         boundary); other modules may mention it in comments/docstrings."""
         violations: list[str] = []
         for path in _python_files(DESKTOP_CLIENT_DIR):
@@ -124,9 +124,9 @@ class TestDesktopDoesNotImportBackend:
                 continue
             tree = ast.parse(path.read_text(encoding="utf-8"))
             for name in _imported_names(tree):
-                if name == "httpx":
+                if name == "httpx2":
                     violations.append(path.name)
-        assert violations == [], f"httpx imported outside backend.py: {violations}"
+        assert violations == [], f"httpx2 imported outside backend.py: {violations}"
 
     def test_client_does_not_reference_backend_paths(self):
         """No client file reaches into Backend/ via paths or subprocess.
