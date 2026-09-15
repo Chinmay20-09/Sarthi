@@ -8,7 +8,6 @@ mocked so no real laptop control is attempted.
 """
 
 import pytest
-
 from brain.intent import Intent
 from skills.automation_engine.ai_chain.awareness import (
     NO_REPLY_MARKER,
@@ -281,7 +280,6 @@ class TestFindWindow:
     def test_open_site_reports_friendly_error_when_window_missing(self, monkeypatch):
         """A browser that never appears raises a clear message, not a crash."""
         import pytest
-
         from skills.automation_engine.ai_chain import control
 
         fake = _FakeWin32Gui(windows=[], foreground=0)

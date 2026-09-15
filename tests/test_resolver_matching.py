@@ -7,7 +7,6 @@ while still resolving real apps/websites — including via aliases
 """
 
 import pytest
-
 from knowledge.entity_resolver import EntityResolver
 
 

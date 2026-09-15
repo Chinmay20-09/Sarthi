@@ -5,7 +5,6 @@ Future multi-step tests will go here.
 """
 
 import pytest
-
 from brain.context import BrainContext
 from brain.intent import Intent
 from brain.planner import Planner

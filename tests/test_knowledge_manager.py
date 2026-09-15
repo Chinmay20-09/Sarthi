@@ -9,7 +9,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from knowledge.manager import KnowledgeManager
 
 # ---------------------------------------------------------------------------
@@ -407,9 +406,8 @@ class TestFavouritesEndpoint:
         """GET /applications/favourites returns the favourite apps with metadata."""
         from unittest.mock import patch
 
-        from fastapi.testclient import TestClient
-
         from api import app
+        from fastapi.testclient import TestClient
 
         client = TestClient(app)
         fake_favourites = [
@@ -436,9 +434,8 @@ class TestFavouritesEndpoint:
         """An empty favourite list returns an empty array."""
         from unittest.mock import patch
 
-        from fastapi.testclient import TestClient
-
         from api import app
+        from fastapi.testclient import TestClient
 
         client = TestClient(app)
         with patch("api.knowledge.get_applications_by_status", return_value=[]):
@@ -456,10 +453,9 @@ class TestFavouritesEndpoint:
 class TestSearchAndSaveWebsiteEndpoint:
     def test_search_and_save_remembers_site(self, monkeypatch):
         """POST /websites/search-and-save searches and saves the site."""
-        from fastapi.testclient import TestClient
-
         import api as api_module
         from api import app
+        from fastapi.testclient import TestClient
 
         monkeypatch.setattr("api.get_test_mode", lambda: False)
 
@@ -496,9 +492,8 @@ class TestSearchAndSaveWebsiteEndpoint:
 
     def test_search_and_save_requires_name(self, monkeypatch):
         """An empty name is rejected without side effects."""
-        from fastapi.testclient import TestClient
-
         from api import app
+        from fastapi.testclient import TestClient
 
         monkeypatch.setattr("api.get_test_mode", lambda: False)
 

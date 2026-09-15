@@ -43,12 +43,13 @@ def connect_via_web_interface(client_config: dict) -> dict[str, Any]:
         Dict with success status, token data on success, error message
         otherwise — the same shape as the desktop connect flow.
     """
+    from skills.browser_awareness.driver import open_session
+
     from connectors.google_calendar.auth import (
         OAuthCallbackHandler,
         build_auth_url,
         exchange_code,
     )
-    from skills.browser_awareness.driver import open_session
 
     auth_url, _state = build_auth_url(client_config)
 

@@ -8,7 +8,6 @@ All tests use in-memory SQLite to avoid touching disk.
 from pathlib import Path
 
 import pytest
-
 from database.manager import DatabaseManager, get_database
 from database.models import ALL_TABLES
 

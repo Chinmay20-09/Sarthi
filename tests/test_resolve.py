@@ -9,7 +9,6 @@ without touching the real applications.json.
 import json
 
 import pytest
-
 from knowledge.entity_resolver import EntityResolver
 from knowledge.manager import KnowledgeManager
 

@@ -14,7 +14,6 @@ and the Brain 'browse' handler delegation.
 from pathlib import Path
 
 import pytest
-
 from brain.intent import Intent
 from brain.interpreter import interpret, interpret_many
 from skills.browser_awareness.page_snapshot import build_page_snapshot, snapshot_for_hermes
@@ -488,7 +487,6 @@ class TestLaunchProfileResolution:
 
     def test_registered_profile_is_reused(self, monkeypatch):
         from database.profiles import ensure_default_profile
-        from skills.browser_awareness import driver as driver_mod
 
         profile_dir = ensure_default_profile(self.db, profile_dir=self.tmp_path / "prof")
         session, driver = self._launch(monkeypatch)
@@ -498,7 +496,6 @@ class TestLaunchProfileResolution:
         assert driver.quit_calls == 1  # we still own this browser
 
     def test_first_run_registers_default_profile(self, monkeypatch):
-        from skills.browser_awareness import driver as driver_mod
 
         session, driver = self._launch(monkeypatch)
         user_data = self._user_data_dir(driver.options)
@@ -514,7 +511,6 @@ class TestLaunchProfileResolution:
 
     def test_env_override_wins_over_db(self, monkeypatch):
         from database.profiles import PROFILE_DIR_ENV, ensure_default_profile
-        from skills.browser_awareness import driver as driver_mod
 
         ensure_default_profile(self.db, profile_dir=self.tmp_path / "prof")
         override = self.tmp_path / "custom-profile"

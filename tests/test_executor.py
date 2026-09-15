@@ -5,7 +5,6 @@ and the fallback default handler.
 """
 
 import pytest
-
 from brain.context import BrainContext
 from brain.executor import BrainExecutor
 from brain.intent import Intent

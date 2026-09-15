@@ -11,7 +11,6 @@ and resolves XPaths over a BeautifulSoup parse, so no real browser is needed.
 import re
 
 import pytest
-
 from skills.automation_engine.ai_chain.browser_automation import (
     AmbiguousElementError,
     BrowserAutomation,

@@ -11,7 +11,6 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
-
 from speech import speech_to_text as stt
 
 SAMPLE_RATE = 16000

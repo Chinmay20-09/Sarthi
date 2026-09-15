@@ -21,6 +21,7 @@ import logging
 from typing import Any
 
 from brain.intent import Intent
+
 from skills.base import BaseSkill
 
 logger = logging.getLogger(__name__)

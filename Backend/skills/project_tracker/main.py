@@ -14,6 +14,7 @@ import os
 from typing import Any
 
 from brain.intent import Intent
+
 from skills.base import BaseSkill
 
 from .database import GitHubDatabase

@@ -15,7 +15,6 @@ from __future__ import annotations
 from unittest.mock import patch
 
 import pytest
-
 from utils import spoken_replies
 from utils.spoken_replies import (
     VOICE_REPLIES_KEY,

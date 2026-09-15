@@ -19,9 +19,10 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from skills.base import BaseSkill
+
 from brain.context import BrainContext
 from brain.intent import Intent
-from skills.base import BaseSkill
 
 logger = logging.getLogger(__name__)
 

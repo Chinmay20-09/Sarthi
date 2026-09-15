@@ -11,10 +11,9 @@ each request, so the patch is picked up per-request.
 """
 
 import pytest
-from fastapi.testclient import TestClient
-
 from api import app
 from database.manager import DatabaseManager
+from fastapi.testclient import TestClient
 
 
 @pytest.fixture()

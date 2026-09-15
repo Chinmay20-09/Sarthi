@@ -21,13 +21,14 @@ import logging
 from datetime import datetime
 from typing import Any
 
+from knowledge.entity_resolver import EntityResolver
+
 from brain.context import BrainContext
 from brain.executor import BrainExecutor
 from brain.intent import Intent
 from brain.interpreter import interpret_many
 from brain.planner import Planner
 from brain.response import BrainResponse, step_payload
-from knowledge.entity_resolver import EntityResolver
 
 logger = logging.getLogger(__name__)
 

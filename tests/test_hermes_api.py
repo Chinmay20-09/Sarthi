@@ -3,9 +3,8 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi.testclient import TestClient
-
 from api import app
+from fastapi.testclient import TestClient
 from hermes.providers.base import ProviderResponse
 
 client = TestClient(app)

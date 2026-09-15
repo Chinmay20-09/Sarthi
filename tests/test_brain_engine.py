@@ -9,7 +9,6 @@ Uses dependency injection to provide mock components for isolated testing.
 from typing import Any
 
 import pytest
-
 from brain.context import BrainContext
 from brain.engine import BrainEngine
 from brain.executor import BrainExecutor

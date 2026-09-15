@@ -6,10 +6,9 @@ returns to default mode where commands run normally.
 """
 
 import pytest
-from fastapi.testclient import TestClient
-
 from api import app
 from brain.modes import CONVERSATION_MODE, DEFAULT_MODE, detect_mode_command, get_mode, set_mode
+from fastapi.testclient import TestClient
 from hermes.providers.base import ProviderResponse
 
 

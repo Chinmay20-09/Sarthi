@@ -7,11 +7,10 @@ reset untouched in the database.
 """
 
 import pytest
-from fastapi.testclient import TestClient
-
 from api import app
 from database.manager import DatabaseManager
 from database.models import CREATE_CONVERSATION_MESSAGES
+from fastapi.testclient import TestClient
 from knowledge.memory import KnowledgeMemory
 
 

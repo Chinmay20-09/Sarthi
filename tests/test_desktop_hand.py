@@ -18,7 +18,6 @@ import logging
 from pathlib import Path
 
 import pytest
-
 from hands.desktop import DesktopHand
 from hands.desktop.capabilities import ACTIONS, CAPABILITIES, PLANNED_CAPABILITIES, action_spec
 from hands.desktop.filesystem import FilesystemBackend, FilesystemScopeError

@@ -12,7 +12,6 @@ Covers:
 from typing import Any
 
 import pytest
-
 from brain.engine import BrainEngine
 from brain.intent import Intent
 from brain.interpreter import interpret, interpret_many, split_queries

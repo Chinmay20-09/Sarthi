@@ -15,6 +15,7 @@ from typing import Any
 
 from brain.intent import Intent
 from brain.modes import get_test_mode
+
 from skills.base import BaseSkill
 
 logger = logging.getLogger(__name__)

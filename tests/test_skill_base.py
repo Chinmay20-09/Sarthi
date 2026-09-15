@@ -7,7 +7,6 @@ Every skill must inherit from BaseSkill and implement execute(intent).
 from typing import Any
 
 import pytest
-
 from brain.intent import Intent
 from skills.base import BaseSkill
 

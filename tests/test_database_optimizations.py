@@ -17,7 +17,6 @@ import threading
 from pathlib import Path
 
 import pytest
-
 from database.manager import DatabaseManager
 from database.models import ALL_INDEXES, ALL_TABLES
 

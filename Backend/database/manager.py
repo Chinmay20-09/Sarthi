@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any
 
 from config import PROJECT_ROOT
+
 from database.models import ALL_INDEXES, ALL_TABLES
 
 logger = logging.getLogger(__name__)

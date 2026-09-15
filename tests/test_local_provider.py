@@ -1,7 +1,6 @@
 """Tests for LocalHermesProvider (Ollama), verifying it uses the local model name."""
 
 import httpx
-
 from hermes.config.settings import HermesConfig
 from hermes.models import Task
 from hermes.providers.local_provider import LocalHermesProvider

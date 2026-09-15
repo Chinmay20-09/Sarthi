@@ -247,7 +247,6 @@ class TestWebInterfaceConnect:
             assert "credentials" in result["error"].lower()
 
     def test_connect_via_web_interface_opens_session_and_exchanges(self):
-        from connectors.google_calendar import connector_web
         from connectors.google_calendar.connector import GoogleCalendarConnector
 
         gc = GoogleCalendarConnector()
@@ -372,10 +371,9 @@ class TestWebInterfaceConnect:
 
 class TestWebInterfaceEndpoint:
     def test_connect_web_endpoint_error_passthrough(self):
-        from fastapi.testclient import TestClient
-
         from api import app
         from connectors.registry import get_registry
+        from fastapi.testclient import TestClient
 
         gc = get_registry().get("google_calendar")
         with patch.object(
@@ -440,9 +438,8 @@ class TestAuthTokenManagement:
 
 class TestConnectorAPIEndpoints:
     def test_list_connectors(self):
-        from fastapi.testclient import TestClient
-
         from api import app
+        from fastapi.testclient import TestClient
 
         client = TestClient(app)
         response = client.get("/connectors")
@@ -452,9 +449,8 @@ class TestConnectorAPIEndpoints:
         assert "connectors" in data
 
     def test_connector_registry_endpoint(self):
-        from fastapi.testclient import TestClient
-
         from api import app
+        from fastapi.testclient import TestClient
 
         client = TestClient(app)
         response = client.get("/connectors/registry")
@@ -466,9 +462,8 @@ class TestConnectorAPIEndpoints:
         assert "google_calendar" in ids
 
     def test_google_calendar_status(self):
-        from fastapi.testclient import TestClient
-
         from api import app
+        from fastapi.testclient import TestClient
 
         client = TestClient(app)
         response = client.get("/connectors/google_calendar/status")
@@ -479,9 +474,8 @@ class TestConnectorAPIEndpoints:
         assert "status" in data
 
     def test_google_calendar_events_not_connected(self):
-        from fastapi.testclient import TestClient
-
         from api import app
+        from fastapi.testclient import TestClient
 
         client = TestClient(app)
         response = client.get("/connectors/google_calendar/events")
@@ -491,9 +485,8 @@ class TestConnectorAPIEndpoints:
         assert data["success"] is False
 
     def test_google_calendar_disconnect(self):
-        from fastapi.testclient import TestClient
-
         from api import app
+        from fastapi.testclient import TestClient
 
         client = TestClient(app)
         response = client.post("/connectors/google_calendar/disconnect")
@@ -502,9 +495,8 @@ class TestConnectorAPIEndpoints:
         assert data["success"] is True
 
     def test_add_and_delete_connector(self):
-        from fastapi.testclient import TestClient
-
         from api import app
+        from fastapi.testclient import TestClient
 
         client = TestClient(app)
 
@@ -534,9 +526,8 @@ class TestConnectorAPIEndpoints:
         assert response.json()["success"] is True
 
     def test_existing_command_still_works(self):
-        from fastapi.testclient import TestClient
-
         from api import app
+        from fastapi.testclient import TestClient
 
         client = TestClient(app)
         response = client.post("/command", json={"text": "hello"})

@@ -9,10 +9,9 @@ Security guarantees under test:
     - Hermes can discover and invoke the tool through the registry
 """
 
-from fastapi.testclient import TestClient
-
 from brain.intent import Intent
 from database.manager import DatabaseManager
+from fastapi.testclient import TestClient
 from hermes.tool_registry import ToolRegistry
 from hermes.tools import PersonalContextTool
 from hermes.tools.base import ToolResult

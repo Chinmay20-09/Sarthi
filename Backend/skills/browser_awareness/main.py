@@ -24,8 +24,9 @@ from typing import Any
 
 from brain.intent import Intent
 from brain.modes import get_test_mode
-from skills.base import BaseSkill
 from utils.logger import get_logger
+
+from skills.base import BaseSkill
 
 from .manager import BrowserAwarenessManager
 

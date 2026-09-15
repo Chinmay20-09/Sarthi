@@ -13,10 +13,9 @@ behavior that used to break.
 
 import uuid
 
-from fastapi.testclient import TestClient
-
 from api import app
 from database.manager import get_database
+from fastapi.testclient import TestClient
 
 client = TestClient(app)
 
