@@ -23,10 +23,17 @@ class DesktopRequest(BaseModel):
     Actions are validated against the hand's registered capability map
     before anything runs; unknown actions and malformed arguments are
     rejected without touching Windows.
+
+    ``target`` is the optional human-facing label the local hand already
+    accepts (e.g. "chrome") — carried into the result for display, never
+    used for routing. This is also the wire format of the Desktop Agent
+    IPC transport (``hands/transport.py`` ↔ ``desktop_agent.py --server``):
+    JSON of exactly this model.
     """
 
     action: str = Field(min_length=1)
     args: dict[str, Any] = Field(default_factory=dict)
+    target: str | None = None
 
 
 class DesktopResult(BaseModel):

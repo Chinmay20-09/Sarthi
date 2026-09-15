@@ -286,7 +286,7 @@ class BrainExecutor:
                     return {"success": False, "status": "error", "error": "No target specified"}
 
                 from hands.base import Hand
-                from hands.desktop import get_desktop_hand
+                from hands.local import get_desktop_hand
                 from knowledge.manager import get_manager as get_knowledge_manager
 
                 app = get_knowledge_manager().find_application(target)
@@ -299,9 +299,11 @@ class BrainExecutor:
                     }
 
                 exe_name = Path(app.get("path", "")).name
-                # Program against the Hand interface, not the concrete local
-                # hand — the Brain issues authorized actions; the hand (local
-                # today, remote tomorrow) performs them and reports back.
+                # Program against the Hand interface, not the concrete hand —
+                # the Brain issues authorized actions; the hand (local
+                # in-process, or RemoteDesktopHand over the Desktop Agent IPC
+                # when SARTHI_DESKTOP_AGENT_MODE=remote) performs them and
+                # reports back. Mode choice is invisible above the boundary.
                 hand: Hand = get_desktop_hand()
                 matched = hand.find_application_process(exe_name)
                 if matched is None:

@@ -86,6 +86,9 @@ class TestHandContract:
         )
         assert "from hands.base import Hand" in executor_source
         assert "hand: Hand = get_desktop_hand()" in executor_source
+        # The seam is hands.local.get_desktop_hand — the local/remote mode
+        # resolver behind which the IPC transport hides (Brain↔Desktop Agent).
+        assert "from hands.local import get_desktop_hand" in executor_source
 
     def test_hand_contract_has_no_reasoning_surface(self):
         """The protocol exposes only perform/observe members — no interpret,

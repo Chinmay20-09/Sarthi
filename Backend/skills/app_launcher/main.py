@@ -21,6 +21,23 @@ from skills.base import BaseSkill
 logger = logging.getLogger(__name__)
 
 
+def desktop_agent_mode() -> str:
+    """Resolved desktop execution mode ("local" | "remote").
+
+    Small indirection so the skill (and tests) can read the mode without
+    constructing any hand: env var wins over the Backend/config default —
+    the same resolution order as hands/local.py.
+    """
+    import os
+
+    mode = os.environ.get("SARTHI_DESKTOP_AGENT_MODE", "").strip().lower()
+    if mode:
+        return mode
+    from config import DESKTOP_AGENT_MODE
+
+    return str(DESKTOP_AGENT_MODE).strip().lower()
+
+
 class AppLauncherSkill(BaseSkill):
     """
     Application launcher skill.
@@ -173,7 +190,9 @@ class AppLauncherSkill(BaseSkill):
 
         The Desktop hand is Sarthi's physical execution layer; this skill
         keeps its knowledge-layer responsibilities (lookup, favourites
-        gate) and delegates the OS interaction. Inside the hand:
+        gate) and delegates the OS interaction.
+
+        Local mode (default, in-process DesktopHand):
 
         - ``.exe`` targets are started directly via CreateProcess using a
           list-form Popen (shell=False): nothing is shell-parsed, so shell
@@ -182,7 +201,22 @@ class AppLauncherSkill(BaseSkill):
           URLs) can't be launched by CreateProcess, so it uses
           ``os.startfile`` (ShellExecute), which also involves no cmd.exe
           and no metacharacter parsing.
+
+        Remote mode (SARTHI_DESKTOP_AGENT_MODE=remote): the launch is
+        submitted as the registered ``open_application`` action to the
+        Desktop Agent, which runs the same logic inside its own
+        DesktopHand. Only structured, registered actions cross the IPC
+        boundary — never a raw path execution request outside the hand's
+        validation gate.
         """
+        if desktop_agent_mode() == "remote":
+            from hands.local import get_desktop_hand
+
+            result = get_desktop_hand().execute("open_application", path=app_path)
+            if not result.get("success"):
+                raise RuntimeError(result.get("message") or "Remote desktop launch failed")
+            return
+
         from hands.desktop.processes import launch_process, startfile
 
         if app_path.lower().endswith(".exe"):
