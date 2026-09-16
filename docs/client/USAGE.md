@@ -27,6 +27,10 @@ the web dashboard chat, or speak them (voice input).
 | `automate <query> from claude to grok` | Same, other supported AIs |
 | `generate assistant for <skill>` | Generates an assistant config from a skill's manifest (experimental) |
 | `clean` | Clears successful task records from the sandbox (failures are kept) |
+| `cd documents` | Changes the terminal working directory (tracked between commands) |
+| `echo hello` | Prints text (add `to notes.txt` to write it into a file) |
+| `create file notes.txt` | Creates an empty file (`create directory projects` for folders; add `with content …` to write too) |
+| `write hello world to notes.txt` | Writes text into a file (content verbatim, no trailing newline) |
 
 **Slash commands**: `/remember`, `/recall`, `/forget`, `/chain`, `/exit`,
 `/help` where applicable. Unknown input falls through to conversational
@@ -36,6 +40,34 @@ answers.
 **Compound commands**: sentences with multiple steps ("open youtube and
 search lofi") are split and executed in order; the response shows one step
 card per action.
+
+## Terminal file commands
+
+Terminal-style file operations (`terminal` skill, TERMINAL capability) —
+structured and scoped to the allowed filesystem roots (default: your home
+directory); no shell, no subprocess. The working directory (`cd`) carries
+between commands.
+
+| Command | What it does |
+| --- | --- |
+| `cd <directory>` | Change the working directory (a resolved path is returned — also serves as pwd) |
+| `echo <text>` | Print text |
+| `echo <text> to <file>` | Write text + newline into a file |
+| `create file <path>` | Create an empty file |
+| `create directory <path>` | Create a directory (one level) |
+| `create file <path> with content <text>` | Create the file AND write the text into it |
+| `write <text> to <file>` | Write text into a file (content verbatim) |
+
+Example sequence:
+
+```
+cd documents
+create file notes.txt with content hello world
+echo done to status.txt
+```
+
+Every path stays inside the allowed roots — `cd` outside them, `..` traversal
+and unknown actions are refused with a structured error message.
 
 ## Sites supported by AI chaining
 
@@ -69,7 +101,7 @@ With the backend running, open <http://127.0.0.1:8000>:
 | Knowledge | The apps/websites Sarthi knows; categorize (favourite/ignored); "Run Anyway" for gated apps; browser-search fallback remembers unknown sites |
 | Memory | The facts you saved with `/remember`; delete entries |
 | Settings | Voice replies toggle, GitHub username, etc. |
-| Skills | The 10 registered skills; enable/disable a skill at runtime |
+| Skills | The 11 registered skills; enable/disable a skill at runtime |
 
 The desktop client (tkinter app) offers the same chat/command experience in a
 native window.
@@ -102,6 +134,7 @@ native window.
   the first complex request can take a while on CPU-only machines.
 - A long search-like request that describes a *task* ("find all assignment
   PDFs and rename them") is sent to the AI agent instead of being searched
-  literally — and since Sarthi cannot manage files yet, the agent will say
-  so rather than doing it.
+  literally. The agent can now run terminal file steps (cd/echo/create/write)
+  via its `terminal` tool; broader file operations (move/copy/delete/search)
+  are still not available.
 - See [FAQ.md](FAQ.md) for known limitations and troubleshooting.

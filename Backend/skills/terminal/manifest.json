@@ -1,0 +1,16 @@
+{
+    "id": "terminal",
+    "name": "Terminal",
+    "description": "Terminal-style file commands (cd, echo, create, write) executed as structured, scoped operations through the Desktop hand — no shell, no subprocess.",
+    "version": "1.0.0",
+    "enabled": true,
+    "icon": "terminal",
+    "commands": [
+        "cd documents",
+        "echo hello",
+        "echo hello to notes.txt",
+        "create file notes.txt",
+        "create directory projects",
+        "write hello world to notes.txt"
+    ]
+}

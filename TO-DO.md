@@ -2,6 +2,10 @@ TO-DO
 
 STATUS (2026-09-16): BOTH ITEMS DONE.
 
+> ACTIVE SPRINT (2026-09-16): the current task list lives in
+> docs/agent/TASK.md — (1) IPC token auth, (2) terminal capability
+> (cd / echo / create / write).
+
 > NOTE (2026-09-16 documentation restructure): docs/ paths mentioned in the
 > historical record below (e.g. docs/ARCHITECTURE.md) were consolidated into
 > docs/dev/ and the originals archived under

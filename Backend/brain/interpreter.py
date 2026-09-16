@@ -117,6 +117,19 @@ _DETERMINISTIC_DOMAINS = frozenset(
     }
 )
 
+# Dot-RUNS ("..", "../..") must never split a sentence: they are filesystem
+# traversal segments inside terminal command paths ("cd ../..", "echo x to
+# ../../f.txt"). Splitting on them previously turned "cd ../.." into the
+# fragments "cd /" + "/" and derailed the command to the complexity router.
+# The protection is gated on a terminal-command prefix so ordinary text with
+# ellipses ("...") keeps its legacy sentence-splitting behaviour.
+_DOT_RUN_RE = re.compile(r"\.{2,}")
+_DOT_RUN_SENTINEL_RE = re.compile(r"\x01D(\d+)\x01")
+_TERMINAL_PREFIX_RE = re.compile(
+    r"^\s*(?:cd\b|echo\b|create\s+(?:file|directory|dir)\b|write\b)",
+    re.IGNORECASE,
+)
+
 # A bare domain like "example.com" or "www.example.com/path" (no scheme
 # required) — the signal that the user wants browser awareness for a site
 # the deterministic knowledge base does not cover.
@@ -156,6 +169,24 @@ _OPEN_CHAIN_RE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
+# Terminal actions (TERMINAL capability): cd / echo / create / write.
+# Exported so downstream stages (entity resolution in brain/engine.py)
+# can recognise terminal intents and leave their targets untouched.
+TERMINAL_ACTIONS = frozenset({"cd", "echo", "create", "write"})
+
+# "create file <path>" / "create directory <path>" / "create dir <path>"
+# (optionally "... with content <text>"). Explicit shapes only — a plain
+# "create a poem" is conversational, not a filesystem command.
+_CREATE_RE = re.compile(
+    r"^create\s+(?P<kind>file|directory|dir)\s+(?P<rest>.+)$",
+    re.IGNORECASE | re.DOTALL,
+)
+
+# "write <content> to <path>" needs the "to <path>" clause; a bare
+# "write a poem" stays conversational (NLP fallback) instead of failing
+# at the terminal skill with a usage error.
+_WRITE_TO_CLAUSE_RE = re.compile(r"^\s*.+?\s+to\s+\S", re.IGNORECASE | re.DOTALL)
+
 
 def _token_key(token: str) -> str:
     """Lowercased token without trailing punctuation (for keyword checks)."""
@@ -181,8 +212,23 @@ def split_queries(text: str) -> list[str]:
     """
     raw = text or ""
     protected, holder = _protect_domain_tokens(raw)
+    # Protect dot-runs ("..") BEFORE splitting — but only for terminal
+    # commands, where they are traversal segments of a path, never
+    # sentence-ending punctuation ("...").
+    dot_runs: list[str] = []
+    if _TERMINAL_PREFIX_RE.match(raw):
+
+        def _hold_dot_run(match: re.Match) -> str:
+            dot_runs.append(match.group(0))
+            return f"{_SENTINEL_CHAR}D{len(dot_runs) - 1}{_SENTINEL_CHAR}"
+
+        protected = _DOT_RUN_RE.sub(_hold_dot_run, protected)
     parts = [part for part in protected.split(".") if part.strip()]
-    return [_restore_domain_tokens(part, holder).strip() for part in parts]
+    restored = [_restore_domain_tokens(part, holder).strip() for part in parts]
+    # Re-expand the dot-run sentinels back into real '..' segments.
+    return [
+        _DOT_RUN_SENTINEL_RE.sub(lambda m: dot_runs[int(m.group(1))], part) for part in restored
+    ]
 
 
 def _protect_domain_tokens(text: str) -> tuple[str, dict[str, str]]:
@@ -271,6 +317,14 @@ def _interpret_query(text: str) -> list[Intent]:
                 )
             ]
 
+    # Terminal file commands (cd / echo / create / write): explicit command
+    # shapes only, checked before the generic scan so ACTION_WORDS and the
+    # filler-word filter ("to", "the", ...) never mangle paths or literal
+    # text ("echo hello to notes.txt" must keep its "to" clause).
+    terminal = _parse_terminal_intent(stripped)
+    if terminal is not None:
+        return [terminal]
+
     # AI chain: "run/chain/automate <query> from <AI> to <AI>" is a
     # chain command. Without this, "run <query> from chatgpt to gemini"
     # is read as an app-open (run -> open) and fails trying to launch an
@@ -331,6 +385,75 @@ def _interpret_query(text: str) -> list[Intent]:
             raw_text=stripped,
         )
     ]
+
+
+def _parse_terminal_intent(text: str) -> Intent | None:
+    """Parse terminal-style file commands (cd / echo / create / write).
+
+    Returns None for anything that is not an explicit command shape so
+    those sentences keep flowing through the generic scan (and, when
+    nothing matches there, the conversational fallback):
+
+        cd documents                        -> cd / "documents"
+        echo hello                          -> echo / "hello"
+        echo hello to notes.txt             -> echo / "hello to notes.txt"
+            (the terminal skill splits the "to <file>" clause)
+        create file notes.txt               -> create / "file notes.txt"
+        create dir projects                 -> create / "dir projects"
+        create file notes.txt with content hi -> create (skill creates + writes)
+        write hello world to notes.txt      -> write / "hello world to notes.txt"
+
+    "write a poem" (no "to <file>") and "create a website" (no
+    file/directory kind) are NOT terminal commands — they return None.
+    "cd" / "echo" alone are terminal intents with an empty target so the
+    skill can answer with its structured usage hint.
+    """
+    lowered = text.lower()
+
+    # Trailing punctuation is NOT stripped from terminal targets: sentence
+    # dots are already consumed by split_queries, and any remaining dots are
+    # part of the path/text ("cd .." must stay "..", not become ".").
+
+    # cd <path> — also "cd" alone (target "" -> the skill's usage hint).
+    if lowered == "cd" or lowered.startswith("cd "):
+        return Intent(
+            action="cd",
+            target=text[2:].strip(),
+            confidence=1.0,
+            raw_text=text,
+        )
+
+    # echo <text> [to <file>]
+    if lowered == "echo" or lowered.startswith("echo "):
+        return Intent(
+            action="echo",
+            target=text[4:].strip(),
+            confidence=1.0,
+            raw_text=text,
+        )
+
+    # create file|directory|dir <path> [with content <text>]
+    create_match = _CREATE_RE.match(text)
+    if create_match is not None:
+        kind = create_match.group("kind").lower()
+        rest = create_match.group("rest").strip()
+        return Intent(
+            action="create",
+            target=f"{kind} {rest}".strip(),
+            confidence=1.0,
+            raw_text=text,
+        )
+
+    # write <content> to <file> — requires the "to <file>" clause.
+    if lowered.startswith("write ") and _WRITE_TO_CLAUSE_RE.match(text):
+        return Intent(
+            action="write",
+            target=text[5:].strip(),
+            confidence=1.0,
+            raw_text=text,
+        )
+
+    return None
 
 
 def _parse_chain_intent(text: str) -> Intent | None:

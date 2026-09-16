@@ -68,6 +68,9 @@ class DesktopHand:
             "write_file": self._write_file,
             "delete_file": self._delete_file,
             "list_directory": self._list_directory,
+            "cd": self._cd,
+            "echo": self._echo,
+            "create": self._create,
         }
 
     # ------------------------------------------------------------------
@@ -326,6 +329,36 @@ class DesktopHand:
     def _list_directory(self, path: str) -> dict[str, Any]:
         entries = self.fs.list_directory(path)
         return {"message": f"{len(entries)} entries", "entries": entries}
+
+    # ------------------------------------------------------------------
+    # Terminal (scoped, structured — never a shell)
+    # ------------------------------------------------------------------
+
+    def _cd(self, path: str) -> dict[str, Any]:
+        resolved = self.fs.change_directory(path)
+        return {
+            "message": f"Working directory: {resolved}",
+            "cwd": str(resolved),
+            "previous_cwd": str(self.fs.get_cwd()),
+        }
+
+    def _echo(self, text: str, path: str | None = None) -> dict[str, Any]:
+        if path:
+            written, resolved = self.fs.echo_to_file(text, path)
+            return {
+                "message": f"Wrote {written} byte(s) to {resolved}",
+                "bytes_written": written,
+                "path": str(resolved),
+            }
+        return {"message": text, "text": text}
+
+    def _create(self, path: str, type: str = "file") -> dict[str, Any]:
+        resolved = self.fs.create(path, kind=type)
+        return {
+            "message": f"Created {type}: {resolved}",
+            "path": str(resolved),
+            "type": type,
+        }
 
     # ------------------------------------------------------------------
     # Brain-facing lookup helper (read-only; no reasoning lives here)

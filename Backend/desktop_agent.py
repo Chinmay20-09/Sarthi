@@ -132,6 +132,22 @@ def build_server_handler(desktop):
             except OSError:
                 pass  # client hung up mid-body — nothing left to do
 
+        def _drain_request_body(self) -> None:
+            """Discard an unread request body before an error reply.
+
+            ``send_error`` closes the connection without reading the body;
+            unread POST data then triggers a TCP reset that can kill the
+            client's read of the error response. Draining first keeps the
+            structured rejection readable (same bounded-drain policy as
+            oversized bodies).
+            """
+            try:
+                length = int(self.headers.get("Content-Length") or 0)
+            except ValueError:
+                return
+            if length > 0:
+                self._drain(length)
+
         # -- endpoint: POST /execute -----------------------------------
 
         def _handle_execute(self) -> None:
@@ -210,8 +226,10 @@ def build_server_handler(desktop):
                 if path == "/execute":
                     self._handle_execute()
                 elif path in ("/health", "/capabilities"):
+                    self._drain_request_body()
                     self.send_error(405, "Use GET for this endpoint")
                 else:
+                    self._drain_request_body()
                     self.send_error(404, f"Unknown endpoint: {path}")
             except BrokenPipeError:
                 pass
@@ -220,7 +238,7 @@ def build_server_handler(desktop):
 
         def log_message(self, format: str, *args) -> None:  # noqa: A002
             # Compact one-line access log with the stdlib format.
-            sys.stderr.write("[agent] %s - %s\n" % (self.address_string(), format % args))
+            sys.stderr.write(f"[agent] {self.address_string()} - {format % args}\n")
 
     return DesktopAgentHandler
 

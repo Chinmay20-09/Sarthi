@@ -12,6 +12,7 @@ Covers:
 from typing import Any
 
 import pytest
+from brain.context import BrainContext
 from brain.engine import BrainEngine
 from brain.intent import Intent
 from brain.interpreter import interpret, interpret_many, split_queries
@@ -388,3 +389,96 @@ def test_plain_search_still_works(browser_skill):
     data = result.get("result") or {}
     assert data.get("website") == "YouTube"
     assert data.get("url") == "https://www.youtube.com/results?search_query=AI"
+
+
+# ---------------------------------------------------------------------------
+# Interpreter: terminal command parsing (cd / echo / create / write)
+# ---------------------------------------------------------------------------
+
+
+class TestTerminalCommandParsing:
+    """Terminal commands reach the terminal skill via the deterministic route.
+
+    The terminal skill's execute() contract takes Intent(action="cd"|"echo"|
+    "create"|"write"). The interpreter must produce those actions from the
+    command shapes, keep filesystem targets verbatim (no filler-word or
+    entity mangling), and leave conversational sentences alone.
+    """
+
+    @pytest.mark.parametrize(
+        ("text", "action", "target"),
+        [
+            ("cd documents", "cd", "documents"),
+            ("cd ..", "cd", ".."),
+            ("cd ../..", "cd", "../.."),
+            ("cd C:/Windows", "cd", "C:/Windows"),
+            ("cd", "cd", ""),
+            ("echo hello", "echo", "hello"),
+            ("echo hello to notes.txt", "echo", "hello to notes.txt"),
+            ("echo done.", "echo", "done"),
+            ("create file notes.txt", "create", "file notes.txt"),
+            ("create directory projects", "create", "directory projects"),
+            ("create dir projects", "create", "dir projects"),
+            (
+                "create file notes.txt with content hello world",
+                "create",
+                "file notes.txt with content hello world",
+            ),
+            ("write hello world to notes.txt", "write", "hello world to notes.txt"),
+            ("write evil to ../../evil.txt", "write", "evil to ../../evil.txt"),
+        ],
+    )
+    def test_terminal_command_shapes(self, text, action, target):
+        intents = interpret_many(text)
+        assert len(intents) == 1
+        assert intents[0].action == action
+        assert intents[0].target == target
+        assert intents[0].confidence == 1.0
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "write a poem",
+            "write me a story about dragons",
+            "create a website",
+            "create something beautiful",
+        ],
+    )
+    def test_conversational_sentences_stay_unrouted(self, text):
+        """No 'to <file>' / 'file|directory <path>' shape -> no terminal intent."""
+        intents = interpret_many(text)
+        assert all(intent.action not in ("cd", "echo", "create", "write") for intent in intents)
+
+    def test_dot_runs_survive_sentence_splitting(self):
+        """'..' inside terminal paths is traversal, not a sentence break."""
+        assert split_queries("cd ../..") == ["cd ../.."]
+        assert split_queries("write evil to ../../evil.txt") == ["write evil to ../../evil.txt"]
+
+    def test_ellipsis_splitting_unchanged(self):
+        """Non-terminal text keeps legacy dot splitting ('...' = separator)."""
+        assert split_queries("...") == []
+        assert split_queries("open chrome.") == ["open chrome"]
+
+    def test_terminal_targets_skip_entity_resolution(self):
+        """Terminal intents bypass the fuzzy resolver (paths are not entities)."""
+        engine = BrainEngine(
+            resolver=EntityResolver(entities=[{"name": "antiword", "type": "app"}]),
+            planner=Planner(),
+        )
+        plan = engine._resolve_plan(
+            [Intent(action="write", target="hello world to notes.txt")],
+            BrainContext(original_text="write hello world to notes.txt"),
+        )
+        assert plan[0].target == "hello world to notes.txt"
+
+    def test_non_terminal_targets_still_resolve(self):
+        """Non-terminal intents keep the legacy entity resolution."""
+        engine = BrainEngine(
+            resolver=EntityResolver(entities=[{"name": "antiword", "type": "app"}]),
+            planner=Planner(),
+        )
+        plan = engine._resolve_plan(
+            [Intent(action="open", target="anti wrd")],
+            BrainContext(original_text="open anti wrd"),
+        )
+        assert plan[0].target == "antiword"

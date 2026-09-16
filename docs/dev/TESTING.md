@@ -23,14 +23,14 @@ not per test. `SARTHI_TEST_VOICE=0` silences it; CI is silent by default.
 
 ## Suite facts (verified 2026-09-16)
 
-- **55 `test_*.py` files** in `tests/`, of which **49 are pytest-collected**
-  (1127 tests). The other six (test_fuzzy, test_interpreter, test_browser,
+- **56 `test_*.py` files** in `tests/`, of which **50 are pytest-collected**
+  (1172 tests). The other six (test_fuzzy, test_interpreter, test_browser,
   test_brain_assistant, test_phrase_generator, test_project_tracker) are
   manual smoke scripts with top-level code and no collected tests — running
   them by hand executes their module body.
-- **Full-suite result on 2026-09-16: `1127 passed`** in ~8.5 min
-  (earlier baselines: 1059 after the 2026-09-14 consolidation; 1021 before
-  it).
+- **Full-suite result on 2026-09-16: `1172 passed`** in ~9.9 min
+  (earlier baselines: 1127 before the terminal capability sprint;
+  1059 after the 2026-09-14 consolidation; 1021 before it).
 - Integration tests use the real app/pipeline with fakes at the network and
   hardware boundary — the suite runs headless and offline.
 - `tests/test_consolidation_routing.py` is the characterization suite for the
@@ -54,6 +54,7 @@ not per test. `SARTHI_TEST_VOICE=0` silences it; CI is silent by default.
 | Provider abstraction | test_provider_abstraction, test_local_provider, test_fallback, test_fallback_integration | fake/queued providers |
 | Pipeline boundaries | test_hermes_pipeline_integration, test_pipeline_compatibility, test_architecture_boundaries, test_consolidation_routing | locks routing + escalation + client/backend import rules |
 | Hands / Brain-Hand boundary / IPC | test_desktop_hand, test_brain_hand_boundary, test_desktop_agent_ipc | validation gate + fake actions + fake transport |
+| Terminal capability | test_terminal_capability | capability registration, scoped filesystem cwd ops (cd/echo/create), hand dispatch, terminal skill + Hermes tool bridge, end-to-end cd→create→write→echo, traversal/scope refusals, no-subprocess scan, test-mode dry-run |
 | ai_chain | test_ai_chain (dry-run plan path), test_browser_automation (DOM resolver) | no real browser/mouse in tests |
 | Browser awareness | test_browser_awareness | manager loop with injected fakes |
 | Knowledge | test_knowledge_manager, test_scanner | unit |

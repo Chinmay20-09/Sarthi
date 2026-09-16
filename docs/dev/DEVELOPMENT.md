@@ -39,7 +39,7 @@ Backend/
   config.py         central constants (paths, speech, API bind, DESKTOP_AGENT_*)
   brain/            deterministic pipeline (the Sarthi Brain)
   hermes/           LLM layer: agent loop, router, validator, tools, providers
-  skills/           10 manifest-discovered skills
+  skills/           11 manifest-discovered skills
   hands/            execution layer: base.py (Hand), desktop/ (local),
                     local.py (mode selection), remote.py + transport.py (IPC)
   knowledge/        apps/websites JSON store + entity resolver + memory
@@ -54,7 +54,7 @@ Backend/
 Desktop/
   client/sarthi_client/   tkinter client (HTTP-only boundary in backend.py)
   run.py            dev launcher; dist/sarthi.exe = packaged client
-tests/              55 test files (49 pytest-collected); see TESTING.md
+tests/              56 test files (50 pytest-collected); see TESTING.md
 docs/               client/ dev/ agent/ archive/
 flutter/, apk/      reserved placeholders — nothing implemented
 start.bat           root launcher delegating to Backend\sarthi.bat

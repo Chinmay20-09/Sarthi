@@ -17,6 +17,7 @@ from .open_website import OpenWebsiteTool
 from .personal_context import PersonalContextTool
 from .project_get import ProjectGetTool
 from .search_web import SearchWebTool
+from .terminal import TerminalTool
 
 __all__ = [
     "BaseTool",
@@ -31,6 +32,7 @@ __all__ = [
     "HistorySearchTool",
     "MemorySearchTool",
     "ProjectGetTool",
+    "TerminalTool",
     "register_default_tools",
 ]
 
@@ -52,3 +54,4 @@ def register_default_tools(registry) -> None:
     registry.register(ProjectGetTool())
     registry.register(GitHubTool())
     registry.register(PersonalContextTool())
+    registry.register(TerminalTool())

@@ -20,9 +20,10 @@ a task-shaped sentence's only reading is a plain web search, and after a
 failure when the heuristic router calls the request complex. Hermes is one
 bounded loop (`hermes/agent.py`: retrieval → model → validated tool call,
 default 3 iterations) behind one validator and one tool registry; it never
-controls the machine directly. Ten manifest-discovered skills provide apps,
+controls the machine directly. Eleven manifest-discovered skills provide apps,
 browser, browser-awareness, project tracking, speech, scanning, personal
-context, user config, conversational fallback, and AI chaining. LLM access is
+context, user config, conversational fallback, AI chaining, and terminal file
+commands (cd/echo/create/write). LLM access is
 provider-abstracted with a local Ollama default.
 
 **Deterministic-first principle.** Sarthi (the Brain) prefers deterministic
@@ -41,7 +42,11 @@ execution belongs only to Hands — today the local `DesktopHand` behind
 - AI chaining (ChatGPT→Gemini by default; 7 sites) with dry-run planning,
   DOM-assisted locating, hands-off safety, run transcripts, sandbox records
 - Browser awareness loop for arbitrary sites (Selenium/Playwright + bs4)
-- Bounded Hermes agent with 10 whitelisted tools and hybrid retrieval
+- Bounded Hermes agent with 11 whitelisted tools and hybrid retrieval
+- Terminal capability (TERMINAL): cd/echo/create as structured hand actions
+  plus `write` mapped onto the existing write_file action; cwd tracked in
+  FilesystemBackend, every path scoped to the allowed roots (no shell, no
+  subprocess); terminal skill (11th) + Hermes terminal tool
 - Complexity router (pure heuristics) gating the fallback
 - /remember memory, session history, sandbox with /clean semantics
 - Project tracking over GitHub; Google Calendar connector (OAuth web + desktop)
@@ -84,8 +89,10 @@ execution belongs only to Hands — today the local `DesktopHand` behind
   pipeline handles them first, so the verdict never costs a model call.
 - A long search query that mentions task verbs ("…and rename them") is
   escalated to Hermes by the task-shaped gate rather than searched literally;
-  Sarthi has no filesystem/file tool yet, so Hermes can reason about such a
-  task but not execute it (AD-04).
+  since 2026-09-16 the agent can execute terminal file steps (cd/echo/
+  create/write via the TERMINAL capability and its `terminal` tool), while
+  broader file operations (move/copy/delete/search) remain unavailable (AD-04,
+  narrowed).
 - LAN exposure (0.0.0.0 bind) has no authentication — applies to both the
   FastAPI server and the Desktop Agent IPC server (documented as a
   LAN/local development boundary in `desktop_agent.py`).
@@ -111,6 +118,7 @@ archived [ARCHITECTURAL_DECISIONS.md](../archive/documentation-reset-2026-09/ARC
 | Unified execution-observation contract (`ToolResult` vs `DesktopResult` vs `InspectionResult`/`StepOutcome`) | DEFERRED (AD-15) | Cross-cutting change; the Hermes-facing view is already normalized by `ToolResult` |
 | Two browser DOM readers (browser_awareness vs ai_chain dom) | DEFERRED (AD-11) | Both working and tested; different consumers |
 | IPC: no authentication/pairing/transport security on the Desktop Agent boundary | OPEN | The boundary is new (2026-09-16); documented as LAN-local only |
+| Broader file operations (move/copy/delete/search/list) on the hand | OPEN (narrowed from AD-04) | cd/echo/create/write now exist (TERMINAL capability); the rest stay out of scope until individually reviewed |
 
 ## Removal candidates (kept for now)
 
@@ -128,7 +136,9 @@ archived [ARCHITECTURAL_DECISIONS.md](../archive/documentation-reset-2026-09/ARC
 - Unified capability registry inside the knowledge layer
 - WINDOW_CONTROL / SHELL capabilities (declared, unregistered)
 - Real multi-step planning in the brain pipeline
-- File capability so task-shaped instructions can actually be executed (AD-04)
+- Broader file capability beyond cd/echo/create/write — move/copy/delete/
+  search/list — so task-shaped instructions can be fully executed (AD-04
+  residue)
 - Authenticated/authorized IPC semantics, device pairing, transport security
 
 ## Historical forensic material

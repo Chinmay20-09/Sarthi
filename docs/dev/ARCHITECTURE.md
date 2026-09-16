@@ -26,9 +26,9 @@ authoritative mapping between the canonical model and the code.
 | **Sarthi Brain** — deterministic orchestrator | `BrainEngine` (`brain/engine.py`): interpret → plan → resolve → execute over registered skills | IMPLEMENTED | `brain/engine.py` |
 | **Hermes** — complex/model-driven orchestrator (NOT interchangeable with the Brain) | `HermesAgent` (`hermes/agent.py`): one bounded reasoning loop (retrieval → model → validated tool call), reached only when deterministic orchestration is insufficient (complexity router, task-shaped escalation) | IMPLEMENTED (escalation path) | `hermes/agent.py`, `hermes/router.py`, `api.py` fallback |
 | **Model** — a component used by the complex orchestrator | LLM access via provider manager (local Ollama default) | IMPLEMENTED | `hermes/providers/` |
-| **Skill** — capability-oriented subsystem grouping related behaviour | 10 manifest-discovered skills (see [Skills](#skills-10) below) | IMPLEMENTED (exactly these 10) | `skills/registry.py` |
-| **Tool** — specific structured operation exposed to the orchestrator (name, purpose, parameters, semantics — never arbitrary code execution) | 10 registered Hermes tools; model output is parsed (`hermes/tool_planner.py`), validated (`hermes/validator.py`) and dispatched (`hermes/tool_registry.py`) | IMPLEMENTED | `hermes/tools/` |
-| **Capability** — abstract ability required to perform an action (terminal, browser, clipboard, filesystem…) | Desktop allow-list of declared, auditable capabilities (APPLICATION_LAUNCH, WINDOW_READ, BROWSER_CONTROL, KEYBOARD, MOUSE, CLIPBOARD, FILESYSTEM_READ/WRITE, PROCESS_CONTROL); `PLANNED_CAPABILITIES` holds declared-but-unregistered ones (WINDOW_CONTROL, SHELL) | IMPLEMENTED (Desktop Hand scope) | `hands/desktop/capabilities.py` |
+| **Skill** — capability-oriented subsystem grouping related behaviour | 11 manifest-discovered skills (see [Skills](#skills-11) below) | IMPLEMENTED (exactly these 11) | `skills/registry.py` |
+| **Tool** — specific structured operation exposed to the orchestrator (name, purpose, parameters, semantics — never arbitrary code execution) | 11 registered Hermes tools; model output is parsed (`hermes/tool_planner.py`), validated (`hermes/validator.py`) and dispatched (`hermes/tool_registry.py`) | IMPLEMENTED | `hermes/tools/` |
+| **Capability** — abstract ability required to perform an action (terminal, browser, clipboard, filesystem…) | Desktop allow-list of declared, auditable capabilities (APPLICATION_LAUNCH, WINDOW_READ, BROWSER_CONTROL, KEYBOARD, MOUSE, CLIPBOARD, FILESYSTEM_READ/WRITE, PROCESS_CONTROL, TERMINAL); `PLANNED_CAPABILITIES` holds declared-but-unregistered ones (WINDOW_CONTROL, SHELL) | IMPLEMENTED (Desktop Hand scope) | `hands/desktop/capabilities.py` |
 | **Provider** — concrete implementation of a capability | No separate provider-discovery layer exists. Concrete implementations are the hand's backend modules (`hands/desktop/input.py`, `processes.py`, `windows.py`, `filesystem.py`, `browser.py`) plus browser engines (Selenium/Playwright) and AI providers. There is no runtime capability→provider→Hand registry. | PARTIAL (no discovery/registry) | `hands/desktop/` |
 | **Hand** — execution layer: receives validated structured requests, resolves the action, performs the physical operation, returns a structured result. Never reasons. | `DesktopHand` (Windows) behind the `Hand` interface (`hands/base.py`); reachable locally or over IPC via `hands/local.py::get_desktop_hand()` | IMPLEMENTED (Desktop) | `hands/desktop/hand.py`, `hands/base.py` |
 | **Memory** — private/user context (conversations, preferences, state). NOT the capability registry. | `/remember` facts (`knowledge_memory`), session history (`conversation_messages`, `chat_messages`), task sandbox | IMPLEMENTED | [Memory](#memory) |
@@ -159,7 +159,7 @@ Hermes sandbox. Details in [AI chaining](#ai-chaining) below.
 | `Backend/api.py` | FastAPI app, all HTTP endpoints, `/command` pipeline, complexity fallback | 46 routes |
 | `Backend/brain/` | Deterministic pipeline: interpreter, planner, resolver wiring, executor, response models, chat modes, wordfinder | `brain/engine.py` is the single entry point |
 | `Backend/knowledge/` | Applications/websites JSON store, fuzzy entity resolver, long-term memory, cache | `knowledge/manager.py` singleton |
-| `Backend/skills/` | 10 discoverable skills + registry (manifest-based) | `skills/registry.py` |
+| `Backend/skills/` | 11 discoverable skills + registry (manifest-based) | `skills/registry.py` |
 | `Backend/hermes/` | LLM layer: providers, orchestrator, bounded agent loop, tool bridge, router, sandbox, conversation store | `hermes/service.py` wires it |
 | `Backend/hands/` | Execution layer: `base.py` (Hand interface), `desktop/` (local Windows hand), `local.py` (mode selection), `remote.py` (IPC hand), `transport.py` (IPC client) | `hands/local.py::get_desktop_hand` |
 | `Backend/connectors/` | Third-party service connectors (Google Calendar only) + registry | `connectors/registry.py` |
@@ -170,14 +170,14 @@ Hermes sandbox. Details in [AI chaining](#ai-chaining) below.
 | `Backend/utils/` | logger, voice announcements (TTS), spoken replies responder, test telemetry | `utils/voice.py`, `utils/spoken_replies.py` |
 | `Backend/UI/` | Static dashboard (7 HTML pages + components), served at `/ui` | `api.py` |
 | `Desktop/client/` | tkinter client, HTTP-only boundary (`backend.py`), controller, GUI | `Desktop/client/sarthi_client/__init__.py` |
-| `tests/` | 55 test files, 49 pytest-collected, 1127 tests (see [TESTING.md](TESTING.md)) | `pyproject.toml` pythonpath |
+| `tests/` | 56 test files, 50 pytest-collected, 1172 tests (see [TESTING.md](TESTING.md)) | `pyproject.toml` pythonpath |
 
 Backend root files: `config.py` (central constants), `main.py` (voice CLI
 loop), `main-test.py` (manual smoke script), `desktop_agent.py` (standalone
 hand CLI + IPC server), `reading.py` (hardware metrics), `test_prompts.json`
 (60 prompts for `POST /test/run`), `sarthi.bat` (launcher).
 
-## Skills (10)
+## Skills (11)
 
 Discovery: `skills/registry.py` scans `Backend/skills/*/manifest.json`,
 instantiates `skills/<id>/main.py` (must export a `BaseSkill` subclass).
@@ -195,6 +195,7 @@ sorting fallback skills LAST (`fallback=True` attribute → NLP skill).
 | project_tracker | `skills/project_tracker/main.py` | GitHub-backed project tracking + prompts | executor skill walk; /projects API |
 | scanner | `skills/scanner/main.py` | Scan installed applications into the knowledge base | executor skill walk |
 | speech | `skills/speech/main.py` | Record + transcribe voice for POST /listen | api.py /listen |
+| terminal | `skills/terminal/main.py` | Terminal-style file commands — cd / echo / create / write — as structured, scoped DesktopHand actions (TERMINAL capability; no shell, no subprocess); relative paths resolve against the tracked cwd | executor skill walk; Hermes TerminalTool |
 | user_config | `skills/user_config/main.py` | Set/configure actions (e.g. github_username) | executor skill walk |
 
 Skill contract: input is always an `Intent`; output is always a plain dict —
@@ -205,9 +206,9 @@ the UI renders. Enable/disable is runtime state via `/skills/{id}/enable|disable
 
 ## Tools (the Sarthi Tool Bridge)
 
-The Hermes agent may request only tools registered in
-`hermes/tool_registry.py`; `register_default_tools` (`hermes/tools/__init__.py`)
-registers exactly these 10. Every tool delegates to an existing Sarthi
+The Hermes agent may request only tools registered in`hermes/tool_registry.py`;
+`register_default_tools` (`hermes/tools/__init__.py`)
+registers exactly these 11. Every tool delegates to an existing Sarthi
 capability — none expose shell/code execution. Arguments are validated
 (`tool_registry.validate_arguments`) and every call passes the
 `hermes/validator.py` gate before dispatch.
@@ -224,6 +225,7 @@ capability — none expose shell/code execution. Arguments are validated
 | project_get | projects/github_projects tables | Fetch user project context |
 | github | project_tracker github client | GitHub data for configured username |
 | personal_context | personal_context skill | Personal context fields |
+| terminal | terminal skill → DesktopHand TERMINAL/write_file actions | cd / echo / create / write on the user's machine — scoped, structured, no shell |
 
 Mechanics: the LLM sees `name`/`description`/`parameters` (JSON-schema subset)
 via `build_decision_instructions` (`hermes/tool_planner.py`). Model output is

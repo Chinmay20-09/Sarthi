@@ -120,6 +120,21 @@ CAPABILITIES: dict[str, Capability] = {
                 "terminate_process": {"pid": ("required", int)},
             },
         ),
+        Capability(
+            id="TERMINAL",
+            description=(
+                "Terminal-style file commands (cd/echo/create) executed as "
+                "structured, scoped operations — no shell, no subprocess."
+            ),
+            actions={
+                "cd": {"path": ("required", str)},
+                "echo": {"text": ("required", str), "path": ("optional", None)},
+                "create": {
+                    "path": ("required", str),
+                    "type": ("choices", ["file", "directory"]),
+                },
+            },
+        ),
     )
 }
 

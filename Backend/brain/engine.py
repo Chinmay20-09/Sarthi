@@ -26,7 +26,7 @@ from knowledge.entity_resolver import EntityResolver
 from brain.context import BrainContext
 from brain.executor import BrainExecutor
 from brain.intent import Intent
-from brain.interpreter import interpret_many
+from brain.interpreter import TERMINAL_ACTIONS, interpret_many
 from brain.planner import Planner
 from brain.response import BrainResponse, step_payload
 
@@ -195,11 +195,17 @@ class BrainEngine:
     # ------------------------------------------------------------------
 
     def _resolve_plan(self, plan: list[Intent], context: BrainContext) -> list[Intent]:
-        """Resolve entities for all intents in the plan."""
+        """Resolve entities for all intents in the plan.
+
+        Terminal intents (cd/echo/create/write) are exempt: their targets
+        are filesystem paths and literal text, not knowledge-base entities —
+        fuzzy resolution would corrupt them ("hello world" -> "hello
+        antiword").
+        """
         resolved = []
         resolved_any = False
         for intent in plan:
-            if intent.target:
+            if intent.target and intent.action not in TERMINAL_ACTIONS:
                 resolved_target = self.resolver.resolve(intent.target)
                 if resolved_target != intent.target:
                     resolved_any = True
