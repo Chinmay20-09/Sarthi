@@ -39,9 +39,7 @@ PDF_TASK = "Find all assignment PDFs and rename them according to subject"
 
 class TestDeterministicRouting:
     def test_open_chrome_is_deterministic(self):
-        assert [(i.action, i.target) for i in interpret_many("Open Chrome")] == [
-            ("open", "Chrome")
-        ]
+        assert [(i.action, i.target) for i in interpret_many("Open Chrome")] == [("open", "Chrome")]
         assert route_command("Open Chrome").route == "fast"
 
     def test_open_youtube_is_deterministic(self):

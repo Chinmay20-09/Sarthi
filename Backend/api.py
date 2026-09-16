@@ -1169,9 +1169,7 @@ def _save_project(
     # Duplicate names are rejected — unless it's this project keeping its own
     # (possibly re-cased) name on update.
     if (name.lower() != (current_name or "").lower()) or project_id is None:
-        clash = db.fetch_one(
-            "SELECT id FROM projects WHERE name = ? COLLATE NOCASE", (name,)
-        )
+        clash = db.fetch_one("SELECT id FROM projects WHERE name = ? COLLATE NOCASE", (name,))
         if clash and clash["id"] != project_id:
             return {
                 "success": False,
@@ -1234,13 +1232,9 @@ def update_project(project_id: int, request: ProjectUpdateRequest):
         return {"success": False, "error": f"Project not found: {project_id}"}
 
     name = request.name if request.name is not None else existing["name"]
-    github_url = (
-        request.github_url if request.github_url is not None else existing["github_url"]
-    )
+    github_url = request.github_url if request.github_url is not None else existing["github_url"]
     terminal_path = (
-        request.terminal_path
-        if request.terminal_path is not None
-        else existing["terminal_path"]
+        request.terminal_path if request.terminal_path is not None else existing["terminal_path"]
     )
     return _save_project(
         name,

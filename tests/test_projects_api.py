@@ -117,9 +117,7 @@ class TestProjectsCRUD:
         # Gone from the API...
         assert c.get(f"/projects/{pid}").json()["success"] is False
         # ...and from the database.
-        assert (
-            db.fetch_one("SELECT * FROM projects WHERE id = ?", (pid,)) is None
-        )
+        assert db.fetch_one("SELECT * FROM projects WHERE id = ?", (pid,)) is None
 
 
 # ---------------------------------------------------------------------------
@@ -221,7 +219,11 @@ class TestProjectsPersistenceAndRetrieval:
         c, _ = client
         c.post(
             "/projects",
-            json={"name": "PersistPy", "github_url": "https://github.com/u/p", "terminal_path": "C:/p"},
+            json={
+                "name": "PersistPy",
+                "github_url": "https://github.com/u/p",
+                "terminal_path": "C:/p",
+            },
         )
         # A fresh DatabaseManager over the same file = what a restart sees.
         monkeypatch.setattr(

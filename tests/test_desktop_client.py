@@ -133,7 +133,9 @@ class TestResponseHandling:
         assert result["error"] == "bad_response"
 
     def test_missing_fields_tolerated(self, monkeypatch):
-        monkeypatch.setattr(client_backend.httpx2, "post", lambda *a, **k: FakeHttpResponse(200, {}))
+        monkeypatch.setattr(
+            client_backend.httpx2, "post", lambda *a, **k: FakeHttpResponse(200, {})
+        )
         result = client_backend.send_query("open chrome")
         assert result["success"] is False  # bool({}.get("success", False))
         assert result["response"] == ""

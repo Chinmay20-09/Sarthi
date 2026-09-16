@@ -15,7 +15,7 @@ Every package and significant file, what it does, and who calls it.
 | `test_prompts.json` | 60 prompts for `POST /test/run` | api.py test runner |
 | `sarthi.bat` | Backend launcher (dev window / background mode) | user |
 
-## Backend/brain/ — deterministic pipeline
+## Backend/brain/ — deterministic pipeline (the Sarthi Brain)
 
 | Module | Purpose |
 | --- | --- |
@@ -40,7 +40,7 @@ Every package and significant file, what it does, and who calls it.
 | `cache.py` | knowledge caching |
 | `applications.json`, `websites.json` | the knowledge data itself |
 
-## Backend/hermes/ — LLM layer
+## Backend/hermes/ — LLM layer (Hermes, the complex orchestrator)
 
 | Module | Purpose |
 | --- | --- |
@@ -71,7 +71,7 @@ Ten skills with `manifest.json` + `main.py` (see SKILLS.md). Plus:
 | `base.py` | `BaseSkill` ABC (execute(intent) → dict) |
 | `automation_engine/engine.py` | Assistant registry (`register_assistant`, `run_assistant`); the unreachable `run(event)` event pipeline was removed |
 
-## Backend/hands/desktop/ — physical layer
+## Backend/hands/desktop/ — physical layer (the Desktop Hand)
 
 | Module | Purpose |
 | --- | --- |
@@ -107,6 +107,7 @@ Ten skills with `manifest.json` + `main.py` (see SKILLS.md). Plus:
 
 ## Tests
 
-`tests/` — 52 files, ~1021 tests. Layout mirrors the packages
+`tests/` — 55 files (49 pytest-collected, 1127 tests; 6 manual smoke
+scripts). Layout mirrors the packages
 (test_brain_engine, test_hermes_*, test_ai_chain, test_backend_api, ...).
 See TESTING.md.

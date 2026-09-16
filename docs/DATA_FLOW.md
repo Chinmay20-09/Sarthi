@@ -3,6 +3,14 @@
 The structures that actually cross component boundaries, with their real field
 names.
 
+> **Security boundary (canonical).** Model/Hermes decisions reach execution
+> only as structured tool/action requests: model output → `parse_tool_call`
+> → `validate_tool_call` (Brain-side validation gate, `hermes/validator.py`)
+> → capability/action resolution → Hand-side allow-list + argument validation
+> (`hands/desktop/hand.py`) → physical execution → structured result. There
+> is no path in which the model, Hermes or the Brain runs a shell, evals
+> Python, or executes arbitrary subprocesses (see §9 and TOOLS.md).
+
 ## 1. Intent — the brain's unit of work
 
 ```

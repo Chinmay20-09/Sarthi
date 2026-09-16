@@ -1,5 +1,35 @@
 TO-DO
-1.add voice feedback to all test
+
+STATUS (2026-09-16): BOTH ITEMS DONE.
+
+1. ✅ DONE (2026-09-16) — add voice feedback to all test(at last for example:"test_ai_chain.py passed" at end of each file)
+   Implemented via `tests/conftest.py` (session-wide pytest hook, no per-file
+   edits): announces "test_<file>.py passed" aloud at the end of every
+   pytest file — or "test_<file>.py failed. N tests failed." — using the
+   existing `utils/voice.announce()` (Windows SAPI → PowerShell TTS → log
+   line). One announcement per file; `SARTHI_TEST_VOICE=0` silences it; CI
+   is silent by default. Verified: full suite 1127 passed, 49 collected
+   files, hook active.
+2. ✅ DONE (2026-09-16) — implement documentation prompt:
+   Documentation aligned with the canonical architecture below. Anchor:
+   "Canonical terminology map" section added to docs/ARCHITECTURE.md
+   (canonical role → code → CURRENT/PLANNED label → evidence, plus the
+   deterministic-first principle and CURRENT-vs-TARGET topology).
+   Aligned: README, PROJECT_STATE, RUNTIME_FLOW, DATA_FLOW, AGENTS, TOOLS,
+   SKILLS, CAPABILITIES, KNOWLEDGE, MEMORY, DATABASE, TESTING, MODULE_MAP.
+   No production code modified; no implementations invented; remote
+   Hands/IPC/discovery documented as PLANNED. Contradiction audit clean
+   (historical reports kept per DOCUMENTATION_RULES.md rule 10). Tests:
+   architecture/boundary suites pass. Changed files: the 14 docs above.
+   Remaining gaps documented as PLANNED: Brain↔Hand protocol, remote
+   Hands, provider/capability discovery registry, unified capability
+   registry, SHELL/WINDOW_CONTROL capabilities, real multi-step planner.
+
+The original prompt text is preserved below unchanged as the reference.
+
+------------------------------------------------------------------------
+
+1.add voice feedback to all test(at last for example:"test_ai_chain.py passed" at end of each file)
 2.implement documentation prompt:
 Update and align the entire Sarthi documentation with the following
 canonical architecture.

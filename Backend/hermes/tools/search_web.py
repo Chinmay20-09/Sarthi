@@ -21,8 +21,7 @@ class SearchWebTool(BaseTool):
 
     name = "search_web"
     description = (
-        "Search the web for a query (opens the results in the browser and "
-        "returns the search URL)."
+        "Search the web for a query (opens the results in the browser and returns the search URL)."
     )
     parameters = {
         "type": "object",

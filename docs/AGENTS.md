@@ -3,6 +3,13 @@
 "Agent" here means a component that runs a model-driven loop until a goal is
 met. **Three** exist — and only one of them is a Hermes reasoning loop.
 
+> **Canonical role.** Hermes is the complex/model-driven orchestrator — an
+> escalation path taken when the Sarthi Brain's deterministic orchestration
+> is insufficient (complexity, ambiguity, no deterministic route). It reasons,
+> plans, selects registered tools and determines required capabilities; it
+> never executes anything itself and is not a replacement for deterministic
+> routing. See ARCHITECTURE.md "Canonical terminology map".
+
 > **2026-09-14:** the former `HermesOrchestrator + ToolPlanner` loop was
 > removed (DM-012/D-01). `HermesAgent` is the single Hermes reasoning loop;
 > `HermesOrchestrator` survives only as provider wiring + the plain-chat path.

@@ -19,6 +19,14 @@ browser-awareness, project tracking, speech, scanning, personal context,
 user config, conversational fallback, and AI chaining. LLM access is
 provider-abstracted with a local Ollama default.
 
+**Deterministic-first principle.** Sarthi (the Brain) prefers deterministic
+orchestration whenever a known, validated capability path exists; Hermes is
+the escalation path for complexity, not the default mechanism. Physical
+execution belongs only to Hands (today: the local Desktop Hand behind
+`hands/base.py`). See ARCHITECTURE.md "Canonical terminology map" for the
+CURRENT/PLANNED split (Sarthi Server, remote Hands, capability discovery:
+all PLANNED).
+
 ## Working capabilities (verified by code + passing tests)
 
 - Deterministic command pipeline with compound command support
@@ -78,8 +86,12 @@ no longer written to.
 
 ## Current tests
 
-54 files / 1059 tests, all passing (283 s). See TESTING.md for the untested
-surface (real RPA runs, real LLM/browser I/O, CLIs, /test/run).
+49 pytest-collected files / 1127 tests, all passing (~8.5 min local run,
+2026-09-16). Six further `tests/test_*.py` files are manual smoke scripts
+with no collected tests (see TESTING.md). Every pytest file announces its
+result aloud at completion (`tests/conftest.py`, SAPI/PowerShell TTS;
+`SARTHI_TEST_VOICE=0` silences it). See TESTING.md for the untested surface
+(real RPA runs, real LLM/browser I/O, CLIs, /test/run).
 
 ## Known limitations
 

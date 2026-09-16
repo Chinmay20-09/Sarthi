@@ -27,9 +27,7 @@ class TestServiceRouter:
         assert route.route == "fast"
 
     def test_complex_command_routes_hermes(self):
-        route = service_route_command(
-            "open ChatGPT and ask it to solve my Sarthi latency problem"
-        )
+        route = service_route_command("open ChatGPT and ask it to solve my Sarthi latency problem")
         assert route.route == "hermes"
 
     def test_router_mode_always_forces_hermes(self):
@@ -146,9 +144,10 @@ class TestCommandPipelineIntegration:
             "model": "fake-8b",
         }
         complex_query = "copy the response from ChatGPT and paste it into the terminal"
-        with patch("hermes.service.route_command") as mock_route, patch(
-            "hermes.service.run_task"
-        ) as mock_run_task:
+        with (
+            patch("hermes.service.route_command") as mock_route,
+            patch("hermes.service.run_task") as mock_run_task,
+        ):
             mock_route.return_value = Route(route="hermes", reason="multi_step_task")
             mock_run_task.return_value = fake_agent_result
             response = client.post("/command", json={"query": complex_query})
@@ -163,9 +162,10 @@ class TestCommandPipelineIntegration:
     def test_deterministic_success_wins_over_router(self):
         """When the pipeline succeeds, its result stands — even for a
         router-complex query (the interpreter owns open+search shapes)."""
-        with patch("hermes.service.route_command") as mock_route, patch(
-            "hermes.service.run_task"
-        ) as mock_run_task:
+        with (
+            patch("hermes.service.route_command") as mock_route,
+            patch("hermes.service.run_task") as mock_run_task,
+        ):
             mock_route.return_value = Route(route="hermes", reason="multi_step_task")
             response = client.post(
                 "/command",
@@ -180,9 +180,10 @@ class TestCommandPipelineIntegration:
 
     def test_complex_command_with_failed_agent_keeps_original(self):
         """When the agent also fails, the original deterministic result stands."""
-        with patch("hermes.service.route_command") as mock_route, patch(
-            "hermes.service.run_task"
-        ) as mock_run_task:
+        with (
+            patch("hermes.service.route_command") as mock_route,
+            patch("hermes.service.run_task") as mock_run_task,
+        ):
             mock_route.return_value = Route(route="hermes", reason="multi_step_task")
             mock_run_task.return_value = {"success": False, "text": "agent failed"}
             response = client.post(
@@ -197,9 +198,10 @@ class TestCommandPipelineIntegration:
 
     def test_hermes_exception_never_breaks_command(self):
         """A crashing Hermes path leaves /command fully functional."""
-        with patch("hermes.service.route_command") as mock_route, patch(
-            "hermes.service.run_task"
-        ) as mock_run_task:
+        with (
+            patch("hermes.service.route_command") as mock_route,
+            patch("hermes.service.run_task") as mock_run_task,
+        ):
             mock_route.return_value = Route(route="hermes", reason="multi_step_task")
             mock_run_task.side_effect = RuntimeError("hermes down")
             response = client.post(

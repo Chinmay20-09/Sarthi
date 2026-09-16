@@ -151,7 +151,13 @@ class TestHandContract:
             knowledge_manager_module,
             "get_manager",
             lambda: type(
-                "K", (), {"find_application": staticmethod(lambda t: {"name": "Chrome", "path": "C:/x/chrome.exe"})}
+                "K",
+                (),
+                {
+                    "find_application": staticmethod(
+                        lambda t: {"name": "Chrome", "path": "C:/x/chrome.exe"}
+                    )
+                },
             )(),
         )
         # Patch the package-level binding the executor's handler actually
@@ -222,7 +228,9 @@ class TestLocalHandExecution:
         from hands.desktop import DesktopHand
 
         monkeypatch.setattr(
-            process_backend, "terminate_process", lambda pid: (_ for _ in ()).throw(FileNotFoundError("gone"))
+            process_backend,
+            "terminate_process",
+            lambda pid: (_ for _ in ()).throw(FileNotFoundError("gone")),
         )
 
         result = DesktopHand().execute("close_application", target="x", pid=99)
@@ -386,4 +394,6 @@ def test_simple_commands_do_not_look_like_task_instructions(text):
 def test_task_shaped_instruction_is_flagged():
     from hermes.router import looks_like_task_instruction
 
-    assert looks_like_task_instruction("find all assignment pdfs and rename them by subject") is True
+    assert (
+        looks_like_task_instruction("find all assignment pdfs and rename them by subject") is True
+    )

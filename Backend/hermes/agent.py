@@ -224,7 +224,9 @@ class HermesAgent:
             isinstance(result, dict)
             and result.get("success") is True
             and result.get("status") in ("executed", "completed")
-            and not (isinstance(result.get("result"), dict) and result["result"].get("source") == "nlp")
+            and not (
+                isinstance(result.get("result"), dict) and result["result"].get("source") == "nlp"
+            )
         )
         trace.append(
             {
@@ -284,8 +286,7 @@ class HermesAgent:
         instructions = build_decision_instructions(query, tools)
         if context_text:
             instructions += (
-                "\n\nRetrieved Sarthi context (may help; ignore if irrelevant):\n"
-                f"{context_text}"
+                f"\n\nRetrieved Sarthi context (may help; ignore if irrelevant):\n{context_text}"
             )
 
         last_response: ProviderResponse | None = None
@@ -380,7 +381,7 @@ class HermesAgent:
             if not verdict.valid:
                 # Feed the refusal back once; the model may correct itself.
                 instructions = (
-                    f'Your previous tool call was refused ({verdict.reason}): '
+                    f"Your previous tool call was refused ({verdict.reason}): "
                     f"{verdict.message}\nRespond to the user helpfully, or "
                     "issue one corrected tool call."
                 )

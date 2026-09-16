@@ -43,9 +43,7 @@ def get_profile_dir(db: DatabaseManager | None = None) -> str | None:
         return str(Path(override).expanduser())
 
     db = db or get_database()
-    row = db.fetch_one(
-        f"SELECT value FROM {PROFILE_TABLE} WHERE name = ?", (DEFAULT_PROFILE_NAME,)
-    )
+    row = db.fetch_one(f"SELECT value FROM {PROFILE_TABLE} WHERE name = ?", (DEFAULT_PROFILE_NAME,))
     value = str(row["value"] or "").strip() if row else ""
     return value or None
 

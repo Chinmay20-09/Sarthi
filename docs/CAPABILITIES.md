@@ -4,6 +4,16 @@ What Sarthi can currently do. "Implemented" means repository evidence supports
 it (code path + caller; test coverage noted separately). Status classes:
 IMPLEMENTED, PARTIAL, PLANNED, EXPERIMENTAL, UNUSED.
 
+> **Canonical terminology.** This table is Sarthi's *capability* inventory in
+> the product sense — what the system can do for a user. It is distinct from
+> the canonical architecture term **Capability** (an abstract ability —
+> terminal, browser, clipboard, filesystem — that a Hand declares and a
+> Provider implements; implemented for the Desktop Hand in
+> `hands/desktop/capabilities.py`, discovery across Hands PLANNED). See
+> ARCHITECTURE.md "Canonical terminology map". A capability may also be known
+> without any connected Hand providing it — the known-vs-available separation
+> is itself PLANNED.
+
 | Capability | Implemented | Entry Point | Main Components | Dependencies | Tested | Status |
 | ---------- | ----------- | ----------- | --------------- | ------------ | ------ | ------ |
 | Deterministic command pipeline (interpret→plan→resolve→execute) | Yes | `BrainEngine.process` | brain/*, knowledge/entity_resolver | rapidfuzz | test_brain_engine, test_interpreter | IMPLEMENTED |
@@ -18,7 +28,7 @@ IMPLEMENTED, PARTIAL, PLANNED, EXPERIMENTAL, UNUSED.
 | Complexity router (fast/complex gate) | Yes | api.py fallback | hermes/router.py, service.route_command | none (pure heuristics) | test_hermes_router, test_hermes_pipeline_integration | IMPLEMENTED |
 | Bounded agent loop with tools | Yes | api.py fallback → run_task | hermes/agent.py, validator, tool_registry | provider | test_hermes_agent, test_hermes_validator | IMPLEMENTED |
 | Hybrid retrieval (memory/history/sandbox/knowledge) | Yes | agent step 2 | hermes/retriever.py | SQLite, sandbox | test_hermes_retriever, test_sandbox_query_index | IMPLEMENTED |
-| Hermes tools (open app/website, close, search web, browser_ask, history/memory/project/github/personal context) | Yes | agent loop | hermes/tools/* (10 tools) | delegate to skills/connectors | test_hermes_tools | IMPLEMENTED |
+| Hermes tools (open app/website, close, search web, browser_ask, history/memory/project/github/personal context) | Yes | agent loop | hermes/tools/* (10 tools) | delegate to skills/connectors | test_hermes_tools | IMPLEMENTED (structured tool calls; the orchestrator validates and routes — tools are not arbitrary code execution) |
 | Long-term memory (/remember /recall /forget) | Yes | slash commands | brain/executor memory handlers, knowledge/memory | SQLite | test_chat_memory_api | IMPLEMENTED |
 | Conversation history (session store, chat UI persistence) | Yes | /hermes/chat, /chat | hermes/conversation.py, api /chat endpoints | SQLite | test_conversation_history, test_chat_memory_api | IMPLEMENTED |
 | Project tracker (GitHub-backed projects + prompts) | Yes | project_tracker skill, /projects API | skills/project_tracker/* | httpx2, GitHub API | test_project_tracker, test_projects_api | IMPLEMENTED |
@@ -37,4 +47,7 @@ IMPLEMENTED, PARTIAL, PLANNED, EXPERIMENTAL, UNUSED.
 | Android APK | No | — | apk/README only | — | — | PLANNED |
 | Brain↔Desktop agent IPC | No | — | desktop_agent.py docstring only | — | — | PLANNED |
 
-Counts: 24 implemented, 3 partial, 3 planned, 1 implemented+unused library.
+Counts: 22 implemented, 4 partial (incl. 1 implemented+partially used),
+2 implemented+unused libraries, 3 planned, 0 experimental — 31 rows total.
+(Counts re-audited 2026-09-16 against the table above; the previous
+"24/3/3/1" tally double-counted the two unused libraries as implemented.)

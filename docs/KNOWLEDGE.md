@@ -1,6 +1,17 @@
 # Knowledge (observed)
 
-The knowledge layer is the deterministic fact base for apps and websites.
+Knowledge is what Sarthi knows about its available capabilities — in the
+canonical model: skills, tools, capabilities, providers, hands, supported
+entities and the relationships between them. It is distinct from Memory
+(private user context) and from what a connected Hand currently provides.
+
+**Implemented scope today:** the knowledge layer is the deterministic fact
+base for apps and websites (entities + alias resolution). Skills and tools
+are registered in code (`skills/registry.py`, `hermes/tool_registry.py`) and
+Desktop capabilities are declared in `hands/desktop/capabilities.py` — there
+is **no unified capability registry** in the knowledge layer, and no
+known-vs-available separation from a live Hand. That registry and discovery
+mechanism are PLANNED (see ARCHITECTURE.md "Canonical terminology map").
 
 ## Components
 
@@ -44,7 +55,11 @@ BrainEngine step 3 ─▶ EntityResolver.resolve(target)
 - The `browser_profiles` SQLite table (persistent Chrome profiles for
   browser awareness) is NOT knowledge data — owned by `database/profiles.py`.
 - `knowledge_memory` (user facts) is memory, not app/site knowledge —
-  see MEMORY.md.
+  see MEMORY.md. Knowledge is NOT the capability registry, and Memory is
+  NOT a store of what Sarthi can do.
+- Skills (skills/registry.py), Hermes tools (hermes/tool_registry.py) and
+  Desktop capabilities (hands/desktop/capabilities.py) live in their own
+  registries — not in the knowledge store.
 
 ## Tests
 

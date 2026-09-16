@@ -134,7 +134,7 @@ def speak_result(result: dict) -> bool:
     if len(spoken) > MAX_SPOKEN_CHARS:
         cut = spoken[:MAX_SPOKEN_CHARS]
         break_at = cut.rfind(" ")
-        spoken = cut[:break_at if break_at > 0 else MAX_SPOKEN_CHARS].rstrip() + "…"
+        spoken = cut[: break_at if break_at > 0 else MAX_SPOKEN_CHARS].rstrip() + "…"
 
     try:
         announce(spoken)

@@ -50,9 +50,7 @@ class CloseAppTool(BaseTool):
             # keeps exactly one close implementation in the project.
             from brain.executor import BrainExecutor
 
-            result = BrainExecutor().execute(
-                Intent(action="close", target=target)
-            )
+            result = BrainExecutor().execute(Intent(action="close", target=target))
         except Exception as e:  # never leak internals upward
             logger.error("close_app failed unexpectedly for '%s': %s", target, e)
             return ToolResult(

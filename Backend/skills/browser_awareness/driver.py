@@ -212,7 +212,9 @@ def open_selenium_session(url: str, cdp_url: str = "") -> BrowserSession:
     if profile_dir is None:
         temp_owner = tempfile.TemporaryDirectory(prefix="sarthi_awareness_")
         profile_dir = temp_owner.name
-        logger.info("[BROWSER] no persistent profile registered — using a temporary profile for this run")
+        logger.info(
+            "[BROWSER] no persistent profile registered — using a temporary profile for this run"
+        )
     try:
         options.add_argument(f"--user-data-dir={profile_dir}")
         if headless:
@@ -286,7 +288,9 @@ def _resolve_profile_dir() -> str | None:
             logger.info("[BROWSER] using persistent automation profile: %s", profile_dir)
         return profile_dir
     except Exception as exc:  # DB unavailable — never block a browser run
-        logger.warning("[BROWSER] could not resolve a persistent profile (%s) — using a temporary profile", exc)
+        logger.warning(
+            "[BROWSER] could not resolve a persistent profile (%s) — using a temporary profile", exc
+        )
         return None
 
 
@@ -296,7 +300,9 @@ def _launch_playwright_session(url: str) -> BrowserSession:
     if profile_dir is None:
         temp_owner = tempfile.TemporaryDirectory(prefix="sarthi_awareness_")
         profile_dir = temp_owner.name
-        logger.info("[BROWSER] no persistent profile registered — using a temporary profile for this run")
+        logger.info(
+            "[BROWSER] no persistent profile registered — using a temporary profile for this run"
+        )
     try:
         from playwright.sync_api import sync_playwright
 

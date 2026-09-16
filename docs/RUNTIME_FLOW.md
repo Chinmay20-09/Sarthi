@@ -3,7 +3,12 @@
 Step-by-step trace of the two real execution paths. Line references verified
 against the working tree.
 
-## Path 1 — deterministic (fast) path
+> **Deterministic-first.** Path 1 is the default: the Sarthi Brain routes
+deterministically through registered skills whenever a known, validated
+capability path exists. Path 2 (Hermes) is the escalation for complexity,
+ambiguity and missing deterministic routes — reached only through the gates
+described below, never as the default execution mechanism, and never
+executing anything itself (Hands execute).
 
 Input: `POST /command {"query": "open youtube and search lofi"}`
 

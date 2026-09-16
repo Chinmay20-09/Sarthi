@@ -2,12 +2,20 @@
 
 ## Suite facts (verified by running it)
 
-- **54 test files** in `tests/`, **1059 tests collected and run**.
-- **Full-suite result after the 2026-09-14 consolidation: `1059 passed`** in
-  ~283 s (`pytest`, pyproject: testpaths=tests, addopts=-q). Baselines:
-  1021 passing before the pass; +38 new tests, 0 deleted (every test that
-  exercised the removed duplicate Hermes loop was migrated to the canonical
-  loop with the same fakes and assertions).
+- **55 `test_*.py` files** in `tests/`, of which **49 are pytest-collected**
+  (1127 tests). The other six (test_fuzzy, test_interpreter, test_browser,
+  test_brain_assistant, test_phrase_generator, test_project_tracker) are
+  manual smoke scripts with top-level code and no collected tests — running
+  them by hand executes their module body.
+- **Full-suite result on 2026-09-16: `1127 passed`** in ~8.5 min (`pytest`,
+  pyproject: testpaths=tests, addopts=-q). Earlier baselines: 1059 after the
+  2026-09-14 consolidation (283 s); 1021 before it.
+- **Voice feedback (conftest):** `tests/conftest.py` announces
+  "test_<file>.py passed" aloud at the end of every pytest file, using
+  `utils/voice.announce()` (Windows SAPI via pywin32, PowerShell
+  System.Speech fallback, log line elsewhere). Files with failures announce
+  their failure count. `SARTHI_TEST_VOICE=0` silences it; CI is silent by
+  default. One announcement per file — not per test.
 - `tests/test_consolidation_routing.py` is the characterization suite for the
   boundaries this pass established: routing (simple vs complex), chain-intent
   collision (both directions), the task-shaped escalation gate, the
@@ -31,7 +39,7 @@
 | Skills | test_skill_base, test_app_launcher, test_browser, test_project_tracker, test_personal_context, test_nlp_skill, test_brain_assistant | unit/dispatch |
 | Client | test_desktop_client | controller/backend parsing without display/network |
 | Voice replies | test_spoken_replies | mocked announce |
-| Infra | test_database_manager, test_database_optimizations, test_telemetry, test_recorder, test_stt, test_phrase_generator | unit |
+| Infra | test_database_manager, test_database_optimizations, test_telemetry, test_recorder, test_stt | unit |
 
 ## What is NOT tested (evidence-based)
 
@@ -57,3 +65,7 @@
   the Desktop client must not import backend internals).
 - The in-app runner (`POST /test/run`, 60 prompts in `test_prompts.json`) is
   a separate, telemetry-flavoured smoke harness — not part of pytest.
+- The manual smoke scripts (test_fuzzy, test_interpreter, test_browser,
+  test_brain_assistant, test_phrase_generator, test_project_tracker) are
+  kept out of the collected count by pytest's collection rules, not by
+  markers — they simply define no test items.

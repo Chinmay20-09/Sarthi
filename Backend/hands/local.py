@@ -43,9 +43,7 @@ def get_desktop_hand():
         return RemoteDesktopHand()
 
     if mode not in ("", "local"):
-        logger.warning(
-            "[Hands] unknown SARTHI_DESKTOP_AGENT_MODE=%r — falling back to local", mode
-        )
+        logger.warning("[Hands] unknown SARTHI_DESKTOP_AGENT_MODE=%r — falling back to local", mode)
     from hands.desktop import get_desktop_hand as get_local_desktop_hand
 
     return get_local_desktop_hand()

@@ -232,19 +232,20 @@ def _retrieve_memory(db, keywords: list[str]) -> tuple[list[str], list[Source]]:
     started = time.perf_counter()
     facts: list[dict] = []
     try:
-        rows = db.fetch_all(
-            "SELECT key, value FROM knowledge_memory ORDER BY updated_at DESC LIMIT ?",
-            (MAX_APPS_SCANNED,),
-        ) or []
+        rows = (
+            db.fetch_all(
+                "SELECT key, value FROM knowledge_memory ORDER BY updated_at DESC LIMIT ?",
+                (MAX_APPS_SCANNED,),
+            )
+            or []
+        )
     except Exception as e:
         logger.debug("retriever: memory query failed: %s", e)
         return [], [Source(name="memory", kind="sql", duration_ms=_ms(started), count=0)]
 
     lowered = [(str(r.get("key", "")), str(r.get("value", ""))) for r in rows]
     matched = [
-        (k, v)
-        for k, v in lowered
-        if any(kw in k.lower() or kw in v.lower() for kw in keywords)
+        (k, v) for k, v in lowered if any(kw in k.lower() or kw in v.lower() for kw in keywords)
     ]
     chosen = matched[:MAX_MEMORY_FACTS] or lowered[:MAX_MEMORY_FACTS]
     facts = [f"{k}: {v}" for k, v in chosen]
@@ -263,27 +264,24 @@ def _retrieve_history(db, keywords: list[str]) -> tuple[list[str], list[Source]]
     """Recent command_history rows, keyword-matched first, newest first."""
     started = time.perf_counter()
     try:
-        rows = db.fetch_all(
-            "SELECT command, action, target, success, timestamp FROM command_history "
-            "ORDER BY id DESC LIMIT ?",
-            (MAX_APPS_SCANNED,),
-        ) or []
+        rows = (
+            db.fetch_all(
+                "SELECT command, action, target, success, timestamp FROM command_history "
+                "ORDER BY id DESC LIMIT ?",
+                (MAX_APPS_SCANNED,),
+            )
+            or []
+        )
     except Exception as e:
         logger.debug("retriever: history query failed: %s", e)
-        return [], [
-            Source(name="command_history", kind="sql", duration_ms=_ms(started), count=0)
-        ]
+        return [], [Source(name="command_history", kind="sql", duration_ms=_ms(started), count=0)]
 
     lines_all = [
         f"{str(r.get('command', ''))[:120]} -> {r.get('action', '')} "
         f"{r.get('target', '')} ({'ok' if r.get('success') else 'failed'})"
         for r in rows
     ]
-    matched = [
-        line
-        for line in lines_all
-        if any(kw in line.lower() for kw in keywords)
-    ]
+    matched = [line for line in lines_all if any(kw in line.lower() for kw in keywords)]
     chosen = matched[:MAX_HISTORY_ROWS] or lines_all[:MAX_HISTORY_ROWS]
     text = "\n".join(f"- {line}" for line in chosen)
     return [_clip(text, MAX_HISTORY_CHARS)], [
@@ -305,9 +303,12 @@ def _retrieve_settings(db) -> tuple[list[str], list[Source]]:
     """
     started = time.perf_counter()
     try:
-        rows = db.fetch_all(
-            "SELECT key, value FROM settings ORDER BY key LIMIT ?", (MAX_SETTINGS_ROWS,)
-        ) or []
+        rows = (
+            db.fetch_all(
+                "SELECT key, value FROM settings ORDER BY key LIMIT ?", (MAX_SETTINGS_ROWS,)
+            )
+            or []
+        )
     except Exception as e:
         logger.debug("retriever: settings query failed: %s", e)
         return [], [Source(name="settings", kind="sql", duration_ms=_ms(started), count=0)]
@@ -382,9 +383,7 @@ def _retrieve_knowledge(query: str) -> tuple[list[str], list[Source]]:
         logger.debug("retriever: applications unavailable: %s", e)
 
     count = len(lines)
-    return lines, [
-        Source(name="knowledge", kind="fuzzy", duration_ms=_ms(started), count=count)
-    ]
+    return lines, [Source(name="knowledge", kind="fuzzy", duration_ms=_ms(started), count=count)]
 
 
 def _retrieve_sandbox(query: str, sandbox) -> tuple[list[str], list[Source]]:
@@ -411,7 +410,7 @@ def _retrieve_sandbox(query: str, sandbox) -> tuple[list[str], list[Source]]:
                 overlap,
                 str(past_query)[:100],
                 f'"{str(rec.get("prompt", past_query))[:90]}" -> {status} '
-                f'({"last 60 chars: " + _clip(str(rec.get("tool_used", "")), 40) or "no tool"})',
+                f"({'last 60 chars: ' + _clip(str(rec.get('tool_used', '')), 40) or 'no tool'})",
             )
         )
     matches.sort(key=lambda m: -m[0])
@@ -422,9 +421,7 @@ def _retrieve_sandbox(query: str, sandbox) -> tuple[list[str], list[Source]]:
     ]
 
 
-def _retrieve_conversation(
-    session_id: str | None, store=None
-) -> tuple[list[str], list[Source]]:
+def _retrieve_conversation(session_id: str | None, store=None) -> tuple[list[str], list[Source]]:
     """The last few turns of this session (already persisted by Hermes)."""
     started = time.perf_counter()
     if not session_id:
@@ -458,11 +455,14 @@ def _retrieve_projects(db, keywords: list[str]) -> tuple[list[str], list[Source]
     """
     started = time.perf_counter()
     try:
-        rows = db.fetch_all(
-            "SELECT name, github_url, terminal_path FROM projects "
-            "ORDER BY updated_at DESC LIMIT ?",
-            (MAX_APPS_SCANNED,),
-        ) or []
+        rows = (
+            db.fetch_all(
+                "SELECT name, github_url, terminal_path FROM projects "
+                "ORDER BY updated_at DESC LIMIT ?",
+                (MAX_APPS_SCANNED,),
+            )
+            or []
+        )
     except Exception as e:
         # Table missing (pre-migration DB) or DB hiccup — degrade silently.
         logger.debug("retriever: projects query failed: %s", e)

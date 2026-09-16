@@ -138,9 +138,7 @@ class TestBoundedLoop:
     def test_single_tool_call_then_answer(self):
         model = FakeModel([TOOL_CALL, "All finished with your request."])
         spy = SpyTool()
-        agent = HermesAgent(
-            generate=model, tool_registry=_registry(spy), fast_path=_no_fast_path
-        )
+        agent = HermesAgent(generate=model, tool_registry=_registry(spy), fast_path=_no_fast_path)
         result = agent.run("do something complex")
 
         assert result["success"] is True
@@ -170,9 +168,7 @@ class TestBoundedLoop:
 
         def slow_generate(task):
             _time.sleep(0.05)  # 50ms per model call
-            return ProviderResponse(
-                success=True, provider="Fake", model="fake-8b", text=TOOL_CALL
-            )
+            return ProviderResponse(success=True, provider="Fake", model="fake-8b", text=TOOL_CALL)
 
         spy = SpyTool()
         agent = HermesAgent(
@@ -232,9 +228,7 @@ class TestValidationGate:
             ]
         )
         spy = SpyTool()
-        agent = HermesAgent(
-            generate=model, tool_registry=_registry(spy), fast_path=_no_fast_path
-        )
+        agent = HermesAgent(generate=model, tool_registry=_registry(spy), fast_path=_no_fast_path)
         result = agent.run("delete everything")
 
         assert result["success"] is True
@@ -251,9 +245,7 @@ class TestValidationGate:
             ]
         )
         spy = SpyTool()
-        agent = HermesAgent(
-            generate=model, tool_registry=_registry(spy), fast_path=_no_fast_path
-        )
+        agent = HermesAgent(generate=model, tool_registry=_registry(spy), fast_path=_no_fast_path)
         result = agent.run("clean the database")
 
         assert spy.calls == []
@@ -263,9 +255,7 @@ class TestValidationGate:
     def test_validated_call_executes(self):
         model = FakeModel([TOOL_CALL, "Done."])
         spy = SpyTool()
-        agent = HermesAgent(
-            generate=model, tool_registry=_registry(spy), fast_path=_no_fast_path
-        )
+        agent = HermesAgent(generate=model, tool_registry=_registry(spy), fast_path=_no_fast_path)
         agent.run("open chrome please")
         assert len(spy.calls) == 1
 
@@ -352,9 +342,7 @@ class TestHistoryAndPersistence:
 
     def test_result_shape_is_stable(self):
         model = FakeModel(["Answer."])
-        agent = HermesAgent(
-            generate=model, tool_registry=_registry(), fast_path=_no_fast_path
-        )
+        agent = HermesAgent(generate=model, tool_registry=_registry(), fast_path=_no_fast_path)
         result = agent.run("question")
 
         expected_keys = {

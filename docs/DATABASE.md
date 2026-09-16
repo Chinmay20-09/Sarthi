@@ -1,5 +1,14 @@
 # Database audit (observed)
 
+> **Canonical model vs implemented scope.** In the target architecture the
+> database is persistent system state for Memory, Knowledge, Skills, Tools,
+> Capabilities, Providers, Hands and configuration. **Today only part of that
+> is real**: the SQLite schema (verified table list below) stores memory,
+> conversation, history, settings, project, connector and browser-profile
+> state. Skills, tools, capabilities, providers and hands are NOT stored in
+> the database — they are code-registered at runtime (`skills/registry.py`,
+> `hermes/tool_registry.py`, `hands/desktop/capabilities.py`).
+
 ## Primary database — SQLite
 
 - **File**: `Backend/database/sarthi.db` (created on first run;

@@ -4,6 +4,29 @@ Documentation for Sarthi, a local-first AI desktop assistant. Every document
 in this tree describes **observed** behaviour — derived from the code in this
 repository, not from plans or claims.
 
+## Canonical model (read this first)
+
+Sarthi's canonical architecture — defined once in
+[ARCHITECTURE.md](ARCHITECTURE.md#canonical-terminology-map) and used
+consistently everywhere in this tree:
+
+- **Sarthi Brain** — the deterministic orchestrator. Prefers known, validated
+  capability paths (deterministic-first principle).
+- **Hermes** — the complex/model-driven orchestrator. An escalation path for
+  complexity and missing deterministic routes, never the default executor and
+  never a physical executor. The model is a component Hermes uses.
+- **Skills** group related capability-oriented behaviour; **Tools** are
+  specific structured operations; **Capabilities** are abstract abilities;
+  **Providers** are concrete implementations of a capability; **Hands** are
+  the execution layers that receive validated structured requests and perform
+  physical operations. Neither Sarthi nor Hermes executes anything directly.
+- **Memory** is private/user context (conversations, preferences, state);
+  **Knowledge** is what Sarthi knows about its available capabilities.
+- CURRENT vs PLANNED: the Sarthi-Server runtime, remote Hands (Android,
+  Browser, IoT), Brain↔Hand IPC and capability/provider discovery are
+  **PLANNED** (see PROJECT_STATE.md); today's implementation is the local
+  Desktop Hand behind the `Hand` interface.
+
 ## Document index
 
 | Document | Contents |
@@ -26,7 +49,7 @@ repository, not from plans or claims.
 | [CLI.md](CLI.md) | Entry points and command-line interfaces |
 | [CONFIGURATION.md](CONFIGURATION.md) | Config files, environment variables, settings table |
 | [DEPENDENCIES.md](DEPENDENCIES.md) | Dependency audit |
-| [TESTING.md](TESTING.md) | Test suite reality check |
+| [TESTING.md](TESTING.md) | Test suite reality check (incl. per-file voice feedback) |
 | [DIVERGENCE.md](DIVERGENCE.md) | Architectural inconsistencies + post-consolidation status (evidence-based) |
 | [DEAD_CODE&Duplicate.md](DEAD_CODE&Duplicate.md) | Dead/orphaned systems + overlapping responsibilities |
 | [PROJECT_STATE.md](PROJECT_STATE.md) | Current implementation state |

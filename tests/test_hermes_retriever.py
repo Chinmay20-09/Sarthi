@@ -53,7 +53,9 @@ def _add_memory(db: DatabaseManager, key: str, value: str) -> None:
     )
 
 
-def _add_history(db: DatabaseManager, command: str, action: str, target: str, success: int = 1) -> None:
+def _add_history(
+    db: DatabaseManager, command: str, action: str, target: str, success: int = 1
+) -> None:
     db.execute(
         "INSERT INTO command_history (command, action, target, success, timestamp) "
         "VALUES (?, ?, ?, ?, datetime('now'))",
@@ -346,9 +348,7 @@ class TestKnowledgeRetrieval:
         d = context.as_dict()
 
         assert {"duration_ms", "total_chars", "sources"} <= set(d)
-        assert all(
-            {"name", "kind", "count", "duration_ms"} <= set(s) for s in d["sources"]
-        )
+        assert all({"name", "kind", "count", "duration_ms"} <= set(s) for s in d["sources"])
 
 
 # ---------------------------------------------------------------------------

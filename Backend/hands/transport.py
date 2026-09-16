@@ -219,9 +219,7 @@ class DesktopAgentClient:
     def _get_json(self, path: str, timeout: float | None) -> dict[str, Any] | None:
         """GET a JSON object from the agent; None on any failure."""
         try:
-            response = httpx2.get(
-                self._base_url + path, timeout=timeout or self.timeout
-            )
+            response = httpx2.get(self._base_url + path, timeout=timeout or self.timeout)
             if response.status_code != 200:
                 return None
             body = response.json()

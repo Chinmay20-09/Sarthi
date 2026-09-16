@@ -7,6 +7,15 @@ to an existing Sarthi capability — none expose shell/code execution. Arguments
 are validated (`tool_registry.validate_arguments`) and every call passes the
 `hermes/validator.py` gate before dispatch.
 
+> **Canonical definition.** A Tool is a specific structured operation exposed
+> to the orchestrator — name, purpose, parameters, required capability,
+> execution semantics. Tools are NOT arbitrary code execution. Example
+> (conceptual shape, matching the real open_app tool): the model requests
+> `open_app` with `{"app": "chrome"}`; the validator gates the call, the
+> registry dispatches, and the tool delegates to the AppLauncherSkill —
+> the orchestrator (Brain/Hermes) remains responsible for validation and
+> routing, and the model never runs anything itself.
+
 | # | Tool | Location | Delegates to | Purpose | Side effects | Tests |
 | - | ---- | -------- | ------------ | ------- | ------------ | ---- |
 | 1 | open_app | hermes/tools/open_app.py | AppLauncherSkill | Launch an application | launches app | test_hermes_tools |

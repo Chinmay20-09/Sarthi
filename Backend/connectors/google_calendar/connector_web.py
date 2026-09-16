@@ -81,8 +81,7 @@ def connect_via_web_interface(client_config: dict) -> dict[str, Any]:
         return {
             "success": False,
             "error": (
-                "Could not open the automation browser for Google sign-in. "
-                f"Original error: {e}"
+                f"Could not open the automation browser for Google sign-in. Original error: {e}"
             ),
         }
     finally:

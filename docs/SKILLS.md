@@ -1,5 +1,9 @@
 # Skills (observed)
 
+A Skill is a capability-oriented subsystem that groups related behaviour
+(app launching, browser control, speech, scanning, …). Only the skills below
+exist in the repository — no others are implied.
+
 Discovery: `skills/registry.py` scans `Backend/skills/*/manifest.json`,
 instantiates `skills/<id>/main.py` (must export a `BaseSkill` subclass).
 `BrainEngine._load_skills` registers every instance with the executor,

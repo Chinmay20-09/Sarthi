@@ -54,9 +54,7 @@ class ProjectGetTool(BaseTool):
             from skills.project_tracker.main import GitHubProjectSkill
 
             skill = GitHubProjectSkill()
-            result = skill.execute(
-                Intent(action=operation, target="projects")
-            )
+            result = skill.execute(Intent(action=operation, target="projects"))
         except Exception as e:  # never leak internals upward
             logger.error("project_get failed unexpectedly: %s", e)
             return ToolResult(

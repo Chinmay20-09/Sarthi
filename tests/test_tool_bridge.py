@@ -381,8 +381,7 @@ def test_hermes_unknown_tool_is_graceful():
     assert spy.calls == []
     assert len(fake.tasks) == 2  # decision call + corrected final answer
     assert any(
-        step.get("step") == "validation" and step.get("valid") is False
-        for step in result["trace"]
+        step.get("step") == "validation" and step.get("valid") is False for step in result["trace"]
     )
 
 

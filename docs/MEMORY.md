@@ -1,5 +1,14 @@
 # Memory (observed)
 
+Memory is Sarthi's private/user context — what it knows about this user,
+their past conversations, preferences and task state. It is NOT the
+capability registry (that is Knowledge's role, and even Knowledge today only
+holds the app/website entity base — see KNOWLEDGE.md). The implementation is
+local-first: data stays in the machine's SQLite database and sandbox files.
+No network-isolation or private-network security guarantee is implemented or
+claimed (the API binds 0.0.0.0 without authentication — see PROJECT_STATE.md
+known limitations).
+
 Three distinct memory systems. All persistent state is SQLite (see
 DATABASE.md) except the sandbox.
 

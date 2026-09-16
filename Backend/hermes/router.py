@@ -261,7 +261,7 @@ def _tokens(text: str) -> list[str]:
 
 
 def _strip_leading_slash(tokens: list[str]) -> list[str]:
-    """"/remember x" behaves like "remember x" for routing."""
+    """ "/remember x" behaves like "remember x" for routing."""
     if tokens and tokens[0].startswith("/"):
         tokens = list(tokens)
         tokens[0] = tokens[0][1:]

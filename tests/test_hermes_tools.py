@@ -35,8 +35,14 @@ def registry() -> ToolRegistry:
 class TestRegistration:
     def test_all_six_new_tools_registered(self, registry):
         names = set(registry.tool_names())
-        assert {"close_app", "search_web", "browser_ask",
-                "history_search", "memory_search", "project_get"} <= names
+        assert {
+            "close_app",
+            "search_web",
+            "browser_ask",
+            "history_search",
+            "memory_search",
+            "project_get",
+        } <= names
 
     def test_describe_schemas_have_required_shape(self, registry):
         for tool in registry.list_tools():
@@ -158,9 +164,7 @@ class TestBrowserAsk:
 
     def test_ask_failure_is_graceful(self):
         tool = BrowserAskTool()
-        with patch(
-            "skills.browser_awareness.main.BrowserAwarenessSkill"
-        ) as mock_skill:
+        with patch("skills.browser_awareness.main.BrowserAwarenessSkill") as mock_skill:
             mock_skill.return_value.execute.return_value = {
                 "success": False,
                 "error": "No website to inspect",
@@ -179,10 +183,20 @@ class TestHistorySearch:
     def test_search_matches_commands(self):
         tool = HistorySearchTool()
         fake_history = [
-            {"command": "open youtube", "action": "open", "target": "youtube",
-             "success": 1, "timestamp": "t1"},
-            {"command": "close chrome", "action": "close", "target": "chrome",
-             "success": 1, "timestamp": "t2"},
+            {
+                "command": "open youtube",
+                "action": "open",
+                "target": "youtube",
+                "success": 1,
+                "timestamp": "t1",
+            },
+            {
+                "command": "close chrome",
+                "action": "close",
+                "target": "chrome",
+                "success": 1,
+                "timestamp": "t2",
+            },
         ]
         with patch("knowledge.memory.get_memory") as mock_mem:
             mock_mem.return_value.get_history.return_value = fake_history

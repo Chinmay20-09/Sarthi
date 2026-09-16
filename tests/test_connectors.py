@@ -273,9 +273,7 @@ class TestWebInterfaceConnect:
                 "skills.browser_awareness.driver.open_session",
                 side_effect=_fake_open_session,
             ),
-            patch(
-                "connectors.google_calendar.auth.OAuthCallbackHandler"
-            ) as mock_handler_cls,
+            patch("connectors.google_calendar.auth.OAuthCallbackHandler") as mock_handler_cls,
             patch(
                 "connectors.google_calendar.auth.exchange_code",
                 side_effect=_fake_exchange,
@@ -304,9 +302,7 @@ class TestWebInterfaceConnect:
                 "skills.browser_awareness.driver.open_session",
                 return_value=_FakeSession(),
             ),
-            patch(
-                "connectors.google_calendar.auth.OAuthCallbackHandler"
-            ) as mock_handler_cls,
+            patch("connectors.google_calendar.auth.OAuthCallbackHandler") as mock_handler_cls,
             patch(
                 "connectors.google_calendar.auth.exchange_code",
                 return_value={"success": True},
@@ -330,9 +326,7 @@ class TestWebInterfaceConnect:
                 "skills.browser_awareness.driver.open_session",
                 side_effect=RuntimeError("no chrome"),
             ),
-            patch(
-                "connectors.google_calendar.auth.OAuthCallbackHandler"
-            ) as mock_handler_cls,
+            patch("connectors.google_calendar.auth.OAuthCallbackHandler") as mock_handler_cls,
         ):
             # A real callback waiter would block; give the mock a proper
             # tuple so the waiter thread ends cleanly when the flow stops it.
@@ -357,9 +351,7 @@ class TestWebInterfaceConnect:
                 "skills.browser_awareness.driver.open_session",
                 return_value=_FakeSession(),
             ),
-            patch(
-                "connectors.google_calendar.auth.OAuthCallbackHandler"
-            ) as mock_handler_cls,
+            patch("connectors.google_calendar.auth.OAuthCallbackHandler") as mock_handler_cls,
         ):
             mock_handler = mock_handler_cls.return_value
             mock_handler.start_server_and_wait.return_value = (None, "access_denied")
@@ -377,7 +369,8 @@ class TestWebInterfaceEndpoint:
 
         gc = get_registry().get("google_calendar")
         with patch.object(
-            type(gc), "connect_via_web_interface",
+            type(gc),
+            "connect_via_web_interface",
             return_value={"success": False, "error": "Google credentials not found"},
         ):
             client = TestClient(app)

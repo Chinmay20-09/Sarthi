@@ -423,9 +423,7 @@ class TestSeleniumDriverSessions:
 
         # Env override keeps the profile registry (and the real sarthi.db)
         # out of this test entirely.
-        monkeypatch.setenv(
-            driver_mod.PROFILE_DIR_ENV, str(tmp_path / "profile")
-        )
+        monkeypatch.setenv(driver_mod.PROFILE_DIR_ENV, str(tmp_path / "profile"))
         driver = _FakeSeleniumDriver()
         _install_fake_selenium(monkeypatch, chrome_factory=_capture_options(driver))
         monkeypatch.delenv("BROWSER_AWARENESS_CDP_URL", raising=False)
@@ -502,9 +500,7 @@ class TestLaunchProfileResolution:
         # The first launch registered the persistent profile and used it.
         assert session._temp_owner is None
         assert Path(user_data).name == ".chrome-profile"
-        row = self.db.fetch_one(
-            "SELECT value FROM browser_profiles WHERE name = 'default'"
-        )
+        row = self.db.fetch_one("SELECT value FROM browser_profiles WHERE name = 'default'")
         assert row["value"] == user_data
         session.close()
         assert driver.quit_calls == 1

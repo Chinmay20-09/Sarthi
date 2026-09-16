@@ -43,7 +43,6 @@ import sys
 from pathlib import Path
 
 import pytest
-
 from hands.desktop.hand import DesktopHand
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -58,7 +57,9 @@ class TestWireModels:
     def test_desktop_request_serialization_roundtrip(self):
         from hands.desktop.models import DesktopRequest
 
-        request = DesktopRequest(action="open_url", args={"url": "https://example.com"}, target="docs")
+        request = DesktopRequest(
+            action="open_url", args={"url": "https://example.com"}, target="docs"
+        )
         payload = request.model_dump(mode="json")
         assert payload == {
             "action": "open_url",
@@ -159,7 +160,10 @@ class TestServerBehaviour:
         fake = _FakeHand()
         port, server = _running_server(fake)
         try:
-            response = _post_execute(port, {"action": "open_application", "args": {"path": "C:/x.exe"}, "target": "chrome"})
+            response = _post_execute(
+                port,
+                {"action": "open_application", "args": {"path": "C:/x.exe"}, "target": "chrome"},
+            )
             assert response.status_code == 200
             body = response.json()
             assert body["success"] is True
@@ -208,7 +212,9 @@ class TestServerBehaviour:
         hand = DesktopHandForServer()
         port, server = _running_server(hand)
         try:
-            body = _post_execute(port, {"action": "close_application", "args": {"pid": "not-a-pid"}}).json()
+            body = _post_execute(
+                port, {"action": "close_application", "args": {"pid": "not-a-pid"}}
+            ).json()
             assert body["success"] is False
             assert body["error"] == "invalid_arguments"
         finally:
@@ -241,7 +247,10 @@ class TestServerBehaviour:
             assert httpx2.get(f"http://127.0.0.1:{port}/execute", timeout=5.0).status_code == 405
             assert httpx2.post(f"http://127.0.0.1:{port}/health", timeout=5.0).status_code == 405
             assert httpx2.get(f"http://127.0.0.1:{port}/nope", timeout=5.0).status_code == 404
-            assert httpx2.post(f"http://127.0.0.1:{port}/nope", json={}, timeout=5.0).status_code == 404
+            assert (
+                httpx2.post(f"http://127.0.0.1:{port}/nope", json={}, timeout=5.0).status_code
+                == 404
+            )
         finally:
             server.shutdown()
 
@@ -289,9 +298,9 @@ class DesktopHandForServer(DesktopHand):
         self.calls: list[tuple[str, dict]] = []
 
     def execute(self, action, target=None, **kwargs):
+        import hands.desktop.browser as browser_backend
         import hands.desktop.input as input_backend
         import hands.desktop.processes as process_backend
-        import hands.desktop.browser as browser_backend
 
         self.calls.append((action, {"target": target, **kwargs}))
 
@@ -383,9 +392,7 @@ class TestClientTransport:
             from hands.transport import DesktopAgentClient
 
             client = DesktopAgentClient(host="127.0.0.1", port=port, timeout=5.0)
-            result = client.execute_request(
-                DesktopRequest(action="get_processes", target="procs")
-            )
+            result = client.execute_request(DesktopRequest(action="get_processes", target="procs"))
             assert result["success"] is True
         finally:
             server.shutdown()
@@ -427,8 +434,8 @@ class TestClientTransport:
         assert result["error"] == "transport_bad_response"
 
     def test_timeout_maps_to_transport_unavailable(self, monkeypatch):
-        from hands import transport
         import httpx2 as real_httpx2
+        from hands import transport
 
         def _timeout(*a, **k):
             raise real_httpx2.TimeoutException("timed out")
@@ -674,9 +681,7 @@ class TestDesktopAgentCLI:
     def test_exec_cli_valid_action(self, monkeypatch, capsys):
         import hands.desktop.processes as processes_backend
 
-        monkeypatch.setattr(
-            processes_backend, "launch_process", lambda path: 31337
-        )
+        monkeypatch.setattr(processes_backend, "launch_process", lambda path: 31337)
         from desktop_agent import main
 
         code = main(["--exec", "open_application", "path=C:/Windows/notepad.exe", "name=Notepad"])
@@ -709,7 +714,16 @@ class TestDesktopAgentCLI:
 # ---------------------------------------------------------------------------
 
 HANDS_TRANSPORT_FILES = ("hands/transport.py", "hands/remote.py", "hands/local.py")
-WINDOWS_ONLY_MODULES = ("pywin32", "win32gui", "win32api", "win32con", "pyautogui", "pygetwindow", "keyboard", "pyperclip")
+WINDOWS_ONLY_MODULES = (
+    "pywin32",
+    "win32gui",
+    "win32api",
+    "win32con",
+    "pyautogui",
+    "pygetwindow",
+    "keyboard",
+    "pyperclip",
+)
 
 
 class TestArchitectureGuards:
@@ -729,7 +743,16 @@ class TestArchitectureGuards:
                 imported |= {a.name.split(".")[0] for a in node.names}
             elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
                 imported.add(node.module.split(".")[0])
-        forbidden = {"win32gui", "win32api", "win32con", "pyautogui", "pygetwindow", "pyperclip", "psutil", "keyboard"}
+        forbidden = {
+            "win32gui",
+            "win32api",
+            "win32con",
+            "pyautogui",
+            "pygetwindow",
+            "pyperclip",
+            "psutil",
+            "keyboard",
+        }
         assert imported & forbidden == set(), f"{relpath} imports {imported & forbidden}"
 
     def test_transport_imports_on_this_interpreter(self):
@@ -787,7 +810,15 @@ class TestArchitectureGuards:
     def test_remote_hand_is_not_a_second_implementation_of_windows_automation(self):
         """RemoteDesktopHand must not contain OS primitives — it forwards."""
         source = (BACKEND_DIR / "hands" / "remote.py").read_text(encoding="utf-8")
-        for forbidden in ("subprocess", "os.system", "pyautogui", "psutil", "startfile", "eval(", "exec("):
+        for forbidden in (
+            "subprocess",
+            "os.system",
+            "pyautogui",
+            "psutil",
+            "startfile",
+            "eval(",
+            "exec(",
+        ):
             assert forbidden not in source
 
 

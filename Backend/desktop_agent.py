@@ -69,7 +69,7 @@ def build_server_handler(desktop):
     fake hand and run the real handler logic in-process.
     """
 
-    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer  # noqa: E402
+    from http.server import BaseHTTPRequestHandler  # noqa: E402
 
     class DesktopAgentHandler(BaseHTTPRequestHandler):
         """One endpoint family: /execute, /health, /capabilities.
@@ -281,7 +281,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="serve the Desktop hand over HTTP IPC (POST /execute, GET /health, GET /capabilities)",
     )
     parser.add_argument("--host", default=None, help="server bind host (default: config/env)")
-    parser.add_argument("--port", type=int, default=None, help="server bind port (default: config/env)")
+    parser.add_argument(
+        "--port", type=int, default=None, help="server bind port (default: config/env)"
+    )
     return parser
 
 

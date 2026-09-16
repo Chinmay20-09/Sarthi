@@ -40,9 +40,7 @@ class ConfigLoader:
             temperature=float(os.getenv("HERMES_TEMPERATURE", HermesConfig.temperature)),
             timeout=float(os.getenv("HERMES_TIMEOUT", HermesConfig.timeout)),
             sandbox_path=str(
-                resolve_sandbox_root(
-                    os.getenv("HERMES_SANDBOX_PATH", HermesConfig.sandbox_path)
-                )
+                resolve_sandbox_root(os.getenv("HERMES_SANDBOX_PATH", HermesConfig.sandbox_path))
             ),
             openrouter_api_key=os.getenv("OPENROUTER_API_KEY", HermesConfig.openrouter_api_key),
             openrouter_url=os.getenv("OPENROUTER_URL", HermesConfig.openrouter_url),
@@ -69,7 +67,9 @@ class ConfigLoader:
             agent_timeout=float(os.getenv("HERMES_AGENT_TIMEOUT", HermesConfig.agent_timeout)),
             # Router knobs (Phase 3f)
             router_mode=os.getenv("HERMES_ROUTER_MODE", HermesConfig.router_mode),
-            router_min_score=int(os.getenv("HERMES_ROUTER_MIN_SCORE", HermesConfig.router_min_score)),
+            router_min_score=int(
+                os.getenv("HERMES_ROUTER_MIN_SCORE", HermesConfig.router_min_score)
+            ),
             # Retrieval knobs (Phase 3f)
             retrieval_max_total_chars=int(
                 os.getenv("HERMES_RETRIEVAL_MAX_CHARS", HermesConfig.retrieval_max_total_chars)
