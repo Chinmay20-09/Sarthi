@@ -3,8 +3,6 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from hermes.sandbox import resolve_sandbox_root
-
 from .settings import HermesConfig
 
 
@@ -25,7 +23,14 @@ class ConfigLoader:
 
         The first call reads .env and caches the result. Subsequent calls
         return the cached config instantly (no disk I/O).
+
+        The sandbox import is deferred into this method: importing it at
+        module level creates a cycle (sandbox → providers → config →
+        sandbox) that crashes any process importing hermes.sandbox first
+        (e.g. scripts/clean_sandbox.py).
         """
+        from hermes.sandbox import resolve_sandbox_root
+
         if ConfigLoader._cached is not None and self._env_path is None:
             return ConfigLoader._cached
 

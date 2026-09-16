@@ -21,7 +21,7 @@ Security boundary (explicit): this transport carries *only* structured
 DesktopRequest actions. The server dispatches exclusively through the
 hand's allow-listed action registry — there is no shell, eval, arbitrary
 Python, or subprocess execution endpoint on either side, and none may be
-added here. See docs/DESKTOP_AGENT_IPC.md.
+added here. See docs/dev/ARCHITECTURE.md ("Brain ↔ Desktop Agent IPC").
 
 Cross-platform rule: this file must stay importable on Linux/Android
 (the Brain may run there). It imports httpx2 (already a core dependency)

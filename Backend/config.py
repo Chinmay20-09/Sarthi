@@ -50,7 +50,8 @@ API_PORT = 8000
 #
 # Security: the transport carries only structured DesktopRequest actions that
 # exist in the DesktopHand action registry. No shell, eval, or code execution
-# crosses this boundary (see Backend/desktop_agent.py and docs/DESKTOP_AGENT_IPC.md).
+# crosses this boundary (see Backend/desktop_agent.py and
+# docs/dev/ARCHITECTURE.md, "Brain ↔ Desktop Agent IPC").
 # ---------------------------------------------------------------------------
 DESKTOP_AGENT_HOST = "127.0.0.1"
 DESKTOP_AGENT_PORT = 8765

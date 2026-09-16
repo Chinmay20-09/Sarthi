@@ -1,11 +1,11 @@
 # SARTHI — DIVERGENCE MATRIX
 
-> **Status note (2026-09-14):** the maintained copy of this matrix lives at
-> [`docs/Divergance-matrix.md`](docs/Divergance-matrix.md); its section 18
-> carries the post-consolidation status (RESOLVED / INTENTIONAL / DEFERRED /
-> NOT REPRODUCIBLE) for every DM id below, and
-> [`docs/ARCHITECTURAL_DECISIONS.md`](docs/ARCHITECTURAL_DECISIONS.md) holds
-> the reasoning. Keep the two in sync, or edit only the canonical copy.
+> **Status note (2026-09-14):** this root-level matrix is a historical snapshot.
+> The maintained copy lived at `docs/Divergance-matrix.md`; both are now
+> archived under `docs/archive/documentation-reset-2026-09/` (its section 18
+> carries the post-consolidation status for every DM id below, and
+> ARCHITECTURAL_DECISIONS.md in the same folder holds the reasoning).
+> Current project state: `docs/dev/PROJECT_STATE.md`.
 
 **Purpose:** Compare the intended Sarthi architecture with the architecture observed in the repository.
 

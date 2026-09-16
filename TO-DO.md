@@ -2,6 +2,11 @@ TO-DO
 
 STATUS (2026-09-16): BOTH ITEMS DONE.
 
+> NOTE (2026-09-16 documentation restructure): docs/ paths mentioned in the
+> historical record below (e.g. docs/ARCHITECTURE.md) were consolidated into
+> docs/dev/ and the originals archived under
+> docs/archive/documentation-reset-2026-09/.
+
 1. ✅ DONE (2026-09-16) — add voice feedback to all test(at last for example:"test_ai_chain.py passed" at end of each file)
    Implemented via `tests/conftest.py` (session-wide pytest hook, no per-file
    edits): announces "test_<file>.py passed" aloud at the end of every
