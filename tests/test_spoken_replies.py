@@ -181,6 +181,18 @@ class TestBusWiring:
         bus.publish("intent_parsed", {"text": "open chrome"})
         announce_spy.assert_not_called()
 
+    def test_double_registration_speaks_once(self, announce_spy):
+        """api.py registers at import time; uvicorn's dev-mode double-import
+        of the module ran that registration twice on the same bus singleton,
+        so every reply was spoken twice. Registration must be idempotent."""
+        from events.bus import EventBus
+
+        bus = EventBus()
+        spoken_replies.register_voice_replies(bus)
+        spoken_replies.register_voice_replies(bus)  # dev-mode double import
+        bus.publish("command_completed", {"text": "Weather is sunny"})
+        announce_spy.assert_called_once_with("Weather is sunny")
+
     def test_handler_failure_never_breaks_the_bus(self):
         from events.bus import EventBus
 

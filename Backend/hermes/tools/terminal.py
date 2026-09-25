@@ -21,28 +21,31 @@ logger = logging.getLogger(__name__)
 
 
 class TerminalTool(BaseTool):
-    """Run one terminal-style file operation (cd / echo / create / write)."""
+    """Run one terminal-style file operation (cd / echo / create / write /
+    read / list / tree)."""
 
     name = "terminal"
     description = (
         "Terminal-style file operations on the user's machine: cd (change "
         "directory), echo (print text or write it to a file), create (new "
-        "file or directory), write (write text to a file). Scoped to "
-        "allowed roots; no shell commands."
+        "file or directory), write (write text to a file), read (read a "
+        "file's content), list (list a directory), tree (recursive listing). "
+        "Scoped to allowed roots; no shell commands."
     )
     parameters = {
         "type": "object",
         "properties": {
             "action": {
                 "type": "string",
-                "description": "One of: cd, echo, create, write.",
+                "description": "One of: cd, echo, create, write, read, list, tree.",
             },
             "target": {
                 "type": "string",
                 "description": (
                     "Operation argument. cd: the directory path. echo: the "
                     "text, optionally 'to <file>'. create: '[file|directory] "
-                    "<path>'. write: '<text> to <file>'."
+                    "<path>'. write: '<text> to <file>'. read: the file path. "
+                    "list/tree: the directory path (empty = current)."
                 ),
             },
         },
@@ -53,14 +56,19 @@ class TerminalTool(BaseTool):
         action = str(arguments.get("action") or "").strip().lower()
         target = str(arguments.get("target") or "").strip()
 
-        if action not in ("cd", "echo", "create", "write"):
+        if action not in ("cd", "echo", "create", "write", "read", "list", "tree"):
             return ToolResult(
                 success=False,
                 tool=self.name,
-                error=f"Unknown terminal action '{action}'. Use cd, echo, create or write.",
+                error=(
+                    f"Unknown terminal action '{action}'. "
+                    "Use cd, echo, create, write, read, list or tree."
+                ),
                 invalid=True,
             )
-        if not target:
+        if not target and action not in ("list", "tree"):
+            # list/tree legitimately take no target: they list the tracked
+            # working directory. Everything else needs an explicit target.
             return ToolResult(
                 success=False,
                 tool=self.name,
@@ -84,7 +92,7 @@ class TerminalTool(BaseTool):
             payload = {
                 k: v
                 for k, v in info.items()
-                if k in ("cwd", "path", "bytes_written", "text", "type")
+                if k in ("cwd", "path", "bytes_written", "text", "type", "content", "entries", "chars")
             }
             return ToolResult(
                 success=True,

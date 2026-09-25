@@ -32,6 +32,17 @@ class TestTerminalCapabilityRegistration:
         cap = CAPABILITIES["TERMINAL"]
         assert set(cap.actions) == {"cd", "echo", "create"}
 
+    def test_read_side_uses_existing_filesystem_read_capability(self):
+        """read/list/tree map onto FILESYSTEM_READ actions — no new capability.
+
+        The registry stays untouched: read_file and list_directory were
+        already implemented and scoped; the terminal skill only delegates.
+        """
+        assert "FILESYSTEM_READ" in CAPABILITIES
+        assert set(CAPABILITIES["FILESYSTEM_READ"].actions) == {"read_file", "list_directory"}
+        assert ACTIONS["read_file"] == "FILESYSTEM_READ"
+        assert ACTIONS["list_directory"] == "FILESYSTEM_READ"
+
     def test_shell_stays_planned(self):
         """The SHELL capability must NOT be promoted by this work."""
         assert "SHELL" in PLANNED_CAPABILITIES
@@ -187,12 +198,39 @@ class TestHandTerminalActions:
         assert result["success"] is False
         assert result["error"] == "invalid_arguments"
 
+    def test_hand_read_file_inside_scope(self, hand):
+        h, root = hand
+        (root / "notes.txt").write_text("hello", encoding="utf-8")
+        result = h.execute("read_file", path="notes.txt")
+        assert result["success"] is True
+        assert result["data"]["content"] == "hello"
+
+    def test_hand_list_directory_inside_scope(self, hand):
+        h, root = hand
+        (root / "docs").mkdir(exist_ok=True)
+        result = h.execute("list_directory", path=".")
+        assert result["success"] is True
+        names = {e["name"] for e in result["data"]["entries"]}
+        assert "docs" in names
+
     def test_create_existing_structured_failure(self, hand):
         h, root = hand
         h.execute("create", path="dup.txt", type="file")
         result = h.execute("create", path="dup.txt", type="file")
         assert result["success"] is False
         assert result["error"] == "execution_failed"
+
+    def test_end_to_end_read_list_after_write(self, hand):
+        """The Task-3 sequence: what is written can be read back and listed."""
+        h, root = hand
+        assert h.execute("cd", path="docs")["success"] is True
+        assert h.execute("write_file", path="notes.txt", content="hello world")["success"] is True
+        read = h.execute("read_file", path="notes.txt")
+        assert read["success"] is True
+        assert read["data"]["content"] == "hello world"
+        listed = h.execute("list_directory", path=".")
+        assert listed["success"] is True
+        assert {e["name"] for e in listed["data"]["entries"]} == {"notes.txt"}
 
     def test_end_to_end_sequence_cwd_carries_between_steps(self, hand):
         """The Task-2 acceptance sequence: cd → create → write → echo."""
@@ -301,6 +339,17 @@ class TestTerminalSkill:
         assert result["success"] is True
         assert (root / "notes.txt").exists()
 
+    def test_bare_create_fails_fast_with_hint(self, skill):
+        """'create testing.txt' (no file/directory kind) is refused instantly
+        with a usage hint — never a silent default to file, never a slow
+        conversational fallback."""
+        s, root = skill
+        result = s.execute(self._intent("create", "testing.txt"))
+        assert result["success"] is False
+        assert result.get("handled") is True
+        assert "create file testing.txt" in result["error"]
+        assert not (root / "testing.txt").exists()
+
     def test_create_directory(self, skill):
         s, root = skill
         result = s.execute(self._intent("create", "directory projects"))
@@ -319,6 +368,82 @@ class TestTerminalSkill:
         assert result["success"] is True
         # write_file semantics: verbatim content, no trailing newline.
         assert (root / "notes.txt").read_text(encoding="utf-8") == "hello world"
+
+    def test_read_file(self, skill):
+        s, root = skill
+        (root / "notes.txt").write_text("line one\nline two", encoding="utf-8")
+        result = s.execute(self._intent("read", "notes.txt"))
+        assert result["success"] is True
+        assert result["result"]["content"] == "line one\nline two"
+        assert "line one" in result["result"]["message"]
+
+    def test_read_file_kind_word_is_stripped(self, skill):
+        s, root = skill
+        (root / "notes.txt").write_text("data", encoding="utf-8")
+        result = s.execute(self._intent("read", "file notes.txt"))
+        assert result["success"] is True
+        assert result["result"]["content"] == "data"
+
+    def test_read_empty_file_says_so(self, skill):
+        s, root = skill
+        (root / "empty.txt").write_text("", encoding="utf-8")
+        result = s.execute(self._intent("read", "empty.txt"))
+        assert result["success"] is True
+        assert "empty" in result["result"]["message"].lower()
+
+    def test_read_missing_file_structured_failure(self, skill):
+        s, _root = skill
+        result = s.execute(self._intent("read", "ghost.txt"))
+        assert result["success"] is False
+        assert result.get("handled") is True
+        assert result.get("error")
+
+    def test_read_outside_scope_refused(self, skill, tmp_path):
+        s, _root = skill
+        outside = tmp_path / "secret.txt"
+        outside.write_text("top secret", encoding="utf-8")
+        result = s.execute(self._intent("read", str(outside)))
+        assert result["success"] is False
+        assert result.get("error")
+
+    def test_read_requires_target(self, skill):
+        s, _root = skill
+        result = s.execute(self._intent("read", ""))
+        assert result["success"] is False
+        assert "Read what?" in result["error"]
+
+    def test_list_current_directory(self, skill):
+        s, root = skill
+        (root / "notes.txt").write_text("x", encoding="utf-8")
+        result = s.execute(self._intent("list", ""))
+        assert result["success"] is True
+        names = {e["name"] for e in result["result"]["entries"]}
+        assert "notes.txt" in names
+        assert "current directory" in result["result"]["message"]
+
+    def test_list_named_directory(self, skill):
+        s, root = skill
+        (root / "docs" / "a.txt").parent.mkdir(exist_ok=True)
+        (root / "docs" / "a.txt").write_text("x", encoding="utf-8")
+        result = s.execute(self._intent("list", "docs"))
+        assert result["success"] is True
+        assert {e["name"] for e in result["result"]["entries"]} == {"a.txt"}
+
+    def test_list_missing_directory_structured_failure(self, skill):
+        s, _root = skill
+        result = s.execute(self._intent("list", "nope"))
+        assert result["success"] is False
+        assert result.get("handled") is True
+
+    def test_tree_recursive_listing(self, skill):
+        s, root = skill
+        (root / "docs").mkdir(exist_ok=True)
+        (root / "docs" / "readme.md").write_text("hi", encoding="utf-8")
+        result = s.execute(self._intent("tree", ""))
+        assert result["success"] is True
+        text = result["result"]["message"]
+        assert "docs/" in text
+        assert "readme.md" in text
 
     def test_write_without_file_target(self, skill):
         s, _root = skill
@@ -407,6 +532,27 @@ class TestTerminalTool:
         # "write" maps onto write_file: content written verbatim, no newline
         # appended (use "echo ... to <file>" for the newline behaviour).
         assert (root / "f.txt").read_text(encoding="utf-8") == "hi there"
+
+    def test_execute_read(self, tool):
+        t, root = tool
+        (root / "f.txt").write_text("file body", encoding="utf-8")
+        result = t.execute({"action": "read", "target": "f.txt"})
+        assert result.success is True
+        assert result.data["content"] == "file body"
+
+    def test_execute_list(self, tool):
+        t, root = tool
+        (root / "f.txt").write_text("x", encoding="utf-8")
+        result = t.execute({"action": "list", "target": ""})
+        assert result.success is True
+        assert isinstance(result.data["entries"], list)
+
+    def test_execute_tree(self, tool):
+        t, root = tool
+        (root / "sub").mkdir()
+        result = t.execute({"action": "tree", "target": ""})
+        assert result.success is True
+        assert "sub" in result.result
 
     def test_execute_rejects_unknown_action(self, tool):
         t, _root = tool

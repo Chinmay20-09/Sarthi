@@ -126,7 +126,7 @@ _DETERMINISTIC_DOMAINS = frozenset(
 _DOT_RUN_RE = re.compile(r"\.{2,}")
 _DOT_RUN_SENTINEL_RE = re.compile(r"\x01D(\d+)\x01")
 _TERMINAL_PREFIX_RE = re.compile(
-    r"^\s*(?:cd\b|echo\b|create\s+(?:file|directory|dir)\b|write\b)",
+    r"^\s*(?:cd\b|echo\b|create\s+(?:file|directory|dir)\b|write\b|read\b|list\b|tree\b)",
     re.IGNORECASE,
 )
 
@@ -169,10 +169,11 @@ _OPEN_CHAIN_RE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
-# Terminal actions (TERMINAL capability): cd / echo / create / write.
+# Terminal actions (TERMINAL capability + FILESYSTEM read mapping):
+# cd / echo / create / write plus the read-side commands read / list / tree.
 # Exported so downstream stages (entity resolution in brain/engine.py)
 # can recognise terminal intents and leave their targets untouched.
-TERMINAL_ACTIONS = frozenset({"cd", "echo", "create", "write"})
+TERMINAL_ACTIONS = frozenset({"cd", "echo", "create", "write", "read", "list", "tree"})
 
 # "create file <path>" / "create directory <path>" / "create dir <path>"
 # (optionally "... with content <text>"). Explicit shapes only — a plain
@@ -186,6 +187,58 @@ _CREATE_RE = re.compile(
 # "write a poem" stays conversational (NLP fallback) instead of failing
 # at the terminal skill with a usage error.
 _WRITE_TO_CLAUSE_RE = re.compile(r"^\s*.+?\s+to\s+\S", re.IGNORECASE | re.DOTALL)
+
+# Vocabulary that belongs to other skills when it follows "list"/"tree":
+# "list pending projects" is the project tracker, not a directory listing.
+_LISTING_BLOCKLIST = frozenset(
+    {
+        "projects",
+        "project",
+        "github",
+        "repos",
+        "repositories",
+        "repo",
+        "pending",
+        "issues",
+        "issue",
+        "tasks",
+        "task",
+        "memories",
+        "memory",
+        "skills",
+        "commands",
+    }
+)
+
+
+def _looks_path_like(text: str, separators: bool = False) -> bool:
+    """True when the first token looks like a filesystem path.
+
+    A dot in the last segment of the first token ("notes.txt") always
+    counts; with ``separators=True`` a separator anywhere ("docs/src",
+    "..\\x") counts too. The same signal the bare "create" gate has
+    always used, extracted so read/list share it.
+    """
+    first = text.split(None, 1)[0] if text else ""
+    if not first:
+        return False
+    if separators and ("/" in first or "\\" in first):
+        return True
+    last_segment = re.split(r"[/\\]", first)[-1]
+    return "." in last_segment
+
+
+def _is_listing_target(text: str) -> bool:
+    """True when "list/tree <text>" safely names a directory.
+
+    Single plain words ("list documents") are accepted; multi-word
+    phrases and project-vocabulary targets ("list pending projects",
+    "list my github repos") keep their existing skills.
+    """
+    tokens = text.split()
+    if len(tokens) != 1:
+        return False
+    return tokens[0].lower().rstrip(_TRAILING_PUNCTUATION) not in _LISTING_BLOCKLIST
 
 
 def _token_key(token: str) -> str:
@@ -402,11 +455,18 @@ def _parse_terminal_intent(text: str) -> Intent | None:
         create dir projects                 -> create / "dir projects"
         create file notes.txt with content hi -> create (skill creates + writes)
         write hello world to notes.txt      -> write / "hello world to notes.txt"
+        read notes.txt                      -> read / "notes.txt"
+        read file notes.txt                 -> read / "notes.txt"
+        list                                -> list / "" (the tracked cwd)
+        list documents                      -> list / "documents"
+        tree projects                       -> tree / "projects"
 
     "write a poem" (no "to <file>") and "create a website" (no
     file/directory kind) are NOT terminal commands — they return None.
-    "cd" / "echo" alone are terminal intents with an empty target so the
-    skill can answer with its structured usage hint.
+    Same for "read a book" (not path-like) and "list pending projects"
+    (project-tracker vocabulary). "cd" / "echo" / "read" / "list" /
+    "tree" alone are terminal intents with an empty target so the skill
+    can answer with its structured usage hint (or list the cwd).
     """
     lowered = text.lower()
 
@@ -443,6 +503,52 @@ def _parse_terminal_intent(text: str) -> Intent | None:
             confidence=1.0,
             raw_text=text,
         )
+
+    # Bare "create <path>" ("create testing.txt") and "create" alone: a
+    # path-like target routes to the terminal skill for its fast, structured
+    # usage hint instead of falling through to the conversational fallback
+    # (a slow model call). Path-like = the first token carries a file
+    # extension (a dot in its last / or \\ -separated segment), so
+    # "create a website" / "create something beautiful" stay conversational.
+    if lowered == "create" or lowered.startswith("create "):
+        rest = text[6:].strip()
+        if not rest or _looks_path_like(rest):
+            return Intent(action="create", target=rest, confidence=1.0, raw_text=text)
+
+    # read [file] <path> — path-like targets only ("read a book" stays
+    # conversational). "read file x" strips the kind word like create does.
+    if lowered == "read" or lowered.startswith("read "):
+        rest = text[4:].strip()
+        if rest.lower().startswith("file "):
+            rest = rest[5:].strip()
+        if not rest or _looks_path_like(rest, separators=True):
+            return Intent(action="read", target=rest, confidence=1.0, raw_text=text)
+
+    # list / tree [path] — filesystem listings. An empty target lists the
+    # tracked cwd; an explicit "directory"/"dir" kind word ("list directory
+    # projects") is accepted like create's "file"; a single plain word is
+    # accepted as a directory name ("list documents"). Everything else
+    # ("list pending projects") is left to the skills that already own it.
+    # "tree" has no other claimant (the tracker never sees it), so a single
+    # plain word is always accepted for it.
+    for verb in ("list", "tree"):
+        if lowered == verb or lowered.startswith(verb + " "):
+            rest = text[len(verb) :].strip()
+            explicit_kind = False
+            if rest.lower().startswith("directory "):
+                rest = rest[10:].strip()
+                explicit_kind = True
+            elif rest.lower().startswith("dir "):
+                rest = rest[4:].strip()
+                explicit_kind = True
+            if (
+                explicit_kind
+                or not rest
+                or _looks_path_like(rest, separators=True)
+                or (verb == "tree" and len(rest.split()) == 1)
+                or _is_listing_target(rest)
+            ):
+                return Intent(action=verb, target=rest, confidence=1.0, raw_text=text)
 
     # write <content> to <file> — requires the "to <file>" clause.
     if lowered.startswith("write ") and _WRITE_TO_CLAUSE_RE.match(text):

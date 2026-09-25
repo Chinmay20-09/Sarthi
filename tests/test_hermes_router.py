@@ -119,6 +119,13 @@ class TestInterpreterShapeAlignment:
             "scan",
             "refresh",
             "set github username",
+            "cd documents",
+            "echo hello",
+            "create testing.txt",
+            "write hello world to notes.txt",
+            "read notes.txt",
+            "list documents",
+            "tree projects",
             "clean",
             "browse example.com",
             "visit github.com",
@@ -128,6 +135,33 @@ class TestInterpreterShapeAlignment:
     )
     def test_known_single_action_shapes_stay_fast(self, command):
         assert route_command(command).route == "fast"
+
+    def test_failed_terminal_command_does_not_escalate(self):
+        """A refused terminal command must surface its own structured error
+        instantly — the router must not send it to the Hermes agent loop."""
+        route = route_command("create testing.txt")
+        assert route.route == "fast"
+        assert route.route != "hermes"
+
+    def test_read_side_terminal_commands_do_not_escalate(self):
+        """read/list/tree filesystem shapes stay on the fast path."""
+        for command in ("read notes.txt", "list documents", "tree projects", "list"):
+            route = route_command(command)
+            assert route.route == "fast", command
+            assert route.reason == "deterministic_terminal_command"
+
+    def test_conversational_read_still_goes_to_hermes(self):
+        """'read a book' is not a filesystem command — keep the old verdict."""
+        route = route_command("read a book and summarize it")
+        assert route.route == "hermes"
+
+    def test_list_project_vocabulary_does_not_get_terminal_veto(self):
+        """'list pending projects' belongs to the project tracker, not the
+        terminal — the terminal fast-path veto must not fire for it."""
+        route = route_command("list pending projects")
+        # The tracker shape was routed hermes before this change; the veto
+        # must not have claimed it.
+        assert route.reason != "deterministic_terminal_command"
 
     def test_deterministic_ai_chain_shape_stays_fast(self):
         # "run X from chatgpt to gemini" is parsed by the automation engine —

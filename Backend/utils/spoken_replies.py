@@ -157,7 +157,17 @@ def _on_command_completed(event) -> None:
 
 
 def register_voice_replies(bus) -> None:
-    """Subscribe the voice responder to `command_completed` on this bus."""
+    """Subscribe the voice responder to `command_completed` on this bus.
+
+    Idempotent per bus: api.py registers at module import time, and the
+    dev-mode launch (``python api.py`` → uvicorn imports ``api`` again in
+    the same process) runs that registration twice against the same bus
+    singleton — which made every reply be spoken twice. Skip when this
+    handler is already wired onto the bus.
+    """
+    existing = getattr(bus, "_handlers", {}).get("command_completed", [])
+    if _on_command_completed in existing:
+        return
     bus.on("command_completed", _on_command_completed)
 
 

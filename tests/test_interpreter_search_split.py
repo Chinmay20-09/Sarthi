@@ -417,6 +417,12 @@ class TestTerminalCommandParsing:
             ("echo hello to notes.txt", "echo", "hello to notes.txt"),
             ("echo done.", "echo", "done"),
             ("create file notes.txt", "create", "file notes.txt"),
+            # Bare path-like create routes to the terminal skill (fast error),
+            # not the conversational fallback (a slow model call).
+            ("create testing.txt", "create", "testing.txt"),
+            ("create notes.txt with content hi", "create", "notes.txt with content hi"),
+            ("create projects/my-file.md", "create", "projects/my-file.md"),
+            ("create", "create", ""),
             ("create directory projects", "create", "directory projects"),
             ("create dir projects", "create", "dir projects"),
             (
@@ -426,6 +432,16 @@ class TestTerminalCommandParsing:
             ),
             ("write hello world to notes.txt", "write", "hello world to notes.txt"),
             ("write evil to ../../evil.txt", "write", "evil to ../../evil.txt"),
+            ("read notes.txt", "read", "notes.txt"),
+            ("read file notes.txt", "read", "notes.txt"),
+            ("read docs/notes.txt", "read", "docs/notes.txt"),
+            ("read", "read", ""),
+            ("list", "list", ""),
+            ("list documents", "list", "documents"),
+            ("list docs/src", "list", "docs/src"),
+            ("list directory projects", "list", "projects"),
+            ("tree", "tree", ""),
+            ("tree projects", "tree", "projects"),
         ],
     )
     def test_terminal_command_shapes(self, text, action, target):
@@ -442,17 +458,30 @@ class TestTerminalCommandParsing:
             "write me a story about dragons",
             "create a website",
             "create something beautiful",
+            "read a book",
+            "read me that article",
+            "list pending projects",
+            "list my github repos",
+            "list all tasks",
         ],
     )
     def test_conversational_sentences_stay_unrouted(self, text):
-        """No 'to <file>' / 'file|directory <path>' shape -> no terminal intent."""
+        """No 'to <file>' / 'file|directory <path>' shape -> no terminal intent.
+
+        read/list keep their other owners: "read a book" stays conversational
+        and "list pending projects" stays with the project tracker.
+        """
         intents = interpret_many(text)
-        assert all(intent.action not in ("cd", "echo", "create", "write") for intent in intents)
+        assert all(
+            intent.action not in ("cd", "echo", "create", "write", "read", "list", "tree")
+            for intent in intents
+        )
 
     def test_dot_runs_survive_sentence_splitting(self):
         """'..' inside terminal paths is traversal, not a sentence break."""
         assert split_queries("cd ../..") == ["cd ../.."]
         assert split_queries("write evil to ../../evil.txt") == ["write evil to ../../evil.txt"]
+        assert split_queries("list ../sibling") == ["list ../sibling"]
 
     def test_ellipsis_splitting_unchanged(self):
         """Non-terminal text keeps legacy dot splitting ('...' = separator)."""
@@ -470,6 +499,19 @@ class TestTerminalCommandParsing:
             BrainContext(original_text="write hello world to notes.txt"),
         )
         assert plan[0].target == "hello world to notes.txt"
+
+    def test_read_list_targets_skip_entity_resolution(self):
+        """The new read-side terminal intents keep their paths verbatim too."""
+        engine = BrainEngine(
+            resolver=EntityResolver(entities=[{"name": "antiword", "type": "app"}]),
+            planner=Planner(),
+        )
+        for action, target in (("read", "notes.txt"), ("list", "documents"), ("tree", "src")):
+            plan = engine._resolve_plan(
+                [Intent(action=action, target=target)],
+                BrainContext(original_text=f"{action} {target}"),
+            )
+            assert plan[0].target == target
 
     def test_non_terminal_targets_still_resolve(self):
         """Non-terminal intents keep the legacy entity resolution."""

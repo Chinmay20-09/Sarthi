@@ -61,6 +61,14 @@ _FAST_ACTIONS = frozenset(
         "clear",
         "browse",
         "visit",
+        # Terminal commands (TERMINAL capability). Their targets are paths / literal
+        # text, so "write hello world to notes.txt" and "create testing.txt" must
+        # not be flagged no_action_word and escalated to Hermes — a failed or
+        # refused terminal command surfaces its own structured error instantly.
+        "cd",
+        "echo",
+        "create",
+        "write",
         "track",
         "pending",
         "update",
@@ -236,6 +244,54 @@ _FOLLOWUP_CLAUSE_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Vocabulary that marks a "list ..." sentence as belonging to another skill
+# (project tracker, memory, skills registry) — mirrors the interpreter's
+# blocklist so both layers agree on what stays a filesystem listing.
+_TERMINAL_LISTING_BLOCKLIST = frozenset(
+    {
+        "projects",
+        "project",
+        "github",
+        "repos",
+        "repositories",
+        "repo",
+        "pending",
+        "issues",
+        "issue",
+        "tasks",
+        "task",
+        "memories",
+        "memory",
+        "skills",
+        "commands",
+    }
+)
+
+
+def _terminal_read_shape(raw: str) -> bool:
+    """Path/listing shape for read/list/tree terminal commands.
+
+    Mirrors the interpreter's gates so both layers agree: "read
+    notes.txt", "list documents", "tree projects" are deterministic
+    terminal commands; "read a book" (conversation) and "list pending
+    projects" (project tracker) are not.
+    """
+    tokens = _tokens(raw)
+    if len(tokens) < 2:
+        return True  # "read"/"list"/"tree" alone -> terminal usage hint
+    verb = tokens[0]
+    rest = tokens[1:]
+    first = rest[0]
+    if first in {"file", "directory", "dir"} or first.startswith("/"):
+        return True
+    if "/" in first or "\\" in first or "." in first.rstrip("."):
+        return True  # separator or extension in the first path token
+    if first in _TERMINAL_LISTING_BLOCKLIST:
+        # "tree" has no other claimant — the tracker never sees it.
+        return verb == "tree" and len(rest) == 1
+    return len(rest) == 1  # single plain word ("list documents")
+
+
 
 @dataclass
 class Route:
@@ -391,6 +447,21 @@ def route_command(text: str) -> Route:
     # the long_command/complex verdicts.
     if first in {"run", "chain", "automate"} and _AI_CHAIN_RE.search(raw):
         return Route(route="fast", reason="deterministic_ai_chain", score=0, signals=signals)
+
+    # Terminal command prefixes (cd / echo / create / write / read / list /
+    # tree): the interpreter parses these deterministically and the terminal
+    # skill answers every one — success or a structured usage error — in
+    # milliseconds. They must never be escalated to Hermes for their
+    # data-flow-ish verbs ("write") or length ("echo hello to notes.txt"):
+    # a refused terminal command surfaces its own error instantly instead of
+    # a slow model round-trip. read/list/tree only veto when the rest of the
+    # sentence is path/listing-shaped (see _terminal_read_shape).
+    if first in {"cd", "echo", "create", "write"} or (
+        first in {"read", "list", "tree"} and _terminal_read_shape(raw)
+    ):
+        return Route(
+            route="fast", reason="deterministic_terminal_command", score=0, signals=signals
+        )
 
     # Long single-action commands tend to be sentences, not commands.
     if first in _FAST_ACTIONS and len(tokens) > _MAX_FAST_TARGET_WORDS + 1:

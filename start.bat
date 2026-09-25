@@ -17,5 +17,5 @@ cd /d "%~dp0"
 call "%~dp0Backend\sarthi.bat" %*
 
 :: Open the UI (served by the backend on port 8000)
-start "" http://127.0.0.1:8000
+start "" http://127.0.0.0:8000
 exit
