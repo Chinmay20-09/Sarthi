@@ -17,6 +17,7 @@ dependencies = [
     "rapidfuzz",
     "google-auth-oauthlib",
     "numpy",
+    "sounddevice",
 ]
 
 [project.optional-dependencies]
