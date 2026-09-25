@@ -16,6 +16,7 @@ dependencies = [
     "psutil",
     "rapidfuzz",
     "google-auth-oauthlib",
+    "numpy",
 ]
 
 [project.optional-dependencies]

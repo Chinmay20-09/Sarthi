@@ -292,7 +292,6 @@ def _terminal_read_shape(raw: str) -> bool:
     return len(rest) == 1  # single plain word ("list documents")
 
 
-
 @dataclass
 class Route:
     """Result of the complexity router.

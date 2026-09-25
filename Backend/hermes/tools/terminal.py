@@ -92,7 +92,8 @@ class TerminalTool(BaseTool):
             payload = {
                 k: v
                 for k, v in info.items()
-                if k in ("cwd", "path", "bytes_written", "text", "type", "content", "entries", "chars")
+                if k
+                in ("cwd", "path", "bytes_written", "text", "type", "content", "entries", "chars")
             }
             return ToolResult(
                 success=True,

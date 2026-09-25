@@ -234,8 +234,7 @@ class TerminalSkill(BaseSkill):
                 "status": "error",
                 "handled": True,
                 "error": (
-                    f"Specify what to create. Try: create file {target} "
-                    "or create directory <name>"
+                    f"Specify what to create. Try: create file {target} or create directory <name>"
                 ),
             }
 
