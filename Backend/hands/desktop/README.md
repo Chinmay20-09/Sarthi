@@ -46,7 +46,7 @@ arbitrary kwargs pass through, and no shell or code execution exists at
 any layer.
 
 | Capability | Status | Actions |
-|---|---|---|
+| --- | --- | --- |
 | APPLICATION_LAUNCH | implemented | open_application |
 | APPLICATION_CLOSE | implemented | close_application |
 | WINDOW_READ | implemented | list_windows, get_active_window |

@@ -130,6 +130,7 @@ empty; everything else was left in place.
 - `utils/telemetry.py`, `reading.py` — used by /test/run and /system/metrics.
 - `database/profiles.py` — used by browser_awareness driver.
 - `speech/*` — used by /listen and main.py CLI.
+
 # Duplication (observed)
 
 Systems with overlapping responsibilities. Each entry documents the overlap

@@ -10,7 +10,7 @@ Configuration lives in three layers. Verified against
 | --- | --- | --- |
 | PROJECT_ROOT / SKILLS_DIR / KNOWLEDGE_DIR / UI_DIR | Backend paths | many |
 | SAMPLE_RATE / RECORDING_DURATION / RECORDING_FILE | 16000 / 5 s / temp.wav | speech recorder |
-| WHISPER_MODEL / _DEVICE / _COMPUTE_TYPE | small / cpu / int8 | speech_to_text |
+| WHISPER_MODEL /_DEVICE / _COMPUTE_TYPE | small / cpu / int8 | speech_to_text |
 | API_HOST / API_PORT | 0.0.0.0 / 8000 | api.py, sarthi.bat (kept in sync manually) |
 | LOG_LEVEL / LOG_FORMAT | INFO / default fmt | utils/logger |
 
@@ -24,8 +24,8 @@ Core provider:
 | HERMES_MODEL | `openai/gpt-5` | model id for the primary provider |
 | HERMES_TEMPERATURE / HERMES_TIMEOUT | 0.2 / 60.0 | generation knobs |
 | HERMES_SANDBOX_PATH | `sandbox` | TaskSandbox root |
-| LOCAL_HERMES_URL / _API_KEY / _MODEL / _TIMEOUT | localhost:11434 / — / hermes3:8b / 180 | Ollama fallback |
-| OPENROUTER_API_KEY / _URL / _HTTP_REFERER / _X_TITLE | — | OpenRouter |
+| LOCAL_HERMES_URL / _API_KEY / _MODEL /_TIMEOUT | localhost:11434 / — / hermes3:8b / 180 | Ollama fallback |
+| OPENROUTER_API_KEY / _URL /_HTTP_REFERER /_X_TITLE | — | OpenRouter |
 | OPENAI_API_KEY (+ per-provider keys) | — | OpenAI-compatible endpoints |
 
 Agent loop + router (Phase 3f knobs, `.env.example` documents them):

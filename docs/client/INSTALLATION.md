@@ -16,20 +16,26 @@
 1. **Get the code** (clone or download the repository) and open a terminal in
    the repository root.
 2. **Create a virtual environment**:
+
    ```bash
    python -m venv .venv
    .venv\Scripts\activate
    ```
+
 3. **Install Sarthi**:
+
    ```bash
    pip install -e .
    ```
+
    Optional extras:
+
    ```bash
    pip install -e ".[automation]"   # AI chaining / laptop control
    pip install -e ".[browser]"      # automated browsing (Selenium/Playwright)
    pip install sounddevice faster-whisper   # voice input
    ```
+
    The core app installs and starts fine without any of the extras — features
    degrade gracefully until you add them.
 4. **Configure (optional)**: copy `.env.example` to `.env`. Defaults are
@@ -45,11 +51,13 @@
   backend (a visible server window) and opens the dashboard at
   <http://127.0.0.1:8000>.
 - **From the terminal**:
+
   ```bash
   Backend\sarthi.bat             # visible server window
   Backend\sarthi.bat background  # windowless (pythonw)
   python Backend/api.py          # direct start
   ```
+
 - **Desktop client**: `python Desktop/run.py` (development) or
   `Desktop/dist/sarthi.exe` if present (packaged build).
 - **Verify**: open <http://127.0.0.1:8000/health> — you should see

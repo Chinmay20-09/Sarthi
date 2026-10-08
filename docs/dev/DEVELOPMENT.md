@@ -9,11 +9,14 @@ How to set up, navigate and safely modify Sarthi.
    Optional: Ollama (local LLM), Chrome (browser automation), a microphone
    (voice input).
 2. **Clone and create a virtual environment**:
+
    ```bash
    python -m venv .venv
    source .venv/Scripts/activate   # Git Bash on Windows
    ```
+
 3. **Install**:
+
    ```bash
    pip install -e .                # core runtime
    pip install -e ".[dev]"         # + ruff, pytest
@@ -21,6 +24,7 @@ How to set up, navigate and safely modify Sarthi.
    pip install -e ".[browser]"     # + selenium/beautifulsoup4/playwright
    pip install sounddevice faster-whisper   # voice input (undeclared extras)
    ```
+
 4. **Configure**: copy `.env.example` to `.env` and set provider settings.
    Default is the local Ollama provider (`HERMES_PROVIDER=local`,
    `LOCAL_HERMES_MODEL=hermes3:8b`) — no API keys needed. If you run Ollama,

@@ -36,45 +36,45 @@ will fail if you violate it.
 
 ## Reuse
 
-8. **Reuse existing skills/tools rather than creating parallel execution
+1. **Reuse existing skills/tools rather than creating parallel execution
    systems.** New Hermes tools delegate to existing skills/executor.
    New OS-level behaviour belongs in `hands/desktop/` backends, not ad-hoc
    pyautogui/psutil calls elsewhere. (Historical precedent: the ai_chain
    control-layer duplication is deferred debt, AD-12 — do not add more.)
-9. **Do not add a second sandbox root, second conversation store, or second
+2. **Do not add a second sandbox root, second conversation store, or second
    capability registry.** Sandbox paths resolve via
    `hermes.sandbox.resolve_sandbox_root` (AD-01); the two conversation
    tables are intentionally distinct (AD-09).
 
 ## Honesty & scope
 
-10. **Do not represent planned functionality as implemented.** Label work
+ 1. **Do not represent planned functionality as implemented.** Label work
     IMPLEMENTED / PARTIAL / PLANNED. If a feature needs new infrastructure
     (auth, discovery, remote hands), say so instead of faking it.
-11. **Preserve existing behaviour unless the active task explicitly changes
+ 2. **Preserve existing behaviour unless the active task explicitly changes
     it.** Behaviour-preserving refactors stay behaviour-preserving; do not
     bundle unrelated changes. Do not modify unrelated subsystems.
-12. **Do not casually "fix" deferred items.** These are decided debts with
+ 3. **Do not casually "fix" deferred items.** These are decided debts with
     recorded reasons (see `docs/dev/PROJECT_STATE.md`): ai_chain control
     layer (AD-12), `handled` vs `success` skill semantics (D-07),
     sandbox→knowledge promotion (AD-13), automation lifecycle (AD-14),
     unified observation contract (AD-15). Changing them needs an explicit
     task, not drive-by cleanup.
-13. **Removal candidates stay in place** (`ai_chain/browser_automation.py`,
+ 4. **Removal candidates stay in place** (`ai_chain/browser_automation.py`,
     `assistants/brain_assistant/analyzer.py`) — they carry unique test
     coverage / contract consumers (AD-06, AD-11).
 
 ## Process
 
-14. **Run relevant tests after modifications.** The boundary suites
+ 1. **Run relevant tests after modifications.** The boundary suites
     (`test_architecture_boundaries.py`, `test_brain_hand_boundary.py`,
     `test_consolidation_routing.py`, `test_desktop_agent_ipc.py`) must pass
     after any structural change; run the full suite before finishing.
-15. **Update documentation in the same change** when behaviour or
+ 2. **Update documentation in the same change** when behaviour or
     architecture changes: the matching section in
     `docs/dev/ARCHITECTURE.md`, the state entry in
     `docs/dev/PROJECT_STATE.md`. Never leave stale architecture documented.
-16. **The code is the source of truth.** If documentation and code disagree,
+ 3. **The code is the source of truth.** If documentation and code disagree,
     verify against the code, then fix the documentation.
-17. **Never commit**: `Backend/database/sarthi.db`, `.env`, `sandbox/`,
+ 4. **Never commit**: `Backend/database/sarthi.db`, `.env`, `sandbox/`,
     `results/`, `ai_chain/calibration.json`, `Desktop/dist/`.

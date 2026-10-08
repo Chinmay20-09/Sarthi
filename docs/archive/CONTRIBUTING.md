@@ -91,7 +91,7 @@ they cannot fulfill return `handled: True` so later fallbacks don't override the
 **Registries (one owner per concern — do not create parallel systems):**
 
 | Registry | Module | Owns |
-|---|---|---|
+| --- | --- | --- |
 | Skills | `skills/registry.py` | skill discovery + enable/disable |
 | Hermes tools | `hermes/tool_registry.py` | tools Hermes may request |
 | Connectors | `connectors/registry.py` | external service connectors |
@@ -100,7 +100,7 @@ they cannot fulfill return `handled: True` so later fallbacks don't override the
 ## Module Ownership
 
 | Module | Owner responsibility | Don't touch without discussion |
-|---|---|---|
+| --- | --- | --- |
 | `brain/` | Pipeline orchestration, intent model | `brain/executor.py` dispatch semantics |
 | `knowledge/` | Entity data + resolution | `knowledge/manager.py` schema (applications.json v2 categories) |
 | `skills/registry.py` | Skill discovery | `skills/base.py` interface |

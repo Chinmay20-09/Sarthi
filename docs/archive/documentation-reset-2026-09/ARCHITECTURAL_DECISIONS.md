@@ -34,6 +34,7 @@ different sandbox roots depending on the launch directory, so task history,
 index lookups and `retrieval` differed by how the server was started.
 
 **Evidence**
+
 - `hermes/config/settings.py`: `sandbox_path: str = "sandbox"` (relative).
 - `TaskSandbox.__init__` did `Path(root)` — resolved against the cwd at
   write time.
@@ -78,6 +79,7 @@ directories, config-loader resolution, `TaskSandbox` defaults).
 over the same `ToolRegistry` with different validation, caps and persistence.
 
 **Evidence**
+
 - `hermes/agent.py` (HermesAgent): fast path → retrieval → model/tool loop →
   `hermes/validator.py` gate → sandbox persistence → iteration + wall-clock
   bounds. Used by the `/command` complexity fallback (`api.py`).
@@ -156,6 +158,7 @@ complex request that the interpreter mis-read as a simple action was executed
 literally and Hermes was never consulted.
 
 **Evidence**
+
 - `api.py`: `if not result.get("success") or routing == "hermes"` → router →
   agent.
 - Probe: `"Find all assignment PDFs and rename them according to subject"` →
@@ -220,6 +223,7 @@ graceful message instead of looping.
 carried a second, unused orchestration pipeline.
 
 **Evidence** (§19 checklist run before deletion)
+
 - `AutomationEngine.run(event)`, `skills/automation_engine/{events,context,preview}.py`
   and `contracts.AutomationEvent`: **no callers** (repo-wide grep), **no test
   imports**, no config keys, no dynamic loading, no skill dependency.
@@ -255,6 +259,7 @@ sandbox-proven misfire where `Open Google, search for "OpenAI", copy the URL…`
 executed as a ChatGPT → Gemini chain.
 
 **Evidence** (live probe, current source)
+
 - `"search for OpenAI"` → `search`.
 - `'Open Google, search for "OpenAI", copy the URL'` → `open` + `search`.
 - `"Use ChatGPT to write a script"` → `unknown` (never `chain`).
@@ -337,6 +342,7 @@ imports for zero behaviour change (§22/§26).
 mechanisms coexist, and the brief forbids blind coordinate clicking.
 
 **Evidence**
+
 - `skills/browser_awareness/` (Selenium primary / Playwright fallback, bs4
   parsing, inspector loop) serves **arbitrary** sites via the `browse` intent
   and the `browser_ask` tool.
@@ -434,6 +440,7 @@ implement, and nothing prevented a reasoning dependency from creeping into
 `hands/`.
 
 **Evidence**
+
 - `hands/desktop/hand.py` already exposes exactly the right surface:
   `execute()` (allow-listed, argument-validated, structured result),
   `capabilities()`, `find_application_process()` — called by the executor's

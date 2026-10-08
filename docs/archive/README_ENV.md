@@ -5,6 +5,7 @@ See also `ARCHITECTURE.md` (§ Provider Architecture) for how selection and
 fallback work.
 
 Variables:
+
 - HERMES_PROVIDER: which provider Hermes uses. Supported values:
   - "local" | "ollama" — local Ollama only (no cloud calls) — **the
     default when HERMES_PROVIDER is unset**
@@ -20,12 +21,14 @@ Variables:
 - HERMES_SANDBOX_PATH: path to store sandbox data
 
 Agent loop bounds (the bounded complex-task loop):
+
 - HERMES_AGENT_MAX_ITERATIONS: max tool-requesting model turns per complex
   task (default: 5)
 - HERMES_AGENT_TIMEOUT: wall-clock budget in seconds for one complex task
   (default: 300)
 
 Complexity router knobs (the fast/complex gate):
+
 - HERMES_ROUTER_MODE: "auto" (heuristic routing, default), "always" (every
   command is treated as complex; the deterministic pipeline still runs first
   inside the agent), or "off" (never route to Hermes from /command)
@@ -33,13 +36,15 @@ Complexity router knobs (the fast/complex gate):
   to be considered complex (default: 1)
 
 Retrieval knobs (bounded context feeding for complex tasks):
+
 - HERMES_RETRIEVAL_ENABLED: "true" (default) or "false"
 - HERMES_RETRIEVAL_MAX_CHARS: total character budget for retrieved context
   (default: 6000)
 
 Local Hermes-specific (provider=local|ollama, and the automatic fallback
 for remote providers):
-- LOCAL_HERMES_URL: http://localhost:11434 (Ollama's default port; the local
+
+- LOCAL_HERMES_URL: <http://localhost:11434> (Ollama's default port; the local
   provider talks to Ollama's /api/chat endpoint)
 - LOCAL_HERMES_API_KEY: optional API key for local Hermes
 - LOCAL_HERMES_MODEL: model name as installed in Ollama (default: hermes3:8b)
@@ -47,21 +52,25 @@ for remote providers):
   (default: 180 — CPU inference is slow)
 
 OpenRouter-specific (provider=openrouter):
+
 - OPENROUTER_API_KEY: your OpenRouter key (keep secret)
 - OPENROUTER_URL: override OpenRouter endpoint if needed
 - OPENROUTER_HTTP_REFERER, OPENROUTER_X_TITLE: optional headers
 
 OpenAI-compatible (provider=openai_compatible | openai):
+
 - OPENAI_COMPATIBLE_URL: base URL of any /v1-compatible endpoint, e.g.
-  https://api.openai.com/v1 (default), http://localhost:1234/v1 (LM Studio)
+  <https://api.openai.com/v1> (default), <http://localhost:1234/v1> (LM Studio)
 - OPENAI_COMPATIBLE_API_KEY: key for that endpoint. Empty is fine for
   keyless local servers (no Authorization header is sent).
 
 Usage:
+
 - Copy .env.example -> .env and set values
 - Run Hermes via python -m hermes.main or as your project starts
 
 Adding a provider:
+
 - Write one adapter subclassing hermes.providers.base.AIProvider (map
   ModelRequest -> the provider's wire format and the response ->
   ProviderResponse), register it in hermes/providers/registry.py, and set

@@ -23,7 +23,7 @@ A divergence does not automatically mean that something should be deleted. It me
 ## 1. Core Architecture
 
 | ID | Concept | Intended Architecture | Current Repository Reality | Divergence | Severity | Decision |
-|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- |
 | DM-001 | Sarthi Core | Sarthi is the final authority over tasks, execution, state, permissions, and hands. | Repository contains BrainEngine/Core routing, execution, sandbox, skills and related systems. | Ownership boundaries need to be verified across runtime paths. | HIGH | Investigate |
 | DM-002 | Deterministic Core | Simple tasks should remain inside Sarthi without waking Hermes. | Deterministic pipeline exists through interpreter/planner/resolver/executor. | Current routing must be checked to ensure simple tasks cannot unnecessarily enter Hermes. | HIGH | Investigate |
 | DM-003 | Complexity Routing | Sarthi decides whether a request is simple or complex. | Complexity Router exists and Hermes is used for complex requests. | Need to verify that routing occurs before unnecessary model invocation. | HIGH | Verify |
@@ -36,7 +36,7 @@ A divergence does not automatically mean that something should be deleted. It me
 ## 2. Hermes
 
 | ID | Concept | Intended Architecture | Current Repository Reality | Divergence | Severity | Decision |
-|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- |
 | DM-007 | Hermes Role | Hermes is the reasoning/planning component used when Sarthi encounters complex work. | HermesAgent and Hermes-related orchestration systems exist. | Role appears to be implemented through more than one orchestration path. | CRITICAL | Investigate |
 | DM-008 | Hermes Control | Hermes must never directly possess system control. | Hermes accesses capabilities through tools. | Appears aligned, but all tool paths need verification. | HIGH | Verify |
 | DM-009 | Hermes Tools | Hermes should interact with Sarthi through controlled tools rather than loading the entire skill system. | Tool registry exposes capabilities to Hermes. | Appears aligned. | LOW | Preserve |
@@ -49,7 +49,7 @@ A divergence does not automatically mean that something should be deleted. It me
 ## 3. Planning & Task Lifecycle
 
 | ID | Concept | Intended Architecture | Current Repository Reality | Divergence | Severity | Decision |
-|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- |
 | DM-013 | Planning | Hermes determines the next steps for complex tasks. | Planner exists in the deterministic path while Hermes also generates/controls next steps. | "Planner" responsibilities may be split between deterministic planner and Hermes. | HIGH | Clarify |
 | DM-014 | Current Step | Sarthi owns the current executing step. | Runtime state is distributed across orchestration/execution components. | Need explicit task-state ownership. | HIGH | Investigate |
 | DM-015 | Previous Step | Completed/previous execution state lives in Sandbox. | Sandbox stores task-related artifacts/history. | Appears directionally aligned. | MEDIUM | Verify |
@@ -63,7 +63,7 @@ A divergence does not automatically mean that something should be deleted. It me
 ## 4. Skills & Tools
 
 | ID | Concept | Intended Architecture | Current Repository Reality | Divergence | Severity | Decision |
-|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- |
 | DM-020 | Skill | A skill is a portable capability that can potentially be copied into another compatible system. | Skills are registered and exposed through the existing skill system. | Portability requirements are not necessarily enforced by current architecture. | MEDIUM | Investigate |
 | DM-021 | Tool | A tool is a Hermes-facing controlled interface into capabilities. | Hermes ToolRegistry exposes tools which delegate into existing capabilities. | Appears strongly aligned. | LOW | Preserve |
 | DM-022 | Skill/Tool Boundary | Hermes should use tools rather than directly owning/understanding the entire skill ecosystem. | Tool bridge exists between Hermes and capabilities. | Appears aligned. | LOW | Preserve |
@@ -75,7 +75,7 @@ A divergence does not automatically mean that something should be deleted. It me
 ## 5. AI Chaining
 
 | ID | Concept | Intended Architecture | Current Repository Reality | Divergence | Severity | Decision |
-|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- |
 | DM-025 | AI Chain Purpose | AI chaining is an automation mechanism allowing AI ↔ execution loops, e.g. ChatGPT → CLI → result → ChatGPT. | ai_chain subsystem exists with AI-provider and browser-related functionality. | Current subsystem may act as a separate orchestration system. | HIGH | Investigate |
 | DM-026 | AI Chain Ownership | Hermes should invoke/use chaining when it is the appropriate automation mechanism. | AI chaining exists as a distinct subsystem. | May be positioned as a peer orchestrator instead of a Hermes capability. | HIGH | Investigate |
 | DM-027 | Chain vs Hermes | Hermes reasons/plans; chaining executes a specific AI-to-AI/external-environment loop. | Hermes and chaining both contain orchestration-like behavior. | Responsibility overlap likely. | HIGH | Resolve |
@@ -87,7 +87,7 @@ A divergence does not automatically mean that something should be deleted. It me
 ## 6. Browser Automation
 
 | ID | Concept | Intended Architecture | Current Repository Reality | Divergence | Severity | Decision |
-|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- |
 | DM-030 | Browser Role | Browser automation gives Sarthi controlled access to the internet. | Multiple browser-related systems exist. | Capability is distributed across multiple implementations. | HIGH | Investigate |
 | DM-031 | Browser Architecture | DOM/HTML understanding is preferred; screenshots/visual interaction are fallback mechanisms. | Repository contains browser awareness, Selenium/BeautifulSoup and automation mechanisms. | Multiple approaches coexist. | HIGH | Consolidate conceptually |
 | DM-032 | Browser Interaction | Sarthi should target semantic elements such as Copy rather than blindly clicking coordinates. | Repository includes browser/automation implementations with differing interaction mechanisms. | Need a single semantic browser-action boundary. | HIGH | Resolve |
@@ -99,7 +99,7 @@ A divergence does not automatically mean that something should be deleted. It me
 ## 7. Memory
 
 | ID | Concept | Intended Architecture | Current Repository Reality | Divergence | Severity | Decision |
-|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- |
 | DM-035 | Memory Definition | Memory stores user facts, preferences, relationships and useful past interactions. | Multiple persistent stores contain conversational/task information. | Memory responsibilities appear distributed. | HIGH | Investigate |
 | DM-036 | Memory Relevance | Sarthi should remember useful user-provided information rather than irrelevant command telemetry. | Command/history/task data is also retained. | Need explicit memory promotion/filtering rules. | MEDIUM | Clarify |
 | DM-037 | Memory Conflict | Conflicting user preferences should be surfaced to the user for resolution. | Memory infrastructure exists. | Conflict-resolution behavior needs verification. | MEDIUM | Implement later |
@@ -111,7 +111,7 @@ A divergence does not automatically mean that something should be deleted. It me
 ## 8. Knowledge
 
 | ID | Concept | Intended Architecture | Current Repository Reality | Divergence | Severity | Decision |
-|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- |
 | DM-040 | Knowledge Definition | Knowledge represents operational information about Sarthi's environment/capabilities. | Knowledge contains environment/application/capability information. | Appears broadly aligned. | LOW | Preserve |
 | DM-041 | Knowledge Ownership | Sarthi owns the knowledge system, ultimately under user control. | KnowledgeManager/loader/knowledge sources exist. | Ownership is distributed across managers and storage. | MEDIUM | Verify |
 | DM-042 | Knowledge Updates | Knowledge should update when the environment changes, e.g. a new application appears. | Scanner/discovery infrastructure exists. | Need to verify update lifecycle. | MEDIUM | Verify |
@@ -122,7 +122,7 @@ A divergence does not automatically mean that something should be deleted. It me
 ## 9. Sandbox
 
 | ID | Concept | Intended Architecture | Current Repository Reality | Divergence | Severity | Decision |
-|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- |
 | DM-044 | Sandbox Purpose | Sandbox stores temporary task state and artifacts. | Sandbox stores task-related artifacts/history. | Broadly aligned. | LOW | Preserve |
 | DM-045 | Sandbox Promotion | Frequently useful information may be promoted into persistent knowledge. | Promotion concept exists in intended architecture. | Actual automatic promotion is not established. | MEDIUM | Planned |
 | DM-046 | Sandbox Path | There should be one stable task workspace regardless of launch directory. | Repository documentation identified root/backend sandbox path divergence. | Same logical sandbox can resolve differently based on working directory. | CRITICAL | Resolve |
@@ -133,7 +133,7 @@ A divergence does not automatically mean that something should be deleted. It me
 ## 10. Hands / Execution
 
 | ID | Concept | Intended Architecture | Current Repository Reality | Divergence | Severity | Decision |
-|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- |
 | DM-048 | Hands | Hands perform actual system interaction on behalf of Sarthi. | Desktop hand abstraction exists. | Appears aligned conceptually. | LOW | Preserve |
 | DM-049 | Hermes → Hands | Hermes should not directly control hands; it should request actions through Sarthi/tool boundaries. | Hermes accesses tools which delegate into capabilities. | Needs complete runtime verification. | CRITICAL | Verify |
 | DM-050 | Observation | After an action, the execution layer should return enough observation/result for Hermes to reason about success. | Browser/desktop automation provides varying levels of observation. | Observation contract is not yet clearly unified. | HIGH | Resolve |
@@ -144,7 +144,7 @@ A divergence does not automatically mean that something should be deleted. It me
 ## 11. Automation
 
 | ID | Concept | Intended Architecture | Current Repository Reality | Divergence | Severity | Decision |
-|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- |
 | DM-052 | Automation Definition | Automation means trigger-based execution of a predefined workflow. | AutomationEngine infrastructure exists but execution is incomplete. | Intended capability exceeds implementation. | MEDIUM | Planned |
 | DM-053 | Automation Creation | CLI creates automation pipelines guided by AI rather than Hermes directly owning automation. | Automation/assistant generation infrastructure exists. | Current creation flow requires verification. | HIGH | Investigate |
 | DM-054 | Automation Ownership | Created automation should persist as a Sarthi-owned workflow. | Persistence/execution model is incomplete. | Ownership lifecycle unclear. | MEDIUM | Clarify |
@@ -154,7 +154,7 @@ A divergence does not automatically mean that something should be deleted. It me
 ## 12. AI / External Intelligence
 
 | ID | Concept | Intended Architecture | Current Repository Reality | Divergence | Severity | Decision |
-|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- |
 | DM-055 | AI Dependency | Sarthi's basic operation must not depend on external AI. | Deterministic execution path exists. | Appears aligned. | LOW | Preserve |
 | DM-056 | AI Invocation | AI should be invoked when complexity/semantic reasoning makes it valuable. | Hermes complex path exists. | Need to verify unnecessary model calls cannot occur. | HIGH | Verify |
 | DM-057 | AI Provider | ChatGPT/Claude/Gemini can provide intelligence through controlled automation. | AI-provider integrations exist in chaining/Hermes-related systems. | Provider boundaries need unification. | MEDIUM | Investigate |
@@ -165,7 +165,7 @@ A divergence does not automatically mean that something should be deleted. It me
 # 13. Overall Divergence Summary
 
 | Category | Current Assessment |
-|---|---|
+| --- | --- |
 | Core Sarthi identity | 🟡 Mostly aligned |
 | Deterministic execution | 🟢 Strong |
 | Hermes concept | 🟠 Multiple overlapping implementations |
@@ -197,16 +197,16 @@ These are the items that should be investigated before adding significant new fu
 
 ### HIGH
 
-6. **DM-029 — AI-chain intent collision**
-7. **DM-027 — Hermes vs AI Chain responsibility overlap**
-8. **DM-031 — Multiple browser automation mechanisms**
-9. **DM-039 — Multiple conversation-state stores**
-10. **DM-043 — Memory vs Knowledge boundary**
-11. **DM-047 — Sandbox/task ownership**
-12. **DM-050 — Unified execution observation**
-13. **DM-051 — Desktop Hand integration**
-14. **DM-017 — Retry ownership**
-15. **DM-019 — Completion ownership**
+1. **DM-029 — AI-chain intent collision**
+2. **DM-027 — Hermes vs AI Chain responsibility overlap**
+3. **DM-031 — Multiple browser automation mechanisms**
+4. **DM-039 — Multiple conversation-state stores**
+5. **DM-043 — Memory vs Knowledge boundary**
+6. **DM-047 — Sandbox/task ownership**
+7. **DM-050 — Unified execution observation**
+8. **DM-051 — Desktop Hand integration**
+9. **DM-017 — Retry ownership**
+10. **DM-019 — Completion ownership**
 
 ---
 

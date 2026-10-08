@@ -155,7 +155,7 @@ are already using.
 ## Layout
 
 | File | Responsibility |
-|------|----------------|
+| ------ | ---------------- |
 | `schemas.py` | typed contracts + pure safety gate (`validate_inspection`) |
 | `page_snapshot.py` | pure, sanitized snapshot builder + Hermes text block |
 | `inspector.py` | Playwright JS walk + BeautifulSoup (Selenium) inspectors (lazy imports) |

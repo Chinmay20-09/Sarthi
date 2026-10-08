@@ -761,9 +761,9 @@ Configuration lives in three layers (verified against `Backend/config.py`,
 | --- | --- | --- |
 | PROJECT_ROOT / SKILLS_DIR / KNOWLEDGE_DIR / UI_DIR | Backend paths | many |
 | SAMPLE_RATE / RECORDING_DURATION / RECORDING_FILE | 16000 / 5 s / temp.wav | speech recorder |
-| WHISPER_MODEL / _DEVICE / _COMPUTE_TYPE | small / cpu / int8 | speech_to_text |
+| WHISPER_MODEL /_DEVICE / _COMPUTE_TYPE | small / cpu / int8 | speech_to_text |
 | API_HOST / API_PORT | 0.0.0.0 / 8000 | api.py, sarthi.bat (kept in sync manually) |
-| DESKTOP_AGENT_HOST / _PORT / _TIMEOUT / _MODE | 127.0.0.1 / 8765 / 30.0 / local | hands transport, desktop_agent.py |
+| DESKTOP_AGENT_HOST / _PORT /_TIMEOUT / _MODE | 127.0.0.1 / 8765 / 30.0 / local | hands transport, desktop_agent.py |
 | LOG_LEVEL / LOG_FORMAT | INFO / default fmt | utils/logger |
 
 ### Hermes environment variables (hermes/config/loader.py)
@@ -776,8 +776,8 @@ Core provider:
 | HERMES_MODEL | `openai/gpt-5` | model id for the primary provider |
 | HERMES_TEMPERATURE / HERMES_TIMEOUT | 0.2 / 60.0 | generation knobs |
 | HERMES_SANDBOX_PATH | `sandbox` | TaskSandbox root (resolved against Backend/ — AD-01) |
-| LOCAL_HERMES_URL / _API_KEY / _MODEL / _TIMEOUT | localhost:11434 / — / hermes3:8b / 180 | Ollama fallback |
-| OPENROUTER_API_KEY / _URL / _HTTP_REFERER / _X_TITLE | — | OpenRouter |
+| LOCAL_HERMES_URL / _API_KEY / _MODEL /_TIMEOUT | localhost:11434 / — / hermes3:8b / 180 | Ollama fallback |
+| OPENROUTER_API_KEY / _URL /_HTTP_REFERER /_X_TITLE | — | OpenRouter |
 | OPENAI_API_KEY (+ per-provider keys) | — | OpenAI-compatible endpoints |
 
 Agent loop + router:

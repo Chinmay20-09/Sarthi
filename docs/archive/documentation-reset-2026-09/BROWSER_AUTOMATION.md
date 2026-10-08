@@ -42,7 +42,7 @@ recommendations.
      debuggerAddress; Playwright fallback) read `page_source`, parse with
      BeautifulSoup, resolve the target element, convert its box to a
      window-fraction point for PyAutoGUI. Fallback: v1.0 estimate + grid scan
-     + Ctrl+A page copy.
+     - Ctrl+A page copy.
   3. v1.7 `browser_automation.py` — a fully DOM-driven navigation/click/
      copy/paste engine with verification and `ChainState` (clipboard,
      extracted_values). **No production caller** (library + tests only).

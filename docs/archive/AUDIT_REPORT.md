@@ -81,7 +81,7 @@ Connectors: connectors/registry.py → google_calendar (OAuth2)
 **Registries (single owner per concern):**
 
 | Registry | Module | Notes |
-|---|---|---|
+| --- | --- | --- |
 | Skills | `skills/registry.py` | manifest.json discovery + enable/disable |
 | Hermes tools | `hermes/tool_registry.py` | allow-list, validated args, bounded loop |
 | Connectors | `connectors/registry.py` | BaseConnector subclasses |
@@ -93,7 +93,7 @@ Connectors: connectors/registry.py → google_calendar (OAuth2)
 ## Compatibility Matrix
 
 | Boundary | Status | Problem | Action |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Scanner → Knowledge | **PASS** | None — scanner dicts merge into v2 categories; games keep `category="game"`; new apps land in `unattended` | Locked by `tests/test_pipeline_compatibility.py` |
 | Knowledge → Resolver | **PASS** | None — `get_all_entities()` produces `{name, aliases, category}` which `EntityResolver._build_index` consumes | Covered by `test_resolve.py`, `test_resolver_matching.py` |
 | Resolver → Executor | **PASS** | None — resolved `Intent.target` dispatches to handlers/skills | Covered by `test_brain_engine.py` |
@@ -112,14 +112,14 @@ Connectors: connectors/registry.py → google_calendar (OAuth2)
 it → validation → registration → Sarthi uses it):
 
 | Question | Finding |
-|---|---|
+| --- | --- |
 | How does Sarthi detect a missing capability? | Not implemented. The executor falls back to the NLP skill for unhandled intents, but nothing detects "a capability is missing and should be built". |
 | How is Hermes invoked? | NLP fallback skill (`hermes.service.chat`), `/hermes/chat` route, `hermes/main.py` standalone. |
 | What input does Hermes receive? | `Task{prompt, instructions, history, memory}`; tool calls come back as strict JSON `{"tool_call": {...}}`. |
 | What output does Hermes produce? | `ProviderResponse{success, provider, model, text, error, tool_used}`; task + trace saved to sandbox. |
 | How does Hermes create a skill? | **It does not** — by design. No skill-authoring path exists today. |
 | Where are skills stored / registered? | `skills/<id>/` with `manifest.json`; auto-discovered by `skills/registry.py`. |
-| Skills enabled/disabled? | `SkillRegistry.enable/disable` (writes `enabled` to manifest) + `/skills/{id}/enable|disable`. |
+| Skills enabled/disabled? | `SkillRegistry.enable/disable` (writes `enabled` to manifest) + `/skills/{id}/enable | disable`. |
 | Skills validated? | Manifest JSON parse + `BaseSkill` subclass discovery on instantiation; no deeper validation. |
 | Failures handled? | Provider failure → local fallback → graceful `ProviderResponse`; tool failures → safe `ToolResult`; sandbox keeps failed tasks. |
 | Can Hermes modify core logic? | No. Tools delegate to existing skills; no code/shell/filesystem tools are registered. |
@@ -179,7 +179,7 @@ All endpoints the frontend calls exist (verified by cross-checking UI
 `fetch()` calls against `api.py` + mounted routers). Key groups:
 
 | Method | Path | Input | Output | Consumer |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | POST | `/command` | `{text, session_id?}` | API dict + `steps[]` | UI chat/dashboard |
 | POST | `/listen` | — | same shape | UI |
 | GET/POST | `/mode` | `{mode}` | `{success, mode}` | UI |
@@ -229,7 +229,7 @@ Baseline: **549 passed / 0 failed** (`python -m pytest tests/ -q`,
 39 files). Coverage by boundary:
 
 | Boundary | Tests |
-|---|---|
+| --- | --- |
 | Scanner | `test_scanner.py` (model, ignore rules, merge priority) |
 | Scanner → Knowledge | `test_knowledge_manager.py` (categories, merge), **new** `test_pipeline_compatibility.py` |
 | Knowledge → Resolver | `test_resolve.py` (rewritten into real tests), `test_resolver_matching.py` |
@@ -243,6 +243,7 @@ Baseline: **549 passed / 0 failed** (`python -m pytest tests/ -q`,
 | Connectors | `test_connectors.py` |
 
 **Fixed during audit:**
+
 - `tests/test_resolve.py` and `tests/test_entity_resolver.py` were scripts
   with `print()` statements and **no test functions** — pytest collected
   nothing from them. `test_resolve.py` was rewritten as 7 real tests;
@@ -257,7 +258,7 @@ Final suite: **561 tests** (to be re-verified).
 ## Documentation Audit
 
 | File | Verdict | Action |
-|---|---|---|
+| --- | --- | --- |
 | `README.md` | Stale: `brain/entity_resolver.py` (deleted), 1040 apps (726), 109 tests/9 files (549/39), deleted files in structure (`query_cache.py`, `helpers.py`), fabricated verification output, wrong install command, roadmap items already implemented | **Updated** |
 | `docs/ARCHITECTURE_NOTES.md` | Stale: `knowledge.router.DataSource` (doesn't exist), 409 tests (549), missing new skills | **Updated** |
 | `docs/AUDIT_REPORT.md` / `docs/AUDIT_CHECKLIST.md` | Historical audit records with outdated counts; still useful as history | **Bannered as historical**, counts corrected, point to root report |
@@ -299,6 +300,7 @@ surface is complete, and the test suite is green.
 ## Non-Critical Issues
 
 **HIGH**
+
 1. *Resolved in this audit:* README/docs described deleted modules and
    wrong architecture locations (`brain/entity_resolver.py`,
    `knowledge/router.py`) — corrected.
@@ -372,7 +374,7 @@ behavior lives behind small adapters). Changing the model is a configuration
 change.
 
 | Item | Finding |
-|---|---|
+| --- | --- |
 | Current provider | Config-driven, **local-first default**: `HERMES_PROVIDER=local` (no `.env` value → local-only Ollama, no cloud calls). Remote providers are opt-in (`openrouter`, `openai_compatible`/`openai`) and automatically get a local Ollama fallback. Canonical values: `local`/`ollama`, `openrouter`, `openai_compatible`/`openai`. Unknown values fall back to the safe **local** provider with a logged warning (never silently remote). |
 | Current model | `HERMES_MODEL` (default `openai/gpt-5`); local inference uses `LOCAL_HERMES_MODEL` (default `hermes3:8b`) |
 | Provider abstraction | `AIProvider` (`hermes/providers/base.py`): `generate(ModelRequest) -> ProviderResponse`, `capabilities() -> ModelCapabilities`. Request + response normalization happen inside adapters; Hermes core, orchestrator, planner, routes never import a concrete provider. |
@@ -398,7 +400,7 @@ not architectural gaps.
 ## Final Report
 
 | Item | Result |
-|---|---|
+| --- | --- |
 | Tests passed | 549 baseline; **561 after the audit pass** (12 new/rewritten); **537 current** after the post-audit wake-word removal (−52) and Hermes provider refactor (+28) |
 | Tests failed | 0 |
 | Files modified | Audit pass: `README.md`, `docs/ARCHITECTURE_NOTES.md`, `docs/AUDIT_REPORT.md`, `docs/AUDIT_CHECKLIST.md`, `README_ENV.md`, `.env.example`, `.gitignore`, `knowledge/__init__.py`, `knowledge/entity_resolver.py`, `UI/skills.html`, `tests/test_resolve.py`. Post-audit: `hermes/{models,service,main,routes,orchestrator,tool_planner}.py`, `hermes/config/{settings,loader}.py`, `hermes/providers/{base,manager,local_provider,openrouter_provider,__init__}.py`, `skills/browser_awareness/hermes_inspector.py`, `skills/automation_engine/ai_chain/awareness.py`, `speech/__init__.py`, `skills/speech/main.py`, `events/bus.py`, `start.bat`, `tests/test_fallback.py`, `tests/test_tool_bridge.py`, `CHANGELOG.md` |

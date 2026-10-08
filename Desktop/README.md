@@ -11,7 +11,7 @@ Desktop (sarthi.exe)  --HTTP-->  Backend (:8000)  --HTTP-->  Desktop
 ## Layout
 
 | Path | Purpose |
-|---|---|
+| --- | --- |
 | `client/sarthi_client/` | client source (tkinter GUI, controller, backend HTTP boundary, config) |
 | `client/sarthi_client/gui.py` | the SARTHI window (Query textbox → Send → Response) |
 | `client/sarthi_client/controller.py` | validate → send → translate (no tk, no http) |

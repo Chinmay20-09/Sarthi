@@ -133,7 +133,7 @@ sandbox root = Backend/sandbox (absolute, cwd-independent)
   still sandbox-recorded); `_get_agent()` builds the agent once with
   `fast_path=False`.
 - `hermes/tool_planner.py`: loop removed; protocol (decision/follow-up prompts
-  + `parse_tool_call`) kept as the shared contract.
+  - `parse_tool_call`) kept as the shared contract.
 - `hermes/service.py`: `run_task(..., allow_fast_path=True)`; default
   iteration bound 3.
 - `hermes/router.py`: new `looks_like_task_instruction` + `task_instruction`

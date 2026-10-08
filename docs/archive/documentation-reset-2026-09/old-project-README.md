@@ -41,7 +41,7 @@
 ## ✨ Features
 
 | Capability | Description |
-|---|---|
+| --- | --- |
 | 🎤 **Speech Recognition** | Whisper-based transcription of voice commands |
 | 🧠 **Brain Pipeline** | Interpret → Plan → Resolve → Execute |
 | 📱 **Entity Resolution** | Fuzzy matching for 700+ discovered applications + websites |
@@ -149,7 +149,8 @@ Open `http://127.0.0.1:8000` in your browser while the API is running — it aut
 curl -X POST http://127.0.0.1:8000/command \
   -H "Content-Type: application/json" \
   -d '{"query": "open chrome"}'
-# Legacy web-UI schema still accepted (identical pipeline):
+
+# Legacy web-UI schema still accepted (identical pipeline):
 curl -X POST http://127.0.0.1:8000/command \
   -H "Content-Type: application/json" \
   -d '{"text": "open chrome"}'
@@ -378,7 +379,7 @@ class BaseSkill(ABC):
 **Current Skills:**
 
 | Skill | Version | Description |
-|---|---|---|
+| --- | --- | --- |
 | `project_tracker` | 1.1.0 | GitHub & Notion project tracking |
 | `automation_engine` | 1.1.0 | AI-chain laptop automation + code generation |
 | `app_launcher` | 1.2.0 | Launch installed applications (delegates to the Desktop hand) |
@@ -401,6 +402,7 @@ class BaseSkill(ABC):
 The codebase was refactored from a tightly-coupled architecture to clean architecture.
 
 **Before (Tightly Coupled):**
+
 ```
 EntityResolver  ──┐
 BrowserSkill    ──┼──> knowledge.loader ──> applications.json
@@ -409,6 +411,7 @@ AppExecutor     ──┘
 ```
 
 **After (Clean Architecture):**
+
 ```
 Skills → KnowledgeManager (business logic) → KnowledgeLoader (JSON I/O)
 EntityResolver depends on List[Dict] (dependency injection)
@@ -416,6 +419,7 @@ Scanner returns list (no direct file writes)
 ```
 
 **Key Principles Applied:**
+
 - **Single Responsibility**: Loader = JSON I/O only, Manager = business logic, Scanner = discovery only
 - **Dependency Injection**: Entities passed to resolver, not imported
 - **Open/Closed**: Adding new entity types requires no code changes
@@ -461,6 +465,7 @@ Code.exe  →  ["code", "vscode", "vs code", "visual studio code"]
 #### Duplicate Handling
 
 When the same application is found in multiple locations, a 5-tier priority system keeps the best entry:
+
 1. Program Files
 2. Program Files (x86)
 3. LocalAppData
@@ -584,7 +589,7 @@ The Entity Resolver consumes all types automatically.
 ## 📡 API Reference
 
 | Method | Endpoint | Description |
-|---|---|---|
+| --- | --- | --- |
 | `GET` | `/` | Redirects to `/ui/dashboard.html` |
 | `GET` | `/health` | Health check |
 | `POST` | `/command` | Process text: `{"query": "open chrome"}` (client schema) or `{"text": ...}` (legacy); returns `success`/`response`/`data` envelope + legacy fields |
@@ -627,7 +632,7 @@ The full request/response shapes are documented in **docs/ARCHITECTURE.md → AP
 The web UI is served directly from the FastAPI server at `http://127.0.0.1:8000`. It features 6 pages:
 
 | Page | Route | Description |
-|---|---|---|
+| --- | --- | --- |
 | **Home** | `dashboard.html` | Main HUD with status, stats, command input |
 | **Chat** | `chat.html` | Conversation, memory, sandbox viewer, test runner |
 | **Skills** | `skills.html` | Skill repository and management |
@@ -637,6 +642,7 @@ The web UI is served directly from the FastAPI server at `http://127.0.0.1:8000`
 | **Settings** | `settings.html` | System configuration |
 
 Built with:
+
 - **Tailwind CSS** — Utility-first styling
 - **Material Symbols** — Icon set
 - **CSS custom properties** — For theming and glassmorphism effects
@@ -660,7 +666,7 @@ python -m pytest tests/ --cov=.
 **763 tests** across 45 test files. Key coverage:
 
 | Test File | Coverage |
-|---|---|
+| --- | --- |
 | `test_brain_engine.py` | Brain pipeline orchestration |
 | `test_interpreter.py` | Text → Intent parsing |
 | `test_executor.py` | Handler dispatch + skills |
@@ -720,7 +726,7 @@ mypy .
 ### Performance Benchmarks
 
 | Operation | Time |
-|---|---|
+| --- | --- |
 | Initial scan | 10-15 seconds (one-time) |
 | Cached lookup | < 1ms |
 | Entity resolution | < 10ms |
@@ -733,7 +739,7 @@ mypy .
 ### Code Artifacts
 
 | Module | Status |
-|---|---|
+| --- | --- |
 | `skills/scanner/application_scanner.py` | ✅ Production-ready |
 | `knowledge/loader.py` | ✅ Production-ready |
 | `knowledge/manager.py` | ✅ Production-ready |
@@ -749,7 +755,7 @@ mypy .
 ### Quality Metrics
 
 | Metric | Score |
-|---|---|
+| --- | --- |
 | Type coverage | Advisory (mypy progressive mode) |
 | Error handling | Comprehensive |
 | Test suite | 763 passing tests |
@@ -759,7 +765,7 @@ mypy .
 ### Architecture Phases
 
 | # | Phase | Status |
-|---|---|---|
+| --- | --- | --- |
 | 1 | Pipeline fix + scanner merge | ✅ Complete |
 | 2 | Brain restructure (Engine, Planner, Resolver) | ✅ Complete |
 | 3 | Skill cleanup + naming standardization | ✅ Complete |
@@ -780,6 +786,7 @@ mypy .
 ## 🔮 Roadmap
 
 **Implemented:**
+
 - **Memory** — Persistent conversation history, /remember facts, settings (SQLite)
 - **CI/CD** — GitHub Actions (`.github/workflows/ci.yml`): lint, format, tests, smoke test
 - **Connectors** — Google Calendar (OAuth2); Gmail/email/IoT planned via `connectors/`
@@ -787,6 +794,7 @@ mypy .
 - **Browser Awareness** — Playwright-based inspection of arbitrary websites
 
 **Planned (future):**
+
 - **Vision package** — Screen capture and OCR
 - **Multi-agent** — Collaborative AI agents for complex tasks
 - **Plugin marketplace** — External skill discovery and loading
@@ -803,6 +811,7 @@ ownership, the Hermes contribution boundary, and how to add a skill or a
 connector without touching core.
 
 Quick start:
+
 1. Create a feature branch: `git checkout -b feat/my-feature`
 2. Make changes and ensure tests pass: `python -m pytest tests/ -v`
 3. Format and lint: `ruff format . && ruff check --fix .`

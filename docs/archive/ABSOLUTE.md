@@ -9,6 +9,7 @@ system moving on its own, and **never** be left unsure whether they can
 touch their keyboard and mouse again.
 
 ## The rule
+
 1.First approach is trying to make any automation is to control device over the approach of API and other paid medium
 2.Any automation that takes control of input devices **must**:
 
@@ -51,7 +52,7 @@ the user. Sarthi never leaves the user locked out of their own machine.
 ## Implementation
 
 | Concern | Where |
-|---|---|
+| --- | --- |
 | Voice announcements (start / done) | `utils/voice.announce()` — Windows SAPI via pywin32, PowerShell `System.Speech` fallback, log-only elsewhere. Never raises. |
 | HANDS-OFF banner, countdown, abort hotkey, failsafe | `skills/automation_engine/ai_chain/` (`chain.py`, `control.py`) |
 | Governed automation (reference implementation) | AI Chain — drives ChatGPT → Gemini by taking over the laptop |

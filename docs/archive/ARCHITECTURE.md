@@ -137,7 +137,7 @@ Two mantras hold the design together:
 **Registries — one owner per concern (do not create parallel systems):**
 
 | Concern | Owner | Notes |
-|---|---|---|
+| --- | --- | --- |
 | Skills | `skills/registry.py` | manifest.json discovery, enable/disable |
 | Hermes tools | `hermes/tool_registry.py` | allow-list, argument validation, bounded loop |
 | Connectors | `connectors/registry.py` | `BaseConnector` subclasses |
@@ -153,7 +153,7 @@ Two mantras hold the design together:
 A single Python process (plus optional helpers):
 
 | Process | Started by | Role |
-|---|---|---|
+| --- | --- | --- |
 | `python api.py` (or `pythonw -m uvicorn api:app` in background mode) | `Backend/sarthi.bat` (root `start.bat` delegates to it) | FastAPI app: REST API, mounted routers, `/ui` static files. Runs **without** uvicorn reload by default so closing the server window frees port 8000. |
 | `python main.py` | manual | Voice CLI: record → Whisper → same `BrainEngine` |
 | `python -m hermes.main` | manual | Hermes self-test: config → provider manager → one task through the orchestrator → sandbox |
@@ -193,6 +193,7 @@ text ─▶ BrainEngine.process(text)
 ```
 
 **"open" resolution order (user-facing contract):**
+
 1. `AppLauncherSkill` (favourites-gated; uncategorized apps surface a
    Favourite/Ignore/Run-Anyway decision)
 2. `BrowserSkill` (known websites)
@@ -210,6 +211,7 @@ Hermes is the conversational/orchestration layer — **not a second brain and no
 a skill author** (that is planned, not implemented).
 
 **Boundaries:**
+
 - May: answer conversationally, request *registered* tools, record every task in
   the sandbox, observe pages in Browser Awareness.
 - Must not: execute code/shell/filesystem operations, bypass the ToolRegistry,
@@ -284,6 +286,7 @@ and never hidden. Every action is logged:
 `[Desktop] action=... target=... status=...`.
 
 **Safety model:**
+
 - The action table in `capabilities.py` is the only thing the hand can
   do; unknown actions and unexpected/wrong-typed arguments are rejected
   before anything runs.
@@ -357,7 +360,7 @@ core never sees provider payloads.
 `hermes/providers/registry.py`):
 
 | Value | Primary | Fallback |
-|---|---|---|
+| --- | --- | --- |
 | `local` / `ollama` (**default**) | LocalHermesProvider | none (local-only) |
 | `openrouter` | OpenRouterProvider | local Ollama |
 | `openai_compatible` / `openai` | OpenAICompatibleProvider | local Ollama |
@@ -374,7 +377,7 @@ must never spend cloud credits. Changing provider/model is configuration-only
 **Capability matrix (what adapters actually implement today):**
 
 | Capability | Ollama | OpenAI-compatible | Notes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `structured_output` | ✔ (`format=json`) | ✔ (`response_format=json_object`) | Hermes always parses+validates JSON regardless |
 | `tool_calling` | ✘ | ✘ | prompt-based tool protocol everywhere |
 | `vision` | ✘ | ✘ | `ModelRequest.images` is never sent |
@@ -464,7 +467,7 @@ via `/skills/{id}/disable|enable`. `BrainEngine` sorts skills with
 Current skills (10):
 
 | Skill | What it owns |
-|---|---|
+| --- | --- |
 | `app_launcher` | Launch installed applications (favourites gate, run_anyway) |
 | `browser` | Open/search known websites (deterministic) |
 | `browser_awareness` | Inspect arbitrary websites with validated actions |
@@ -536,12 +539,12 @@ two local origins (`127.0.0.1:8000`, `localhost:8000`), credentials off.
 Endpoint groups (all verified present):
 
 | Group | Endpoints |
-|---|---|
+| --- | --- |
 | Core | `GET /health`, `POST /command`, `POST /listen`, `GET/POST /mode` |
 | Knowledge | `GET /knowledge`, `GET /applications`, `GET /applications/categories`, `GET /applications/favourites`, `POST /applications/categorize`, `POST /applications/run`, `POST /websites/search-and-save` |
 | Memory/history | `GET /memory`, `DELETE /memory/{key}`, `GET /command-history`, `DELETE /command-history/{id}`, `GET/POST/DELETE /chat` |
 | Settings | `POST /settings`, `GET /settings/{key}` |
-| Skills | `GET /skills`, `GET /skills/{id}`, `POST /skills/{id}/enable|disable` |
+| Skills | `GET /skills`, `GET /skills/{id}`, `POST /skills/{id}/enable | disable` |
 | Hermes | `POST /hermes/chat`, `GET /hermes/tools`, `GET /hermes/sandbox`, `GET /hermes/sandbox/tasks/{id}`, `GET /hermes/status` |
 | Browser (extension bridge) | `POST /browser/page`, `/browser/selection`, `/browser/action`, `GET /browser/current`, `/browser/session` |
 | Connectors | `GET/POST/PUT/DELETE /connectors*`, `GET /connectors/registry`, `/connectors/google_calendar/*` |
@@ -604,7 +607,7 @@ toggles are explicitly labeled visual previews without backing settings).
 Two small, distinct layers — there is deliberately no bigger framework:
 
 | Layer | Mechanism | Variables |
-|---|---|---|
+| --- | --- | --- |
 | App config | `config.py` (plain module constants) | paths, `API_HOST`/`API_PORT` (8000), Whisper settings, log format |
 | Hermes config | `.env` → `hermes/config/loader.py` → `HermesConfig` (cached) | `HERMES_PROVIDER`, `HERMES_MODEL`, `HERMES_TEMPERATURE`, `HERMES_TIMEOUT`, `HERMES_SANDBOX_PATH`, `LOCAL_HERMES_*`, `OPENROUTER_*`, `OPENAI_COMPATIBLE_*` |
 | ai_chain tuning | env vars + `calibration.json` (git-ignored) | `AI_CHAIN_*` (CDP URL, DOM switches, per-site overrides) |
@@ -620,13 +623,13 @@ path, and the Desktop client's default backend URL (`127.0.0.1:8000`).
 ## 13. Persistence
 
 | Store | Location | Owner | Content |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | SQLite | `database/sarthi.db` | `DatabaseManager` (single connection, WAL + synchronous=NORMAL, busy_timeout, connection lock) | command_history, knowledge_memory, settings, chat_messages, conversation_messages, connectors |
 | Applications | `knowledge/applications.json` | KnowledgeManager | v2 categorized entities |
 | Websites | `knowledge/websites.json` | KnowledgeManager | v1 entities |
 | Hermes sandbox | `sandbox/` (gitignored) | TaskSandbox | tasks + query index |
 | AI-chain runs | `results/ai_chain/<ts>_<slug>/` | chain module | transcripts, images |
-| Test-run reports | `results/run_*.json|csv|png` | `/test/run` | metrics (30-day retention) |
+| Test-run reports | `results/run_*.json | csv | png` | `/test/run` | metrics (30-day retention) |
 
 The SQLite file holds personal data and is blocked from commits by a pre-commit
 hook; `sandbox/` and `sandbox_test/` are runtime data (gitignored — see
@@ -657,8 +660,8 @@ passing** (plus 1
 benign deprecation warning from FastAPI's test client). Lint/format: `ruff
 check .` and `ruff format --check .` are clean. Smoke test: `python
 `Backend/main-test.py` (9 checks, no LLM call). Pytest config lives in
-`pyproject.toml` (`testpaths = ["tests"]`, `pythonpath = ["Backend",
-"Desktop/client"]`); the root `tests/` folder is the single suite and the
+`pyproject.toml`(`testpaths = ["tests"]`,`pythonpath = ["Backend",
+"Desktop/client"]`); the root`tests/` folder is the single suite and the
 only place tests live.
 
 Boundary tests live in `tests/test_pipeline_compatibility.py` (Scanner →
@@ -676,7 +679,7 @@ pytest, smoke test. Local pre-commit hooks mirror it (plus a no-DB-files guard).
 ## 15. Extension Points
 
 | I want to add a… | Do this | Never |
-|---|---|---|
+| --- | --- | --- |
 | **Skill** | `skills/<id>/` with `manifest.json` + `BaseSkill` subclass in `main.py` | scan the skills dir yourself; touch `skills/base.py` casually |
 | **Hermes tool** | `hermes/tools/<name>.py` (`BaseTool`), register in `hermes/tools/__init__.py` | expose code/shell/filesystem execution |
 | **Provider** | `hermes/providers/<name>.py` (`AIProvider` subclass) + registry entry + `.env` docs | import a concrete adapter outside `hermes/providers/` |

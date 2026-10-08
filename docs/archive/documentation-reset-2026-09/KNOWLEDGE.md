@@ -25,6 +25,7 @@ mechanism are PLANNED (see ARCHITECTURE.md "Canonical terminology map").
 ## Stores
 
 ### applications.json
+
 - **Location**: `Backend/knowledge/applications.json`
 - **Shape**: application entities with name, path, aliases, category
   (favourite/ignored/unattended states tracked via the scanner + categorize API).
@@ -33,6 +34,7 @@ mechanism are PLANNED (see ARCHITECTURE.md "Canonical terminology map").
   Hermes retriever.
 
 ### websites.json
+
 - **Location**: `Backend/knowledge/websites.json`
 - **Shape**: website entities with URL + aliases.
 - **Writers**: `/websites/search-and-save` (the "search on browser" fallback
@@ -45,6 +47,7 @@ mechanism are PLANNED (see ARCHITECTURE.md "Canonical terminology map").
 "open yt" ─▶ BrowserSkill ─▶ KnowledgeManager.find_website("yt")
                               └─ alias match ─▶ https://youtube.com ─▶ webbrowser.open
 ```
+
 ```
 BrainEngine step 3 ─▶ EntityResolver.resolve(target)
                        └─ fuzzy vs entities ─▶ canonical name (context.resolved=True)

@@ -42,6 +42,7 @@ Sarthi is a Desktop AI Assistant built with a layered architecture:
 ### Brain Pipeline (`brain/`)
 
 **canonical imports:**
+
 ```python
 from brain.engine import BrainEngine  # Main entry point
 from brain.intent import Intent       # Intent model
@@ -49,6 +50,7 @@ from knowledge.entity_resolver import EntityResolver  # Canonical location
 ```
 
 **Flow:**
+
 1. **Interpreter** (`interpreter.py`) - Parse text → Intent
 2. **Planner** (`planner.py`) - Multi-step plan generation
 3. **Resolver** (`entity_resolver.py`) - Fuzzy entity matching
@@ -58,12 +60,14 @@ from knowledge.entity_resolver import EntityResolver  # Canonical location
 ### Skills System (`skills/`)
 
 **canonical imports:**
+
 ```python
 from skills.registry import get_registry, SkillRegistry
 from skills.base import BaseSkill
 ```
 
 **Architecture:**
+
 - **registry.py** - CANONICAL skill discovery & management system
   - Discovers skills from manifest.json files
   - Instantiates skill classes dynamically
@@ -72,6 +76,7 @@ from skills.base import BaseSkill
 - **manager.py** - REMOVED (September 2026) — legacy loader superseded by `registry.py`
 
 **Available Skills:**
+
 - `app_launcher/` - Launch desktop applications
 - `browser/` - Open/search known websites in the default browser
 - `browser_awareness/` - Inspect arbitrary websites (Playwright) with validated actions
@@ -86,11 +91,13 @@ from skills.base import BaseSkill
 ### Knowledge Layer (`knowledge/`)
 
 **Entity Resolution:**
+
 ```python
 from knowledge.entity_resolver import EntityResolver
 ```
 
 **Components:**
+
 - **entity_resolver.py** - CANONICAL entity resolution
 - **manager.py** - Knowledge graph management + application refresh
 - **loader.py** - Pure JSON I/O
@@ -156,15 +163,15 @@ All modules scheduled for removal have been deleted from the codebase:
 
 ### 🟠 Additional Fixes
 
-4. **Debug Prints Removed** - FIXED
+1. **Debug Prints Removed** - FIXED
    - File: `speech/speech_to_text.py`
    - Solution: Replaced print() with logger.debug()
 
-5. **Orphaned Files Deleted** - FIXED
+2. **Orphaned Files Deleted** - FIXED
    - `models/intent.py` - Duplicate of `brain/intent.py`
    - `knowledge/scanners/application_scanner.py` - Duplicate shim
 
-6. **Import Dependencies Fixed** - FIXED
+3. **Import Dependencies Fixed** - FIXED
    - `skills/automation_engine/skill.py` - Import from config instead of manager
 
 ---
@@ -311,11 +318,13 @@ from config import (
 ## Testing
 
 ### Run All Tests
+
 ```bash
 python -m pytest tests/ -v
 ```
 
 ### Run Specific Module Tests
+
 ```bash
 python -m pytest tests/test_brain_engine.py -v
 python -m pytest tests/test_executor.py -v
@@ -323,6 +332,7 @@ python -m pytest tests/test_skill_base.py -v
 ```
 
 ### Current Test Status
+
 - ✅ 549+ tests passing
 - ✅ No deprecation warnings (`brain/normalizer.py` removed)
 - ✅ No regressions

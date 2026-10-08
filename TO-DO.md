@@ -53,6 +53,7 @@ tooling/tests.
 First inspect the existing code and documentation, then update the docs.
 
 ============================================================
+
 1. CANONICAL SARTHI ARCHITECTURE
 ============================================================
 

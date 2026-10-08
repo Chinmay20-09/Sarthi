@@ -190,16 +190,16 @@ These are the items that should be investigated before adding significant new fu
 
 ### HIGH
 
-6. **DM-029 — AI-chain intent collision**
-7. **DM-027 — Hermes vs AI Chain responsibility overlap**
-8. **DM-031 — Multiple browser automation mechanisms**
-9. **DM-039 — Multiple conversation-state stores**
-10. **DM-043 — Memory vs Knowledge boundary**
-11. **DM-047 — Sandbox/task ownership**
-12. **DM-050 — Unified execution observation**
-13. **DM-051 — Desktop Hand integration**
-14. **DM-017 — Retry ownership**
-15. **DM-019 — Completion ownership**
+1. **DM-029 — AI-chain intent collision**
+2. **DM-027 — Hermes vs AI Chain responsibility overlap**
+3. **DM-031 — Multiple browser automation mechanisms**
+4. **DM-039 — Multiple conversation-state stores**
+5. **DM-043 — Memory vs Knowledge boundary**
+6. **DM-047 — Sandbox/task ownership**
+7. **DM-050 — Unified execution observation**
+8. **DM-051 — Desktop Hand integration**
+9. **DM-017 — Retry ownership**
+10. **DM-019 — Completion ownership**
 
 ---
 
