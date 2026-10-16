@@ -6,8 +6,7 @@ Uses BrainEngine for the full pipeline: interpret → plan → resolve → execu
 """
 
 from brain.engine import BrainEngine
-from speech.recorder import record_audio
-from speech.speech_to_text import transcribe
+from speech import record_transcribe
 from utils.logger import setup_logging
 
 setup_logging()
@@ -24,8 +23,7 @@ def main() -> None:
     while True:
         input("\nPress ENTER to speak...")
 
-        audio = record_audio()
-        raw_text = transcribe(audio)
+        raw_text = record_transcribe(duration=5.0, verbose=True)
 
         print("\n📝 Whisper :", raw_text)
 

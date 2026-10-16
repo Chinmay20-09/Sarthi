@@ -71,11 +71,10 @@ class SpeechSkill(BaseSkill):
     def _listen(self) -> dict[str, Any]:
         """Record audio and transcribe."""
         try:
-            from speech.recorder import record_audio
-            from speech.speech_to_text import transcribe
-
-            audio = record_audio()
-            text = transcribe(audio)
+            # Shared standalone capability — the same code path the CLI uses,
+            # so a `speak` sounds the same from the skill, backend CLI, or
+            # `python -m speech`.
+            text = record_transcribe()
 
             # Publish event via DI
             self.events.publish("speech_recognized", {"text": text}, source="speech_skill")
