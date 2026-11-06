@@ -6,6 +6,8 @@ Desktop loop. The full Stitch dashboard intentionally does NOT live here.
 
 Presentation only: every action goes through SarthiController, which
 talks to the Backend over HTTP. No backend intelligence is imported.
+The desktop pet (optional) is launched from this module so it starts
+auto-matically when the window opens.
 """
 
 from __future__ import annotations
@@ -14,6 +16,7 @@ import tkinter as tk
 from tkinter import font as tkfont
 
 from .controller import SarthiController
+from .pet import attach_pet_to  # optional desktop pet
 
 # Window defaults
 WINDOW_TITLE = "Sarthi"
@@ -31,6 +34,11 @@ class SarthiApp:
         self.root.geometry(WINDOW_SIZE)
         self.root.minsize(*WINDOW_MIN_SIZE)
         self._build_widgets()
+
+        # Launch the optional desktop pet (borderless, always-on-top).
+        # It does not depend on backend internals — it only uses the existing
+        # Hitori image assets and Tkinter.
+        self.pet = attach_pet_to(self.root)
 
     # ------------------------------------------------------------------
     # Widget construction
