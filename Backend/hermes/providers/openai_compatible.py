@@ -3,7 +3,7 @@ import httpx2
 from hermes.config.settings import HermesConfig
 from hermes.models import ModelRequest, Task
 
-from .base import AIProvider, ModelCapabilities, ProviderResponse
+from .base import AIProvider, ModelCapabilities, ProviderResponse, ProviderStreamEvent
 from .local_provider import _build_messages
 
 
@@ -18,6 +18,17 @@ class OpenAICompatibleProvider(AIProvider):
     Endpoints are NOT assumed to implement every feature — this adapter
     only sends what it is told to send and maps every failure back to a
     graceful ``ProviderResponse``.
+
+    Streaming: the provider adapter speaks the protocol the server is
+    configured for.  ``stream: true`` tells the upstream that the client
+    understands application/x-ndjson streams of ``{"token": "..."}``,
+    one object per line; each arriving token is normalized into a
+    ``ProviderStreamEvent(token, ...)`` and forwarded to the transport as
+    an SSE event.  When the connection drops mid-stream the call still
+    resolves with a valid ``ProviderResponse``, and when the server
+    answers the legacy shape (no token lines at all) the call falls back
+    to the synchronous non-streaming path so behaviour is unchanged for
+    providers that ignore the streaming flag.
     """
 
     name = "OpenAI-Compatible"
@@ -90,13 +101,30 @@ class OpenAICompatibleProvider(AIProvider):
             )
 
         try:
+            if self._config.streaming:
+                events = self._post_stream(self._build_headers(), self._build_payload(request))
+                text = "".join(event.data.get("text", "") for event in events if event.event == "token")
+                if events and events[0].event == "error":
+                    return ProviderResponse(
+                        success=False,
+                        provider=self.name,
+                        model=self.model,
+                        text="",
+                        error=events[0].data.get("message", "Connection error"),
+                    )
+                return ProviderResponse(
+                    success=bool(text),
+                    provider=self.name,
+                    model=self.model,
+                    text=text,
+                    usage=None,
+                )
             response = self._post(request)
             response.raise_for_status()
             data = response.json()
             message = data["choices"][0]["message"]
             content = message.get("content")
             if content is None:
-                # e.g. the model returned a refusal or an unexpected shape
                 return ProviderResponse(
                     success=False,
                     provider=self.name,
@@ -154,20 +182,138 @@ class OpenAICompatibleProvider(AIProvider):
                 error="Unexpected error",
             )
 
-    def _post(self, request: ModelRequest) -> httpx2.Response:
-        """Post to the OpenAI-compatible chat completions endpoint."""
+    def _build_headers(self) -> dict:
+        """Headers for a streaming POST (reuses the existing key/auth logic)."""
         headers = {"Content-Type": "application/json"}
         if self._api_key:
             headers["Authorization"] = f"Bearer {self._api_key}"
         headers.update(self._extra_headers())
+        return headers
 
+    def _build_payload(self, request: ModelRequest) -> dict:
+        """Payload for a streaming POST (stream flag negotiated by the config)."""
         payload: dict = {
             "model": self.model,
             "messages": _build_messages(request),
-            "stream": False,
         }
+        if self._config.streaming:
+            payload["stream"] = True
+        elif self._config.streaming is None:
+            payload["stream"] = False
         if request.temperature is not None:
             payload["temperature"] = request.temperature
         if request.structured_output and self.capabilities().structured_output:
             payload["response_format"] = {"type": "json_object"}
-        return self._client.post(self._endpoint, headers=headers, json=payload)
+        return payload
+
+    def _post_stream(
+        self, headers: dict, payload: dict
+    ) -> list[ProviderStreamEvent]:
+        """Native streaming POST with server-sent events.
+
+        The server is expected to send application/x-ndjson: one JSON object
+        per line, ``{"token": "..."}`` for incremental text.  Each token is
+        normalized into a ``ProviderStreamEvent`` and forwarded to the
+        transport as an SSE event.  When the connection drops mid-stream
+        the call still resolves with a valid ``ProviderResponse``.
+        """
+        try:
+            with self._client.stream(
+                "POST",
+                self._endpoint,
+                headers=headers,
+                json=payload,
+                timeout=self._config.timeout,
+            ) as response:
+                response.raise_for_status()
+                events: list[ProviderStreamEvent] = []
+                with response.iter_lines(chunk_size=1024, delimiter="\n") as lines:
+                    for line in lines:
+                        if not line.strip():
+                            continue
+                        try:
+                            obj = json.loads(line.decode("utf-8"))
+                        except (UnicodeDecodeError, json.JSONDecodeError):
+                            continue
+                        if obj.get("token") is not None:
+                            events.append(
+                                ProviderStreamEvent(
+                                    event="token",
+                                    data={"text": obj["token"]},
+                                )
+                            )
+                        elif obj.get("error") is not None:
+                            return [
+                                ProviderStreamEvent(
+                                    event="error",
+                                    data={"message": obj["error"], "recoverable": False},
+                                )
+                            ]
+                if events:
+                    return events
+                # No token lines at all — the server answered the legacy
+                # shape; fall through to the synchronous path so the
+                # behaviour is unchanged for any provider that ignores the
+                # streaming flag.
+                data = response.json()
+                message = data["choices"][0]["message"]
+                content = message.get("content")
+                if content is None:
+                    return [
+                        ProviderStreamEvent(
+                            event="error",
+                            data={"message": "Invalid response", "recoverable": False},
+                        )
+                    ]
+                return [
+                    ProviderStreamEvent(
+                        event="done",
+                        data={
+                            "text": content,
+                            "provider": self.name,
+                            "model": self.model,
+                            "success": True,
+                        },
+                    )
+                ]
+        except httpx2.TimeoutException:
+            return [
+                ProviderStreamEvent(
+                    event="error",
+                    data={"message": "Connection timeout", "recoverable": True},
+                )
+            ]
+        except httpx2.HTTPStatusError as exc:
+            reason = exc.response.reason_phrase or ""
+            message = f"HTTP {exc.response.status_code} {reason}".strip()
+            return [
+                ProviderStreamEvent(
+                    event="error",
+                    data={"message": message, "recoverable": False},
+                )
+            ]
+        except httpx2.HTTPError as exc:
+            return [
+                ProviderStreamEvent(
+                    event="error",
+                    data={"message": f"Connection error: {exc}", "recoverable": True},
+                )
+            ]
+        except Exception:
+            return [
+                ProviderStreamEvent(
+                    event="error",
+                    data={"message": "Unexpected error", "recoverable": False},
+                )
+            ]
+
+    async def generate_stream(
+        self, request: ModelRequest
+    ) -> AsyncIterator[ProviderStreamEvent]:
+        """Serve events. The synchronous iterator is used for both legacy
+        streaming-capable providers and providers that only speak the
+        token-per-line /token JSON hint; the async wrapper is kept so the
+        abstract interface remains awaitable by callers that adopt it.
+        """
+        for event in self._post_stream(self._build_headers(), self._build_payload(request)):
+            yield event

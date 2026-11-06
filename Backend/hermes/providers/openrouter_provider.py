@@ -1,3 +1,5 @@
+import httpx2
+
 from hermes.config.settings import HermesConfig
 
 from .openai_compatible import OpenAICompatibleProvider
@@ -33,3 +35,17 @@ class OpenRouterProvider(OpenAICompatibleProvider):
         if getattr(self._config, "openrouter_x_title", ""):
             headers["X-Title"] = self._config.openrouter_x_title
         return headers
+
+    def _build_headers(self) -> dict:
+        """Headers for a streaming POST; delegates to the base class and
+        adds the OpenRouter-specific site headers."""
+        headers = super()._build_headers()
+        if getattr(self._config, "openrouter_http_referer", ""):
+            headers["HTTP-Referer"] = self._config.openrouter_http_referer
+        if getattr(self._config, "openrouter_x_title", ""):
+            headers["X-Title"] = self._config.openrouter_x_title
+        return headers
+
+    def _build_payload(self, request: ModelRequest) -> dict:
+        """Payload for a streaming POST; delegates to the base class."""
+        return super()._build_payload(request)

@@ -1,11 +1,16 @@
 import time
 
 from .agent import HermesAgent
+from .conversation import DEFAULT_SESSION, get_conversation_store
 from .models import ModelRequest, Task
 from .providers.base import ProviderResponse
 from .providers.manager import ProviderManager
 from .sandbox import TaskSandbox
 from .tool_registry import ToolRegistry
+
+
+DEFAULT_CHAT_TIMEOUT_MS = 30_000
+MAX_CHAT_CHUNK_BYTES = 128_000
 
 
 class HermesOrchestrator:
@@ -95,14 +100,12 @@ class HermesOrchestrator:
             )
         return self._agent
 
-    def chat(self, task: Task) -> ProviderResponse:
+    def chat(self, task: Task):
         """
         Plain conversational generation — NO tool planning, NO tool fetching.
 
         This is the "natural language processor" path: the model is asked
         directly for a conversational reply, never given the tool registry.
-        The task is still saved to the sandbox (indexed by query) like every
-        other Hermes execution, so the sandbox stays the single reference.
 
         Args:
             task: Task whose prompt is the user's message.

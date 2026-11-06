@@ -6,7 +6,7 @@ Scope: every skill under `backend/skills/`
 ## Classification Summary
 
 | Skill | Status | Direct CLI | Reusable capability | Hard deps |
-|-------|--------|-----------|---------------------|-----------|
+| ------- | -------- | ----------- | --------------------- | ----------- |
 | speech | DIRECTLY_EXECUTABLE | `python -m speech` | `record_transcribe` (mic + Whisper) | microphone, sounddevice, scipy, faster_whisper |
 | scanner | DIRECTLY_EXECUTABLE | `python -m skills.scanner` | `scan_all` (pure file enumeration) | none (prints to stdout) |
 | browser | DIRECTLY_EXECUTABLE | `python -m skills.browser` | `_search`, `_play`, `_get_first_youtube_video` | webbrowser + urllib (stdlib) |
@@ -22,55 +22,66 @@ Scope: every skill under `backend/skills/`
 ## Details
 
 ### speech
+
 - **Direct CLI**: `python -m speech` (from backend/) — `--help`, `--check`, `--duration`, `--language`, `--quiet`, `--filename`. Exit codes 0/1.
 - **Capability**: `record_transcribe()` shared by CLI, backend/main.py, and skills/speech/main.py.
 - **Dependencies**: `sounddevice` (mic), `scipy.io.wavfile`, `faster_whisper` (WhisperModel).
 - **Verification**: `--check` exits 0; imports verified; transcription tested with synthetic wav.
 
 ### scanner
+
 - **Direct CLI**: `python -m skills.scanner` — `--quiet`, `--json`, `--check`. Exit codes 0/1.
 - **Capability**: `scan_all()` from `skills.scanner.application_scanner` — standard library only.
 - **Dependencies**: stdlib only (pathlib, subprocess, tempfile, json).
 - **Verification**: `--check` exits 0; 729 applications discovered.
 
 ### browser
+
 - **Direct CLI**: `python -m skills.browser` — `--open <name>`, `--search <query>`, `--play <media>`, `--list`, `--check`. Exit codes 0/1.
 - **Capability**: `BrowserSkill` with `_search`, `_play`, `_get_first_youtube_video` — `webbrowser` + `urllib` stdlib.
 - **Verification**: `--check` exits 0; website list verified (6 sites from knowledge file).
 
 ### user_config
+
 - **Direct CLI**: `python -m skills.user_config` — `--get`, `--set <username>`, `--check`. Exit codes 0/1.
 - **Capability**: `UserConfigSkill.set_github_username()` / `get_github_username()` — SQLite via `database.manager`.
 - **Verification**: `--check` exits 0; username set/get/verify round-trip tested.
 
 ### personal_context
+
 - **Direct CLI**: `python -m skills.personal_context` — `--list`, `--get <field>`, `--check`. Exit codes 0/1.
 - **Capability**: `PersonalContextService.get_field()` — SQLite via `database.manager`; allowlisted `SAFE_FIELDS`.
 - **Verification**: `--check` exits 0; `list` and `get github` verified (repositories counted, field values returned).
 
 ### project_tracker
+
 - **Direct CLI**: `python -m skills.project_tracker` — `status`, `check`, `sync`, `list`, `--check`. Exit codes 0/1.
 - **Capability**: `GitHubProjectSkill.project_status()` / `check_new_repositories()` — SQLite via `database.manager`.
 - **Verification**: `--check` exits 0; `status` and `list` verified (5 projects, 27 tracked).
 
 ### app_launcher
+
 - **Direct CLI**: `python -m skills.app_launcher` — `launch <app> [--test]`, `list`, `check`. Exit codes 0/1.
 - **Capability**: `AppLauncherSkill` via `KnowledgeManager.find_application()` + `_launch_path` (DesktopHand).
 - **Verification**: `--check` exits 0; `launch <app> --test` verified (729 apps found, test launch of Code/notepad).
 
 ### terminal
+
 - **Status**: NOT_EXECUTABLE as a standalone CLI.
 - **Reason**: delegates every command to `hands.local.get_desktop_hand()` (DesktopHand in-process), which opens OS-level desktop capabilities. No pure core without the hand.
 
 ### natural_language_processor
+
 - **Status**: NOT_EXECUTABLE as a standalone CLI.
 - **Reason**: `_user_message` depends on the brain intent pipeline (intent model, modes).
 
 ### browser_awareness
+
 - **Status**: NOT_EXECUTABLE as a standalone CLI.
 - **Reason**: `_plan` only parses URLs and objectives (pure), but the full skill needs a browser session and the knowledge database.
 
 ### automation_engine
+
 - **Status**: NOT_EXECUTABLE as a standalone CLI.
 - **Reason**: `_handle_chain` depends on parsing LLM-generated chains; full execution needs `AutomationEngine` (LLM).
 
@@ -149,7 +160,7 @@ capability runs for both the CLI and the Sarthi skill/adapter layers.
 ### Delivery Summary
 
 | Skill | Direct CLI | Status |
-|-------|-----------|--------|
+| ------- | ----------- | -------- |
 | speech | `python -m speech` | DIRECTLY_EXECUTABLE |
 | scanner | `python -m skills.scanner` | DIRECTLY_EXECUTABLE |
 | browser | `python -m skills.browser` | DIRECTLY_EXECUTABLE |
@@ -165,7 +176,7 @@ capability runs for both the CLI and the Sarthi skill/adapter layers.
 ### Unified Entry Point
 
 | Command | Description |
-|---------|-------------|
+| --------- | ------------- |
 | `python -m sarthi list [--json] [--enabled-only]` | List all skills |
 | `python -m sarthi help [<skill>]` | Show help (overview or per skill) |
 | `python -m sarthi <skill-id> ...` | Run a skill directly |

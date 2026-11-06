@@ -5,7 +5,7 @@ import httpx2
 from hermes.config.settings import HermesConfig
 from hermes.models import ModelRequest, Task
 
-from .base import AIProvider, ModelCapabilities, ProviderResponse
+from .base import AIProvider, ModelCapabilities, ProviderResponse, ProviderStreamEvent
 
 logger = logging.getLogger(__name__)
 
@@ -145,6 +145,109 @@ class LocalHermesProvider(AIProvider):
         if request.temperature is not None:
             payload["temperature"] = request.temperature
         return self._client.post(url, headers=headers, json=payload)
+
+    def _post_stream(self, request: ModelRequest) -> list[ProviderStreamEvent]:
+        """Incremental Ollama `/api/chat` pull ("stream": true). The server
+        sends one JSON object per line (NDJSON), each line being the full
+        cumulative message state or a plain incremental delta; the adapter
+        normalizes every line into a ``ProviderStreamEvent(token, ...)``
+        so the transport can render text as it arrives.
+
+        Connection failures during the pull are returned as an error event
+        rather than raised, and a fully received but unknown response shape
+        degrades to the legacy synchronous result instead of failing the
+        whole run.
+        """
+        try:
+            response = self._client.post(
+                f"{self._config.local_hermes_url}/api/chat",
+                headers={"Content-Type": "application/json"},
+                json=self._build_payload(request),
+                timeout=self._config.local_timeout,
+            )
+            response.raise_for_status()
+            events: list[ProviderStreamEvent] = []
+            for line in response.text.splitlines():
+                if not line.strip():
+                    continue
+                try:
+                    obj = response.json()
+                except ValueError:
+                    continue
+                # NDJSON pull: the server sends one complete object per line.
+                # The model message carries the full text so far, so every
+                # line can yield a token.
+                if isinstance(obj, dict):
+                    message = obj.get("message") or {}
+                    content = message.get("content")
+                    if content:
+                        events.append(
+                            ProviderStreamEvent(
+                                event="token",
+                                data={"text": content},
+                            )
+                        )
+                elif isinstance(obj, str):
+                    # Delta-only streaming: the line itself is the new text.
+                    if obj:
+                        events.append(
+                            ProviderStreamEvent(
+                                event="token",
+                                data={"text": obj},
+                            )
+                        )
+            if events:
+                return events
+            # No tokens parsed: the model did not stream incrementally.
+            # Return the same graceful error as the legacy path.
+            return [
+                ProviderStreamEvent(
+                    event="error",
+                    data={"message": "Incomplete stream", "recoverable": True},
+                )
+            ]
+        except httpx2.TimeoutException:
+            return [
+                ProviderStreamEvent(
+                    event="error",
+                    data={"message": "Connection timeout", "recoverable": True},
+                )
+            ]
+        except httpx2.HTTPStatusError as exc:
+            reason = self._error_reason(exc.response)
+            return [
+                ProviderStreamEvent(
+                    event="error",
+                    data={"message": reason, "recoverable": False},
+                )
+            ]
+        except httpx2.HTTPError as exc:
+            return [
+                ProviderStreamEvent(
+                    event="error",
+                    data={"message": f"Connection error: {exc}", "recoverable": True},
+                )
+            ]
+        except Exception:
+            return [
+                ProviderStreamEvent(
+                    event="error",
+                    data={"message": "Unexpected error", "recoverable": False},
+                )
+            ]
+
+    async def generate_stream(
+        self, request: ModelRequest
+    ) -> AsyncIterator[ProviderStreamEvent]:
+        """Ollama streaming via the incremental `/api/chat` pull.
+
+        The synchronous `_post_stream` is the streaming-capable path and is
+        wrapped with an async iterator so the provider abstraction is
+        awaitable by the orchestrator without changing the synchronous
+        ``generate`` fallback.
+        """
+        for event in self._post_stream(request):
+            yield event
 
     @staticmethod
     def _error_reason(response: httpx2.Response) -> str:

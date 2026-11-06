@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Any
+from dataclasses import dataclass, field
+from typing import Any, AsyncIterator
 
 from hermes.models import ModelRequest, Task
 
@@ -60,6 +60,27 @@ class ModelCapabilities:
     structured_output: bool = False
     vision: bool = False
     streaming: bool = False
+
+
+@dataclass
+class ProviderStreamEvent:
+    """One wire event on the chat/stream transport.
+
+    JSON shape (as serialized by the SSE / HTTP-stream transport):
+        {"event": "start", "data": {...}}
+        {"event": "token", "data": {"text": "..."}}
+        {"event": "status", "data": {..., "tool_used": ..., "iterations": ...}}
+        {"event": "done", "data": {...meta...}}
+        {"event": "error", "data": {"message": "...", "recoverable": ...}}
+    """
+
+    event: str
+    data: dict[str, Any] = field(default_factory=dict)
+
+    def to_json(self) -> str:
+        """Serialize a single event as a compact JSON object."""
+        return json.dumps({"event": self.event, "data": self.data}, ensure_ascii=False)
+
     context_window: int | None = None
 
 
@@ -81,9 +102,24 @@ class AIProvider(ABC):
     name: str = ""
 
     @abstractmethod
-    def generate(self, request: ModelRequest) -> ProviderResponse:
-        """Generate a response for the provider-neutral request."""
-        ...
+    async def generate_stream(
+        self, request: ModelRequest
+    ) -> AsyncIterator[ProviderStreamEvent]:
+        """Stream tokens with live progress events.
+
+        Defaults to a single event carrying the whole final text, which
+        preserves the legacy non-streaming behavior for every provider
+        that does not implement a native streaming API.
+        """
+        yield ProviderStreamEvent(
+            event="done",
+            data={
+                "text": self.generate(request).text,
+                "provider": self.name,
+                "model": self.model,
+                "success": True,
+            },
+        )
 
     def capabilities(self) -> ModelCapabilities:
         """Capabilities of this adapter + configured model.
