@@ -12,12 +12,12 @@ and when frozen into an executable.
 
 from __future__ import annotations
 
-import os
-from pathlib import Path
-
-from PIL import Image
+import sys
 import tkinter as tk
+from pathlib import Path
 from tkinter import font as tkfont
+
+from PIL import Image, ImageTk
 
 # ---------------------------------------------------------------------------
 # Image path resolution
@@ -27,7 +27,10 @@ from tkinter import font as tkfont
 # From pet.py (Desktop/client/sarthi_client/), go up 2 levels to Desktop/,
 # then add Hitori/ folder.
 # parent = sarthi_client, parent.parent = client, parent.parent.parent = Desktop
-_HITORI_DIR = Path(__file__).resolve().parent.parent.parent / "Hitori"  # Desktop/Hitori
+_DESKTOP_DIR = Path(__file__).resolve().parent.parent.parent
+# PyInstaller extracts bundled data beneath _MEIPASS. In a source checkout,
+# assets live beside run.py under Desktop/Hitori.
+_HITORI_DIR = Path(getattr(sys, "_MEIPASS", _DESKTOP_DIR)) / "Hitori"
 
 # Map of supported states to image file names.
 # All 5 images exist in the Hitori/ folder.
@@ -41,12 +44,17 @@ _STATE_TO_FILENAME: dict[str, str] = {
 }
 
 # Default state when the pet launches (Phase 1 MVP).
-DEFAULT_STATE = "sleeping"
+DEFAULT_STATE = "happy"
+# Tk's transparent-color attribute uses a color key on Windows. Keep the
+# window and image label on this unusual color so it does not cover the PNG's
+# transparent pixels (or turn ordinary white parts of the artwork invisible).
+_TRANSPARENT_COLOR = "#000000"  # Tk's default background color for labels and windows
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _resolve_image_path(filename: str) -> Path:
     """Return the absolute path for a Hitori image file.
@@ -83,6 +91,7 @@ def _load_photoimage(filename: str) -> ImageTk.PhotoImage | None:
 # Pet window
 # ---------------------------------------------------------------------------
 
+
 class DesktopPet(tk.Toplevel):
     """Floating desktop pet window using Tkinter.
 
@@ -104,19 +113,28 @@ class DesktopPet(tk.Toplevel):
         self._drag_offset_y = 0
 
         # --- Window decorations: borderless, always-on-top, transient ---
-        self.overrideredirect(True)      # no title bar, no borders
+        self.overrideredirect(True)  # no title bar, no borders
         self.wm_attributes("-topmost", True)  # stays above normal windows
         self.wm_attributes("-toolwindow", True)  # compact taskbar icon
 
-        # Transparent background where supported (Windows / X11). Use a
-        # distinct colour as colorkey so the window paint shows through.
-        self.wm_attributes("-transparentcolor", "white")
+        # Transparent background where supported. Tk's color-key transparency
+        # works on Windows; other Tk builds may not support this attribute.
+        self.configure(bg=_TRANSPARENT_COLOR)
+        try:
+            self.wm_attributes("-transparentcolor", _TRANSPARENT_COLOR)
+        except tk.TclError:
+            pass
 
         # Initial geometry: small, upper-right of the parent screen.
         self.geometry("+100+100")
 
         # --- Layout: a single label holding the image ---
-        self._label = tk.Label(self, borderwidth=0, highlightthickness=0)
+        self._label = tk.Label(
+            self,
+            borderwidth=0,
+            highlightthickness=0,
+            bg=_TRANSPARENT_COLOR,
+        )
         self._label.pack(fill=tk.BOTH, expand=True)
 
         # Load the image.
@@ -141,7 +159,9 @@ class DesktopPet(tk.Toplevel):
         # --- Close handler: hide instead of destroy so the backend stays alive ---
         self.protocol("WM_DELETE_WINDOW", self.hide)
         # Click the <X> in titlebar-free mode: right-click to close.
-        self._close_button = tk.Button(self, text="×", command=self.close, font=(tkfont.NORMAL, 10, "bold"))
+        self._close_button = tk.Button(
+            self, text="×", command=self.close, font=(tkfont.NORMAL, 10, "bold")
+        )
         self._close_button.place(relx=1.0, rely=0.0, anchor="ne", width=16, height=16)
 
         # Ensure the window stays above the parent even when the parent is focused.
@@ -230,6 +250,7 @@ class DesktopPet(tk.Toplevel):
 # ---------------------------------------------------------------------------
 # Convenience: auto-launch when the parent SarthiApp starts
 # ---------------------------------------------------------------------------
+
 
 def attach_pet_to(parent: tk.Tk) -> DesktopPet:
     """Create and show a DesktopPet attached to *parent*.

@@ -7,7 +7,7 @@ if "from fastapi import BackgroundTasks" not in content:
         "from hermes.service import get_orchestrator as _service_get_orchestrator",
         "from hermes.service import get_orchestrator as _service_get_orchestrator\n"
         "from fastapi import BackgroundTasks, Request\n"
-        "from fastapi.responses import StreamingResponse\n"
+        "from fastapi.responses import StreamingResponse\n",
     )
 
 # The streaming endpoint code (verbatim, no escaping issues)

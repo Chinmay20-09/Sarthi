@@ -236,9 +236,7 @@ class LocalHermesProvider(AIProvider):
                 )
             ]
 
-    async def generate_stream(
-        self, request: ModelRequest
-    ) -> AsyncIterator[ProviderStreamEvent]:
+    async def generate_stream(self, request: ModelRequest) -> AsyncIterator[ProviderStreamEvent]:
         """Ollama streaming via the incremental `/api/chat` pull.
 
         The synchronous `_post_stream` is the streaming-capable path and is

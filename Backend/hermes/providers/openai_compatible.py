@@ -103,7 +103,9 @@ class OpenAICompatibleProvider(AIProvider):
         try:
             if self._config.streaming:
                 events = self._post_stream(self._build_headers(), self._build_payload(request))
-                text = "".join(event.data.get("text", "") for event in events if event.event == "token")
+                text = "".join(
+                    event.data.get("text", "") for event in events if event.event == "token"
+                )
                 if events and events[0].event == "error":
                     return ProviderResponse(
                         success=False,
@@ -206,9 +208,7 @@ class OpenAICompatibleProvider(AIProvider):
             payload["response_format"] = {"type": "json_object"}
         return payload
 
-    def _post_stream(
-        self, headers: dict, payload: dict
-    ) -> list[ProviderStreamEvent]:
+    def _post_stream(self, headers: dict, payload: dict) -> list[ProviderStreamEvent]:
         """Native streaming POST with server-sent events.
 
         The server is expected to send application/x-ndjson: one JSON object
@@ -307,9 +307,7 @@ class OpenAICompatibleProvider(AIProvider):
                 )
             ]
 
-    async def generate_stream(
-        self, request: ModelRequest
-    ) -> AsyncIterator[ProviderStreamEvent]:
+    async def generate_stream(self, request: ModelRequest) -> AsyncIterator[ProviderStreamEvent]:
         """Serve events. The synchronous iterator is used for both legacy
         streaming-capable providers and providers that only speak the
         token-per-line /token JSON hint; the async wrapper is kept so the

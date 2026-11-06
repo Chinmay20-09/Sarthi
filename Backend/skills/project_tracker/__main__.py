@@ -68,7 +68,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.check:
         return _check_dependencies()
 
-    skill = GitHubProjectSkill(username=args.username or os.environ.get("SKILL_PROJECT_TRACKER_USERNAME", ""), token=args.token)
+    skill = GitHubProjectSkill(
+        username=args.username or os.environ.get("SKILL_PROJECT_TRACKER_USERNAME", ""),
+        token=args.token,
+    )
 
     try:
         if args.action == "status":

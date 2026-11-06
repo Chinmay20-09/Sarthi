@@ -36,6 +36,7 @@ from sarthi_client.pet import (
 # Helper: fake Tk root used when we need a minimal Tk instance
 # ---------------------------------------------------------------------------
 
+
 class _FakeRoot:
     """Minimal stand-in for tk.Tk used by some pet internals."""
 
@@ -82,6 +83,7 @@ class _FakeRoot:
 # _resolve_image_path
 # ---------------------------------------------------------------------------
 
+
 def test_resolve_image_path_uses_project_root():
     """_resolve_image_path should return a path under the Hitori directory."""
     path = _resolve_image_path("sleeping-removebg-preview.png")
@@ -101,6 +103,7 @@ def test_resolve_image_path_does_not_require_file_to_exist():
 # _load_photoimage
 # ---------------------------------------------------------------------------
 
+
 def test_load_photoimage_returns_none_for_missing_file(tmp_path, monkeypatch):
     """_load_photoimage must return None (not raise) when the PNG is absent."""
     # Create a non-existent path by patching _HITORI_DIR
@@ -109,9 +112,10 @@ def test_load_photoimage_returns_none_for_missing_file(tmp_path, monkeypatch):
 
     # Patch at the resolution level - make _resolve_image_path return a path
     # that doesn't exist, which is the natural fallback path.
-    with patch(
-        "sarthi_client.pet._HITORI_DIR", fake_hitori
-    ), patch("sarthi_client.pet.Path.is_file", return_value=False) as _:
+    with (
+        patch("sarthi_client.pet._HITORI_DIR", fake_hitori),
+        patch("sarthi_client.pet.Path.is_file", return_value=False) as _,
+    ):
         result = _load_photoimage("sleeping-removebg-preview.png")
         assert result is None
 
@@ -145,6 +149,7 @@ def test_load_photoimage_returns_photoimage_when_file_exists(monkeypatch):
 # _STATE_TO_FILENAME
 # ---------------------------------------------------------------------------
 
+
 def test_state_to_filename_mapping():
     """All five states should map to filenames."""
     expected = {
@@ -161,6 +166,7 @@ def test_state_to_filename_mapping():
 # DEFAULT_STATE
 # ---------------------------------------------------------------------------
 
+
 def test_default_state_is_sleeping():
     """The default pet state should be 'sleeping'."""
     assert DEFAULT_STATE == "sleeping"
@@ -169,6 +175,7 @@ def test_default_state_is_sleeping():
 # ---------------------------------------------------------------------------
 # DesktopPet class (core logic tests with a real but minimal Tk)
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def minimal_tk():
@@ -195,8 +202,11 @@ def test_pet_set_state_sleeping(minimal_tk):
     """set_state('sleeping') should display the sleeping image (or fallback)."""
     pet = DesktopPet(minimal_tk, image_filename="sleeping-removebg-preview.png")
     pet.set_state("sleeping")
-    # After set_state, the pet should still exist and not have crashed.
+    # Regression check: this used to silently show text because ImageTk was
+    # missing from pet.py's imports and the loader swallowed the NameError.
     assert pet.winfo_exists()
+    assert pet._label.cget("image")
+    assert not pet._label.cget("text")
     pet.close()
 
 
@@ -278,9 +288,11 @@ def test_attach_pet_to_returns_pet(minimal_tk):
 # Integration: ensure the pet does not import backend internals
 # ---------------------------------------------------------------------------
 
+
 def test_pet_no_backend_imports():
     """Verify the pet module does not import from backend packages."""
     import sarthi_client.pet as pet_mod
+
     pet_source = pet_mod.__file__
     # Read the source and check for forbidden imports
     with open(pet_source, "r") as f:

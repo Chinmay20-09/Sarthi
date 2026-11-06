@@ -114,10 +114,18 @@ def _execute_open(skill: BrowserSkill, target: str, test: bool) -> dict:
         km.load_websites()
         website = km.find_website(target)
         if website is None:
-            return {"success": False, "status": "not_found", "error": f"Website not found: {target}"}
+            return {
+                "success": False,
+                "status": "not_found",
+                "error": f"Website not found: {target}",
+            }
         url = website.get("url") or ""
         if not url:
-            return {"success": False, "status": "error", "error": f"No URL for website: {website.get('name')}"}
+            return {
+                "success": False,
+                "status": "error",
+                "error": f"No URL for website: {website.get('name')}",
+            }
         import webbrowser
 
         webbrowser.open(url)
@@ -175,7 +183,9 @@ def _check_dependencies() -> int:
         browsers = webbrowser._browsers if hasattr(webbrowser, "_browsers") else []
         print("BROWSER AVAILABLE (webbrowser module)")
         if browsers:
-            print(f"   default browser: {browsers[0].name if hasattr(browsers[0], 'name') else browsers[0]}")
+            print(
+                f"   default browser: {browsers[0].name if hasattr(browsers[0], 'name') else browsers[0]}"
+            )
     except Exception as e:  # noqa: BLE001
         print(f"BROWSER UNAVAILABLE: {e}", file=sys.stderr)
         return 1

@@ -23,9 +23,7 @@ NDJSON_CONTENT_TYPE = "application/x-ndjson"
 KEEP_ALIVE_INTERVAL = 15
 
 
-async def _write_event(
-    send: Any, event: str, data: dict[str, Any]
-) -> None:
+async def _write_event(send: Any, event: str, data: dict[str, Any]) -> None:
     """Serialize one event and flush it to the client.
 
     ``send`` is the ASGI send callable passed in by the routing layer.

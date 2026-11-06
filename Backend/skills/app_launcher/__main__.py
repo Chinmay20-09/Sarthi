@@ -133,7 +133,9 @@ def _launch_real(skill: AppLauncherSkill, target: str, force: bool) -> int:
         return 1
 
     if app_status != "favourite" and not force:
-        print(f" {app_name} is '{app_status}' — use --force to launch (Run Anyway)", file=sys.stderr)
+        print(
+            f" {app_name} is '{app_status}' — use --force to launch (Run Anyway)", file=sys.stderr
+        )
         return 1
 
     if app_path.lower().endswith((".exe", ".lnk", ".bat", ".cmd")):

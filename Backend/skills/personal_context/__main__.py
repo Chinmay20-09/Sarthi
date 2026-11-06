@@ -92,8 +92,10 @@ def _print_available_fields() -> None:
         cats = ()
         # find category (implementation detail: uses FIELD_CATEGORIES)
         import sys
+
         sys.path.insert(0, ".")
         from skills.personal_context.fields import FIELD_CATEGORIES
+
         for cat, members in FIELD_CATEGORIES.items():
             if field in members:
                 cats = (cat,)

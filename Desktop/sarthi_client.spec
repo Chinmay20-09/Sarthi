@@ -27,7 +27,7 @@ a = Analysis(
     [str(SPEC_DIR / "run.py")],
     pathex=[str(CLIENT_DIR), str(REPO_ROOT)],
     binaries=[],
-    datas=[],
+    datas=[(str(SPEC_DIR / "Hitori"), "Hitori")],
     hiddenimports=[],
     hookspath=[],
     runtime_hooks=[],

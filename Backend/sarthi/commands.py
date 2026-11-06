@@ -60,7 +60,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     return parser
 
-
     return parser
 
 
@@ -123,6 +122,7 @@ def dispatch(argv: list[str] | None = None) -> int:
         rest = rest[1:]
     if command == "help":
         from .commands import _print_help
+
         return _print_help(args.skill_id, registry)
 
     # Pass everything else through to the skill's own CLI

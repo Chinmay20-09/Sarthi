@@ -68,11 +68,7 @@ def get_registry() -> "SkillRegistry":
                 ],
                 "list_enabled": lambda self: self.list_skills(),
                 "get_metadata": lambda self, skill_id: next(
-                    (
-                        m
-                        for m in self.list_skills()
-                        if m["id"] == skill_id
-                    ),
+                    (m for m in self.list_skills() if m["id"] == skill_id),
                     None,
                 ),
                 "get_all_instances": lambda self: [],
@@ -81,18 +77,18 @@ def get_registry() -> "SkillRegistry":
                     "name": json.loads((folder / "manifest.json").read_text(encoding="utf-8")).get(
                         "name", folder.name
                     ),
-                    "description": json.loads((folder / "manifest.json").read_text(encoding="utf-8")).get(
-                        "description", ""
-                    ),
-                    "version": json.loads((folder / "manifest.json").read_text(encoding="utf-8")).get(
-                        "version", "0.1.0"
-                    ),
-                    "enabled": json.loads((folder / "manifest.json").read_text(encoding="utf-8")).get(
-                        "enabled", True
-                    ),
-                    "commands": json.loads((folder / "manifest.json").read_text(encoding="utf-8")).get(
-                        "commands", []
-                    ),
+                    "description": json.loads(
+                        (folder / "manifest.json").read_text(encoding="utf-8")
+                    ).get("description", ""),
+                    "version": json.loads(
+                        (folder / "manifest.json").read_text(encoding="utf-8")
+                    ).get("version", "0.1.0"),
+                    "enabled": json.loads(
+                        (folder / "manifest.json").read_text(encoding="utf-8")
+                    ).get("enabled", True),
+                    "commands": json.loads(
+                        (folder / "manifest.json").read_text(encoding="utf-8")
+                    ).get("commands", []),
                     "directory": str(folder),
                 },
             },
@@ -105,4 +101,3 @@ def main(argv: list[str] | None = None) -> int:
     from . import commands
 
     return commands.dispatch(argv)
-

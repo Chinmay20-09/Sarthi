@@ -102,9 +102,7 @@ class AIProvider(ABC):
     name: str = ""
 
     @abstractmethod
-    async def generate_stream(
-        self, request: ModelRequest
-    ) -> AsyncIterator[ProviderStreamEvent]:
+    async def generate_stream(self, request: ModelRequest) -> AsyncIterator[ProviderStreamEvent]:
         """Stream tokens with live progress events.
 
         Defaults to a single event carrying the whole final text, which
