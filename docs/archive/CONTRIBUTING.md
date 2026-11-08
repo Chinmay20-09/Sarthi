@@ -8,7 +8,7 @@ breaking the architecture. Read it before your first PR.
 
 ## Project Structure
 
-```
+```text
 brain/            Core intelligence pipeline (Interpreter → Planner →
                   Resolver → Executor). brain/engine.py is the public entry point.
 hands/            Physical execution layer. The Desktop hand
@@ -33,7 +33,7 @@ UI/               Static web interface served by api.py (/ui).
 api.py            FastAPI server — the ONLY API boundary for the UI.
 config.py         Central configuration (app paths/ports; Hermes uses .env).
 tests/            Pytest suite (713 tests). Run with `python -m pytest tests/`.
-```
+```text
 
 ## Development Setup
 
@@ -44,7 +44,7 @@ pip install -e ".[dev]"
 # Optional capability stacks:
 pip install -e ".[automation]"   # AI-chain laptop automation
 pip install -e ".[browser]"      # Browser Awareness (Playwright)
-```
+```text
 
 Copy `.env.example` → `.env` and fill in secrets if you work on Hermes
 providers or connectors. `.env` is gitignored — never commit it.
@@ -56,7 +56,7 @@ python -m pytest tests/ -q     # full suite
 ruff check .                   # lint
 ruff format --check .          # format
 python main-test.py            # smoke test
-```
+```text
 
 Pre-commit hooks (ruff, smoke test, no-database-files guard) are configured
 in `.pre-commit-config.yaml`; the same checks run in CI (`.github/workflows/ci.yml`).
@@ -67,21 +67,23 @@ The canonical, code-verified architecture document is **`ARCHITECTURE.md`** —
 read it for the pipeline, Hermes/provider abstraction, Browser Awareness,
 configuration and persistence. The short version:
 
-```
+```text
 UI (static pages) ──> api.py (FastAPI) ──> BrainEngine.process(text)
                                               │  interpret → plan → resolve → execute
                                               ▼
                                      Executor dispatches to:
                                        1. built-in handlers (open/browse/remember/...)
-                                       2. registered skills (fallback pool, NLP last)
+                                       2. registered skills (fallback pool, NLP
+                                          last)
                                        3. NLP skill ──> Hermes (chat or tool bridge)
 Skills ──> KnowledgeManager ──> KnowledgeLoader ──> knowledge/*.json
 Hermes ──> ToolRegistry ──> existing skills (never a second executor)
-Brain ──> BrowserAwarenessSkill ──> inspector ─> Hermes observes ─> validate ─> executor
+Brain ──> BrowserAwarenessSkill ──> inspector ─> Hermes observes ─> validate ─>
+executor
 Executor/Skills ──> DesktopHand (hands/desktop/) ──> Windows
                     (explicit paths/pids only; capability allow-list;
                      structured DesktopResult; no shell, no code execution)
-```
+```text
 
 **Data contract of the pipeline:** `Intent(action, target, confidence, site, raw_text)`.
 Skills receive an `Intent` and return a dict with `success`, `status`, `result`
@@ -206,7 +208,7 @@ skill is *registered*. Never register a failed/unvalidated proposal.
 ```bash
 python -m pytest tests/ -q            # everything
 python -m pytest tests/test_<area>.py  # one area
-```
+```text
 
 Boundary tests live in `tests/test_pipeline_compatibility.py` — if you
 change the shape of scanner output, knowledge entities, `Intent`, or the

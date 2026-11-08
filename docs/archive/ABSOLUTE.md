@@ -10,7 +10,8 @@ touch their keyboard and mouse again.
 
 ## The rule
 
-1.First approach is trying to make any automation is to control device over the approach of API and other paid medium
+1.First approach is trying to make any automation is to control device over the
+approach of API and other paid medium
 2.Any automation that takes control of input devices **must**:
 
 ### 1. Announce before it starts (voice feedback)
@@ -66,12 +67,13 @@ contract. Minimum skeleton:
 ```python
 from utils.voice import announce
 
-announce("Hands off. Automation started. Please step away from the keyboard and mouse.")
+announce("Hands off. Automation started. Please step away from the keyboard and
+mouse.")
 try:
     ...  # the automation, with abort support ...
 finally:
     announce("Automation finished. You can use your computer now.")
-```
+```text
 
 Notes:
 

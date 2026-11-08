@@ -40,7 +40,9 @@ Dataset: `docs\dev\hermes_model_benchmark_prompts.json` (version 1)
 
 ## Qualitative quality review
 
-Human qualitative review of the 2048-context responses against the fixed dataset checks. Scores are judgment calls, not automated model metrics; structured tool accuracy is measured separately in the benchmark results.
+Human qualitative review of the 2048-context responses against the fixed dataset
+checks. Scores are judgment calls, not automated model metrics; structured tool
+accuracy is measured separately in the benchmark results.
 
 | Model | Basic | Emotion | Personality | Memory | Tool choice | Overall | Review notes |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
@@ -51,18 +53,38 @@ Human qualitative review of the 2048-context responses against the fixed dataset
 
 ## Recommendation
 
-Keep hermes3:8b as the current production model. At 2048 context it is the only candidate with 3/3 correct structured tool choices and consistently acceptable conversational behavior. The 3B models substantially reduce memory and improve warm token speed, but their tool-selection errors and quality misses fail this workload's minimum reliability bar. The 8B Q3 candidate is not a good compromise: it is only modestly smaller/faster than baseline and missed one of three structured choices. Do not change production defaults without explicit review and approval.
+Keep hermes3:8b as the current production model. At 2048 context it is the only
+candidate with 3/3 correct structured tool choices and consistently acceptable
+conversational behavior. The 3B models substantially reduce memory and improve
+warm token speed, but their tool-selection errors and quality misses fail this
+workload's minimum reliability bar. The 8B Q3 candidate is not a good
+compromise: it is only modestly smaller/faster than baseline and missed one of
+three structured choices. Do not change production defaults without explicit
+review and approval.
 
-For a future controlled trial, 2048 context is the best starting point: the baseline's loaded-model allocation was about 5.05 GB versus 6.0 GB at 8192, with slightly higher measured warm throughput. This does not alter the production context setting.
+For a future controlled trial, 2048 context is the best starting point: the
+baseline's loaded-model allocation was about 5.05 GB versus 6.0 GB at 8192, with
+slightly higher measured warm throughput. This does not alter the production
+context setting.
 
 ## Method and limitations
 
 - Candidates: `hermes3:8b`, `hermes3:8b-llama3.1-q3_K_M`, `hermes3:3b`, `hermes3:3b-llama3.2-q3_K_M`.
-- Context sizes: 2048, 4096, and 8192; temperature 0.2, seed 42, maximum 120 generated tokens.
-- Each prompt runs with the same dataset instructions and generation settings. The benchmark sets `num_ctx` per request.
-- Before each model/context cell, the harness asks Ollama to unload that model. The first request is labeled cold and following requests warm; unload success is recorded. Ollama `load_duration` is retained separately.
-- Memory snapshots include system memory, best-effort Ollama/runner RSS, and `/api/ps` loaded-model allocation before and after each request.
-- TTFT is measured from request start to the first non-empty streamed content. Token rate uses Ollama `eval_count / eval_duration`.
-- Outputs are saved unedited. Human reviewers should score each rubric item (pass/partial/fail) and structured JSON exact-key validity before selecting a winner.
-- The harness talks only to the local Ollama API for benchmark-only access to `num_ctx`, streaming timing, and runtime counters. It does not change the application's provider or tool-validation paths.
+- Context sizes: 2048, 4096, and 8192; temperature 0.2, seed 42, maximum 120
+  generated tokens.
+- Each prompt runs with the same dataset instructions and generation settings.
+  The benchmark sets `num_ctx` per request.
+- Before each model/context cell, the harness asks Ollama to unload that model.
+  The first request is labeled cold and following requests warm; unload success
+  is recorded. Ollama `load_duration` is retained separately.
+- Memory snapshots include system memory, best-effort Ollama/runner RSS, and
+  `/api/ps` loaded-model allocation before and after each request.
+- TTFT is measured from request start to the first non-empty streamed content.
+  Token rate uses Ollama `eval_count / eval_duration`.
+- Outputs are saved unedited. Human reviewers should score each rubric item
+  (pass/partial/fail) and structured JSON exact-key validity before selecting a
+  winner.
+- The harness talks only to the local Ollama API for benchmark-only access to
+  `num_ctx`, streaming timing, and runtime counters. It does not change the
+  application's provider or tool-validation paths.
 - No downloads are initiated. Missing models are skipped.

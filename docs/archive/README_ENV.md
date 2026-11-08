@@ -1,6 +1,9 @@
+# Readme Env
+
 Environment variables for Hermes integration
 
-Create a .env from .env.example and fill in secrets. Do NOT commit .env to source control.
+Create a .env from .env.example and fill in secrets. Do NOT commit .env to
+source control.
 See also `ARCHITECTURE.md` (§ Provider Architecture) for how selection and
 fallback work.
 

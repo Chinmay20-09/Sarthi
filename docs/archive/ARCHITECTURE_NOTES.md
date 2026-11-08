@@ -9,7 +9,7 @@
 
 Sarthi is a Desktop AI Assistant built with a layered architecture:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                    CLI / API Layer                          │
 │                    (main.py, api.py)                        │
@@ -33,7 +33,7 @@ Sarthi is a Desktop AI Assistant built with a layered architecture:
 │      • Entity Resolution | Routing | Caching | Storage      │
 │     (knowledge/*.py, database/*.py, events/*.py)            │
 └─────────────────────────────────────────────────────────────┘
-```
+```text
 
 ---
 
@@ -47,7 +47,7 @@ Sarthi is a Desktop AI Assistant built with a layered architecture:
 from brain.engine import BrainEngine  # Main entry point
 from brain.intent import Intent       # Intent model
 from knowledge.entity_resolver import EntityResolver  # Canonical location
-```
+```text
 
 **Flow:**
 
@@ -64,7 +64,7 @@ from knowledge.entity_resolver import EntityResolver  # Canonical location
 ```python
 from skills.registry import get_registry, SkillRegistry
 from skills.base import BaseSkill
-```
+```text
 
 **Architecture:**
 
@@ -79,14 +79,16 @@ from skills.base import BaseSkill
 
 - `app_launcher/` - Launch desktop applications
 - `browser/` - Open/search known websites in the default browser
-- `browser_awareness/` - Inspect arbitrary websites (Playwright) with validated actions
+- `browser_awareness/` - Inspect arbitrary websites (Playwright) with validated
+  actions
 - `project_tracker/` - Track software projects (GitHub)
 - `automation_engine/` - AI-chain laptop automation & assistant generation
 - `scanner/` - Application discovery
 - `speech/` - Speech recognition features
 - `user_config/` - Configuration management
 - `personal_context/` - Personal profile fields (safe, field-scoped access)
-- `natural_language_processor/` - Conversational fallback via Hermes (registered last)
+- `natural_language_processor/` - Conversational fallback via Hermes (registered
+  last)
 
 ### Knowledge Layer (`knowledge/`)
 
@@ -94,7 +96,7 @@ from skills.base import BaseSkill
 
 ```python
 from knowledge.entity_resolver import EntityResolver
-```
+```text
 
 **Components:**
 
@@ -109,7 +111,7 @@ from knowledge.entity_resolver import EntityResolver
 
 ```python
 from database.manager import DatabaseManager
-```
+```text
 
 - SQLite-based persistence
 - Schema management
@@ -122,7 +124,7 @@ from events import get_bus
 bus = get_bus()
 bus.publish("event_name", {data}, source="module")
 bus.subscribe("event_name", callback)
-```
+```text
 
 - Decoupled communication between modules
 - Event history tracking
@@ -137,7 +139,8 @@ bus.subscribe("event_name", callback)
 All modules scheduled for removal have been deleted from the codebase:
 
 - `brain/normalizer.py` + `tests/test_normalizer.py` — use `brain.interpreter.interpret()`
-- `actions/` package (`apps.py`, `browser.py`, `files.py`, `system.py`) — skills replace these
+- `actions/` package (`apps.py`, `browser.py`, `files.py`, `system.py`) — skills
+  replace these
 - `brain/entity_resolver.py` — import from `knowledge.entity_resolver`
 - `brain/schemas.py` — import from `brain.intent`
 - `knowledge/scanners/` — application discovery now lives in `skills/scanner/`
@@ -202,7 +205,7 @@ from events import get_bus
 
 # Configuration
 from config import SKILLS_DIR, WHISPER_MODEL, API_PORT
-```
+```text
 
 ### ❌ DON'T USE (Deprecated)
 
@@ -222,7 +225,7 @@ from actions.apps import open_app
 from actions.browser import open_site
 from brain.normalizer import normalize
 from knowledge.scanners import scan_all
-```
+```text
 
 ---
 
@@ -243,7 +246,7 @@ if response.success:
     print(f"Time: {response.execution_ms}ms")
 else:
     print(f"Error: {response.error}")
-```
+```text
 
 ### Discovering and Using Skills
 
@@ -261,7 +264,7 @@ app_launcher = registry.get_skill("app_launcher")
 
 # Get all skill instances
 all_skills = registry.get_all_instances()
-```
+```text
 
 ### Publishing Events
 
@@ -281,7 +284,7 @@ def on_startup(event):
     print(f"System started at {event.timestamp}")
 
 bus.subscribe("system_startup", on_startup)
-```
+```text
 
 ### Resolving Entity Names
 
@@ -295,7 +298,7 @@ resolver = EntityResolver(entities=[
 
 resolved = resolver.resolve("chrome browser")
 # Returns: "Chrome"
-```
+```text
 
 ---
 
@@ -311,7 +314,7 @@ from config import (
     API_HOST, API_PORT,   # API server settings
     LOG_LEVEL,            # Logging verbosity
 )
-```
+```text
 
 ---
 
@@ -321,7 +324,7 @@ from config import (
 
 ```bash
 python -m pytest tests/ -v
-```
+```text
 
 ### Run Specific Module Tests
 
@@ -329,7 +332,7 @@ python -m pytest tests/ -v
 python -m pytest tests/test_brain_engine.py -v
 python -m pytest tests/test_executor.py -v
 python -m pytest tests/test_skill_base.py -v
-```
+```text
 
 ### Current Test Status
 

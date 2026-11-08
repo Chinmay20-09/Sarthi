@@ -54,14 +54,14 @@ purpose (AD-09, DIVERGENCE D-05).
 
 `hermes/retriever.py` — hybrid, bounded, no vector DB:
 
-```
+```text
 query ─▶ retrieve(query, session_id)
           ├─ SQL:        knowledge_memory (LIKE), command_history, settings
           ├─ Knowledge:  applications + websites (exact + fuzzy)
           ├─ Sandbox:    similar past tasks via index.json
           └─ Conversation: recent session turns
        ─▶ ContextBuilder ─▶ bounded, source-tagged text blocks
-```
+```text
 
 Caps: per-section and overall char limits; failures degrade to empty context.
 

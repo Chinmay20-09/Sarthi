@@ -7,7 +7,7 @@ left for the future.
 
 ## 1. Current architecture (observed, before this change)
 
-```
+```text
                         SARTHI
                           │
           ┌───────────────┴───────────────┐
@@ -16,7 +16,7 @@ left for the future.
     retrieval, routing, planning     windows, browser backends
           │                                 │
           └──────── in-process calls ───────┘
-```
+```text
 
 The boundary already existed in substance after the 2026-09-14
 consolidation (AD-01–AD-11): the Brain never touched the OS directly, and
@@ -25,12 +25,12 @@ missing was a *named contract* and an *enforced import lock*.
 
 ## 2. Target architecture
 
-```
+```text
 USER/CLIENT → NETWORK → BACKEND/BRAIN → Sarthi Core → Interpreter
   → Complexity Router → Deterministic OR Hermes → validated action request
   → NETWORK → DESKTOP/HAND → Execute → Observe
   → NETWORK → BACKEND/BRAIN → next decision / final result
-```
+```text
 
 The Backend is the authority; the Desktop is an execution/observation
 endpoint. Current local mode (same machine, in-process calls) and future
@@ -48,9 +48,11 @@ Traced end-to-end (see [RUNTIME_FLOW.md](RUNTIME_FLOW.md)):
    `HermesAgent` (the single bounded loop) → validator → `ToolRegistry` → tools.
 4. OS-touching tools and skills delegate to `hands/desktop/`:
    - `app_launcher` → `hands.desktop.processes` (`launch_process`/`startfile`)
-   - executor `close` handler → `get_desktop_hand().execute("close_application", pid=...)`
+   - executor `close` handler → `get_desktop_hand().execute("close_application",
+     pid=...)`
    - `hermes/tools/open_app.py` → `AppLauncherSkill`; `close_app.py` → `BrainExecutor`
-5. `desktop_agent.py` is the standalone hand seam (capabilities/self-test/exec CLI; no IPC).
+5. `desktop_agent.py` is the standalone hand seam (capabilities/self-test/exec
+   CLI; no IPC).
 
 Verified by grep during inspection: zero `subprocess`/`os.system` under
 `hermes/`; pyautogui/keyboard/win32 imports exist **only** under

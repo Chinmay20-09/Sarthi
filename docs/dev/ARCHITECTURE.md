@@ -50,7 +50,7 @@ the interpreter's only reading is a plain search — decision AD-04 in
 
 ### Current vs target topology
 
-```
+```text
 CURRENT (local mode, default):
   User → Sarthi Brain → deterministic route (Skill/Tool)
               │ (no deterministic route)
@@ -63,7 +63,7 @@ CURRENT (remote mode, SARTHI_DESKTOP_AGENT_MODE=remote):
 
 TARGET:  registered Hands (Desktop / Android / Browser / IoT) with
          capability discovery: capability → provider → Hand
-```
+```text
 
 The remote mode is implemented (`hands/remote.py`, `hands/transport.py`,
 `desktop_agent.py --server`); capability discovery and additional Hands are
@@ -71,7 +71,7 @@ not (see [PROJECT_STATE.md](PROJECT_STATE.md)).
 
 ## Runtime architecture (real request flow)
 
-```
+```text
 User
  │  tkinter Desktop client (Desktop/client/sarthi_client/gui.py, HTTP only)
  │  or web dashboard (Backend/UI/*.html, served at /ui)
@@ -84,7 +84,8 @@ Sarthi Brain: BrainEngine.process  (Backend/brain/engine.py)
  │    2. Planner       plan(intent)  [pass-through]  (brain/planner.py)
  │    3. Resolver      EntityResolver.resolve(target) (knowledge/entity_resolver.py)
  │    4. Executor      BrainExecutor.execute(intent)  (brain/executor.py)
- │           ├── built-in handlers: open, close, browse, remember, recall, forget, clean
+ │           ├── built-in handlers: open, close, browse, remember, recall,
+ forget, clean
  │           └── registered skills (skills/registry.py), fallback skill LAST
  ▼
 complexity gate / fallback        (api.py; hermes/router.py)
@@ -98,11 +99,12 @@ HermesAgent.run(query)            (Backend/hermes/agent.py — the ONE loop)
  │    2. hybrid retrieval (hermes/retriever.py — SQL + knowledge + sandbox + history)
  │    3. bounded loop: model → tool call → validate (hermes/validator.py)
  │       → ToolRegistry.execute (hermes/tool_registry.py) → repeat
- │       caps: HERMES_AGENT_MAX_ITERATIONS (default 3), HERMES_AGENT_TIMEOUT (300 s)
+ │       caps: HERMES_AGENT_MAX_ITERATIONS (default 3), HERMES_AGENT_TIMEOUT
+ (300 s)
  ▼
 response dict → _client_envelope  → client / dashboard
         plus: command_completed event → voice reply (utils/spoken_replies.py)
-```
+```text
 
 ### Path 2 details — complex (Hermes) fallback
 
@@ -286,12 +288,12 @@ Stores:
 
 Data flow:
 
-```
+```text
 "open yt" ─▶ BrowserSkill ─▶ KnowledgeManager.find_website("yt")
                               └─ alias match ─▶ https://youtube.com ─▶ webbrowser.open
 BrainEngine step 3 ─▶ EntityResolver.resolve(target)
                        └─ fuzzy vs entities ─▶ canonical name (context.resolved=True)
-```
+```text
 
 Kept distinct: the `browser_profiles` SQLite table is NOT knowledge data
 (owned by `database/profiles.py`); `knowledge_memory` (user facts) is memory,
@@ -477,12 +479,12 @@ mode is active.
 
 ### Brain ↔ Desktop Agent IPC (implemented 2026-09-16)
 
-```
+```text
 Brain (any OS)                      Desktop Agent (Windows machine)
 DesktopRequest ──HTTP/JSON──▶  desktop_agent.py --server
                                └─▶ DesktopHand.execute()  (same allow-list gate)
 DesktopResult ◀──HTTP/JSON───  structured result
-```
+```text
 
 - **Transport** (`hands/transport.py`): `DesktopAgentClient` (httpx2) —
   `POST /execute` (one DesktopRequest), `GET /health`, `GET /capabilities`.
@@ -521,7 +523,8 @@ a second AI website, hands-off. Everything lives in
 
 - **Chain request**: `ChainRequest(query, ai1, ai2, save_images)` parsed by
   `ai_chain/parsing.py::parse_chain_command` from forms:
-  `chain <query> from <AI1> to <AI2>` / `run|automate <query> from <AI1> to <AI2>` /
+  `chain <query> from <AI1> to <AI2>` / `run|automate <query> from <AI1> to
+  <AI2>` /
   `open <AI1> and <query> ... to <AI2>`; no from/to → defaults `chatgpt → gemini`.
 - **Steps**: always 2 (AI1 → AI2). A declarative N-step library exists
   (`ai_chain/browser_automation.py`) but has no production caller.
@@ -748,7 +751,8 @@ exceptions for control flow. Tool call protocol:
 invalid?, data)`.
 
 Persistence shapes: `sandbox/index.json` =
-`{query_string: [{task_id, prompt, provider, model, status, tool_used, timestamp, duration_ms}]}`;
+`{query_string: [{task_id, prompt, provider, model, status, tool_used,
+timestamp, duration_ms}]}`;
 `sandbox/tasks/<id>/` = metadata.json, prompt.md, response.md, trace.json;
 `results/ai_chain/<run>/` = 01_query.txt, 0N_stepN_<site>_response.txt,
 harvested images.

@@ -24,7 +24,9 @@ def prepare_chat_personality(message: str, history: list[dict] | None = None) ->
     preferences.observe(message)
     state = SarthiMoodEngine().update(user_mood=mood.mood, message=message)
     context = build_personality_context(
-        mood, state, preferences.relevant(message),
+        mood,
+        state,
+        preferences.relevant(message),
     )
     return context, {"user_mood": mood, "sarthi_mood": state}
 
@@ -37,9 +39,7 @@ def decorate_command_result(result: dict, message: str) -> dict:
         action = result.get("action")
         if route == "command" and action not in (None, "conversation", "reject_preference"):
             outcome = "success" if result.get("success") else "failure"
-            state = SarthiMoodEngine().update(
-                user_mood=mood.mood, message=message, outcome=outcome
-            )
+            state = SarthiMoodEngine().update(user_mood=mood.mood, message=message, outcome=outcome)
         else:
             # Conversation mode already updated state before prompt construction.
             state = SarthiMoodEngine().current()

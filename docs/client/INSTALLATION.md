@@ -20,13 +20,13 @@
    ```bash
    python -m venv .venv
    .venv\Scripts\activate
-   ```
+   ```text
 
 3. **Install Sarthi**:
 
    ```bash
    pip install -e .
-   ```
+   ```text
 
    Optional extras:
 
@@ -34,11 +34,12 @@
    pip install -e ".[automation]"   # AI chaining / laptop control
    pip install -e ".[browser]"      # automated browsing (Selenium/Playwright)
    pip install sounddevice faster-whisper   # voice input
-   ```
+   ```text
 
    The core app installs and starts fine without any of the extras — features
    degrade gracefully until you add them.
 4. **Configure (optional)**: copy `.env.example` to `.env`. Defaults are
+
    sensible: `HERMES_PROVIDER=local` (Ollama at `localhost:11434`,
    model `hermes3:8b`). If you use Ollama, make sure it is running and pull
    the model once: `ollama pull hermes3:8b`. To use a cloud provider instead,
@@ -56,9 +57,10 @@
   Backend\sarthi.bat             # visible server window
   Backend\sarthi.bat background  # windowless (pythonw)
   python Backend/api.py          # direct start
-  ```
+  ```text
 
 - **Desktop client**: `python Desktop/run.py` (development) or
+
   `Desktop/dist/sarthi.exe` if present (packaged build).
 - **Verify**: open <http://127.0.0.1:8000/health> — you should see
   `{"assistant": "Sarthi", "status": "Running"}`.

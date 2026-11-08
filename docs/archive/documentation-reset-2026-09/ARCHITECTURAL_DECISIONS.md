@@ -172,7 +172,8 @@ literally and Hermes was never consulted.
 **Chosen**: a pre-execution gate. `hermes.router.looks_like_task_instruction()`
 fires when a sentence names file/document work (two task verbs, or one task
 verb in a ≥6-word sentence); `api._is_task_shaped_search()` combines that with
-an interpreter reading of exactly one `search` intent, and such a request is  handed to Hermes (`allow_fast_path=False`) **before** anything executes. The
+an interpreter reading of exactly one `search` intent, and such a request is
+handed to Hermes (`allow_fast_path=False`) **before** anything executes. The
   router also reports its most specific signal as the verdict reason instead of
   the generic `simple_action_word` / `long_command` ones.
 

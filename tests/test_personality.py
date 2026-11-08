@@ -31,7 +31,9 @@ class FakeMemory:
 
 
 def test_mood_detection_uses_context_and_returns_evidence():
-    mood = detect_user_mood("I've tried this three times and nothing works. This is so frustrating.")
+    mood = detect_user_mood(
+        "I've tried this three times and nothing works. This is so frustrating."
+    )
     assert mood.mood == "frustrated"
     assert mood.confidence >= 0.8
     assert "unsuccessful" in mood.evidence
@@ -232,4 +234,3 @@ def test_existing_command_http_boundary_includes_pet_state(monkeypatch):
     envelope = api.command(SimpleNamespace(command_text="open Calculator", session_id=None))
     assert envelope["pet_state"] == "working"
     assert envelope["data"] == {"message": "Done."}
-

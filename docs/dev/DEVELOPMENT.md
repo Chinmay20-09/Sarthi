@@ -13,7 +13,7 @@ How to set up, navigate and safely modify Sarthi.
    ```bash
    python -m venv .venv
    source .venv/Scripts/activate   # Git Bash on Windows
-   ```
+   ```text
 
 3. **Install**:
 
@@ -23,9 +23,10 @@ How to set up, navigate and safely modify Sarthi.
    pip install -e ".[automation]"  # + laptop control (pyautogui/keyboard/pywin32)
    pip install -e ".[browser]"     # + selenium/beautifulsoup4/playwright
    pip install sounddevice faster-whisper   # voice input (undeclared extras)
-   ```
+   ```text
 
 4. **Configure**: copy `.env.example` to `.env` and set provider settings.
+
    Default is the local Ollama provider (`HERMES_PROVIDER=local`,
    `LOCAL_HERMES_MODEL=hermes3:8b`) — no API keys needed. If you run Ollama,
    `ollama pull hermes3:8b` (or point `LOCAL_HERMES_MODEL` at a model you
@@ -62,7 +63,7 @@ tests/              56 test files (50 pytest-collected); see TESTING.md
 docs/               client/ dev/ agent/ archive/
 flutter/, apk/      reserved placeholders — nothing implemented
 start.bat           root launcher delegating to Backend\sarthi.bat
-```
+```text
 
 ## Important commands
 

@@ -43,15 +43,15 @@ mechanism are PLANNED (see ARCHITECTURE.md "Canonical terminology map").
 
 ## Data flow
 
-```
+```text
 "open yt" ─▶ BrowserSkill ─▶ KnowledgeManager.find_website("yt")
                               └─ alias match ─▶ https://youtube.com ─▶ webbrowser.open
-```
+```text
 
-```
+```text
 BrainEngine step 3 ─▶ EntityResolver.resolve(target)
                        └─ fuzzy vs entities ─▶ canonical name (context.resolved=True)
-```
+```text
 
 ## Related registries (kept distinct)
 

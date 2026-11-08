@@ -1,6 +1,9 @@
 # 🧠 Sarthi — Local-First AI Desktop Assistant
 
-**Sarthi** is a local-first, privacy-respecting AI Desktop Assistant that runs entirely on your machine. It understands natural language commands, recognizes speech, discovers installed applications, and executes tasks through a modular skill system.
+**Sarthi** is a local-first, privacy-respecting AI Desktop Assistant that runs
+entirely on your machine. It understands natural language commands, recognizes
+speech, discovers installed applications, and executes tasks through a modular
+skill system.
 
 > **Version:** 1.0.4 Hyperion
 > **Status:** Production-ready
@@ -86,7 +89,7 @@ pip install -e ".[dev]"
 
 # 5. Run tests (optional)
 python -m pytest tests/ -v
-```
+```text
 
 ### Run the Backend (API Server)
 
@@ -101,7 +104,7 @@ python Backend/api.py         # manual
 
 # → http://127.0.0.1:8000 (redirects to UI)
 # → http://127.0.0.1:8000/health (health check)
-```
+```text
 
 ### Run the Desktop Client
 
@@ -109,7 +112,7 @@ python Backend/api.py         # manual
 python Desktop/run.py         # from source
 
 # or double-click Desktop/sarthi.exe (build: see Desktop/README.md)
-```
+```text
 
 The Desktop client is a thin GUI (query textbox → Send → response) that
 talks to the Backend API over HTTP — it contains no assistant
@@ -120,16 +123,17 @@ default `http://127.0.0.1:8000` (see `Desktop/README.md`).
 ### Run the Scanner
 
 ```bash
-python -c "import sys; sys.path.insert(0, 'Backend'); from knowledge.manager import get_manager; get_manager().refresh_applications()"
+python -c "import sys; sys.path.insert(0, 'Backend'); from knowledge.manager
+import get_manager; get_manager().refresh_applications()"
 # Discovers 700+ applications and saves to Backend/knowledge/applications.json
-```
+```text
 
 ### Run the CLI (Voice)
 
 ```bash
 python Backend/main.py
 # Press ENTER to speak a command
-```
+```text
 
 ### Run Sarthi Windowless (Optional)
 
@@ -140,7 +144,8 @@ for the classic dev experience with visible server windows.
 
 ### Open the Web UI
 
-Open `http://127.0.0.1:8000` in your browser while the API is running — it automatically serves the dashboard.
+Open `http://127.0.0.1:8000` in your browser while the API is running — it
+automatically serves the dashboard.
 
 ### Try It via cURL
 
@@ -163,7 +168,7 @@ curl http://127.0.0.1:8000/skills
 
 # Get knowledge base stats
 curl http://127.0.0.1:8000/knowledge
-```
+```text
 
 ---
 
@@ -171,7 +176,7 @@ curl http://127.0.0.1:8000/knowledge
 
 ### Brain Pipeline
 
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
 │                        UI Layer                          │
 │              dashboard / skills / memory / etc.          │
@@ -202,11 +207,11 @@ curl http://127.0.0.1:8000/knowledge
 │   DatabaseManager   ←  SQLite                           │
 │   SpeechService     ←  Whisper model                    │
 └─────────────────────────────────────────────────────────┘
-```
+```text
 
 ### Package Structure
 
-```
+```text
 sarthi/
 ├── Backend/        # THE INTELLIGENCE — FastAPI service (started by Backend/sarthi.bat)
 │
@@ -302,7 +307,7 @@ sarthi/
 ├── apk/            # Future Android distribution (not implemented)
 ├── tests/          # Project-wide pytest suite (root — single source of truth)
 └── docs/           # ARCHITECTURE.md, PROJECT_STATE.md, CHANGELOG.md, ...
-```
+```text
 
 The root `start.bat` is a thin delegate to `Backend/sarthi.bat` (the real
 launcher, which works from any working directory); `Desktop/` builds into
@@ -312,7 +317,7 @@ reuse the same Backend API.
 
 ### Knowledge System
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────┐
 │                    PRESENTATION LAYER                         │
 │  Skills (Apps, Browser, Future...)                           │
@@ -359,7 +364,7 @@ reuse the same Backend API.
    │ devices.json   │
    │ (future)       │
    └────────────────┘
-```
+```text
 
 ### Skill System
 
@@ -374,7 +379,7 @@ class BaseSkill(ABC):
 
     @abstractmethod
     def execute(self, intent: Intent) -> dict: ...
-```
+```text
 
 **Current Skills:**
 
@@ -403,24 +408,25 @@ The codebase was refactored from a tightly-coupled architecture to clean archite
 
 **Before (Tightly Coupled):**
 
-```
+```text
 EntityResolver  ──┐
 BrowserSkill    ──┼──> knowledge.loader ──> applications.json
 AppExecutor     ──┘
      (All importing loader directly)
-```
+```text
 
 **After (Clean Architecture):**
 
-```
+```text
 Skills → KnowledgeManager (business logic) → KnowledgeLoader (JSON I/O)
 EntityResolver depends on List[Dict] (dependency injection)
 Scanner returns list (no direct file writes)
-```
+```text
 
 **Key Principles Applied:**
 
-- **Single Responsibility**: Loader = JSON I/O only, Manager = business logic, Scanner = discovery only
+- **Single Responsibility**: Loader = JSON I/O only, Manager = business logic,
+  Scanner = discovery only
 - **Dependency Injection**: Entities passed to resolver, not imported
 - **Open/Closed**: Adding new entity types requires no code changes
 - **Singleton Pattern**: `get_manager()` returns single instance
@@ -458,13 +464,14 @@ Automatically discovers installed applications from standard Windows locations.
 
 Aliases are automatically generated using metadata + pattern matching:
 
-```
+```text
 Code.exe  →  ["code", "vscode", "vs code", "visual studio code"]
-```
+```text
 
 #### Duplicate Handling
 
-When the same application is found in multiple locations, a 5-tier priority system keeps the best entry:
+When the same application is found in multiple locations, a 5-tier priority
+system keeps the best entry:
 
 1. Program Files
 2. Program Files (x86)
@@ -482,7 +489,7 @@ applications = scan_all()
 
 # Save via manager
 manager.save_applications(applications)
-```
+```text
 
 ### 2. Knowledge Loader
 
@@ -497,7 +504,7 @@ loader = KnowledgeLoader()
 data = loader.load()           # Read JSON from disk
 loader.save(data)              # Write JSON to disk
 loader.is_valid()              # Validate structure
-```
+```text
 
 **What it does NOT do:** Searching, business logic, merging, caching, alias generation.
 
@@ -505,7 +512,8 @@ loader.is_valid()              # Validate structure
 
 **File:** `knowledge/manager.py`
 
-**Responsibility:** Centralized knowledge system — the single source of truth for all entity access.
+**Responsibility:** Centralized knowledge system — the single source of truth
+for all entity access.
 
 ```python
 from knowledge.manager import get_manager
@@ -526,7 +534,7 @@ entities = manager.get_all_entities()  # List[Dict]
 
 # Refresh
 manager.refresh_applications()
-```
+```text
 
 ### 4. Entity Resolver
 
@@ -548,7 +556,7 @@ result = resolver.resolve("open visual studio code")
 
 # Empty resolver (no entities to match)
 resolver = EntityResolver()
-```
+```text
 
 ### 5. Application Executor
 
@@ -561,7 +569,7 @@ from skills.app_launcher import AppLauncherSkill
 
 skill = AppLauncherSkill()
 skill.execute(intent)   # Or: BrainEngine().process("open vscode")
-```
+```text
 
 ### 6. Future Entity Types
 
@@ -580,7 +588,7 @@ knowledge/devices.json
     }
   ]
 }
-```
+```text
 
 The Entity Resolver consumes all types automatically.
 
@@ -623,13 +631,14 @@ The full request/response shapes are documented in **docs/ARCHITECTURE.md → AP
   "success": true,
   "execution_ms": 15.3
 }
-```
+```text
 
 ---
 
 ## 🎨 Web UI
 
-The web UI is served directly from the FastAPI server at `http://127.0.0.1:8000`. It features 6 pages:
+The web UI is served directly from the FastAPI server at
+`http://127.0.0.1:8000`. It features 6 pages:
 
 | Page | Route | Description |
 | --- | --- | --- |
@@ -661,7 +670,7 @@ python -m pytest tests/test_interpreter.py -v
 
 # Run with coverage
 python -m pytest tests/ --cov=.
-```
+```text
 
 **763 tests** across 45 test files. Key coverage:
 
@@ -686,10 +695,10 @@ python -m pytest tests/ --cov=.
 
 ### Verification
 
-```
+```text
 python -m pytest tests/ -q
 # 763 passed
-```
+```text
 
 ---
 
@@ -706,7 +715,7 @@ ruff check --fix .
 
 # Type check (advisory)
 mypy .
-```
+```text
 
 ### Verification Checklist
 
@@ -788,9 +797,11 @@ mypy .
 **Implemented:**
 
 - **Memory** — Persistent conversation history, /remember facts, settings (SQLite)
-- **CI/CD** — GitHub Actions (`.github/workflows/ci.yml`): lint, format, tests, smoke test
+- **CI/CD** — GitHub Actions (`.github/workflows/ci.yml`): lint, format, tests,
+  smoke test
 - **Connectors** — Google Calendar (OAuth2); Gmail/email/IoT planned via `connectors/`
-- **Hermes integration** — Conversational fallback, tool bridge, sandbox execution records
+- **Hermes integration** — Conversational fallback, tool bridge, sandbox
+  execution records
 - **Browser Awareness** — Playwright-based inspection of arbitrary websites
 
 **Planned (future):**
@@ -799,14 +810,16 @@ mypy .
 - **Multi-agent** — Collaborative AI agents for complex tasks
 - **Plugin marketplace** — External skill discovery and loading
 - **More entity types** — Devices, contacts, plugins (no code changes needed)
-- **Hermes skill authoring** — validated creation/registration of new skills by Hermes (see `docs/CONTRIBUTING.md` boundary; **planned, not implemented**)
+- **Hermes skill authoring** — validated creation/registration of new skills by
+  Hermes (see `docs/CONTRIBUTING.md` boundary; **planned, not implemented**)
 - **Gmail / IoT connectors** — registry scaffolding exists in `connectors/`
 
 ---
 
 ## 🧑‍💻 Contributing
 
-See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) — it covers project structure, module
+See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) — it covers project structure,
+module
 ownership, the Hermes contribution boundary, and how to add a skill or a
 connector without touching core.
 

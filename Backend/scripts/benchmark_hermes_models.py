@@ -140,10 +140,14 @@ def runtime_memory() -> dict[str, Any]:
 
             class MemoryStatus(ctypes.Structure):
                 _fields_ = [
-                    ("dwLength", wintypes.DWORD), ("dwMemoryLoad", wintypes.DWORD),
-                    ("ullTotalPhys", ctypes.c_ulonglong), ("ullAvailPhys", ctypes.c_ulonglong),
-                    ("ullTotalPageFile", ctypes.c_ulonglong), ("ullAvailPageFile", ctypes.c_ulonglong),
-                    ("ullTotalVirtual", ctypes.c_ulonglong), ("ullAvailVirtual", ctypes.c_ulonglong),
+                    ("dwLength", wintypes.DWORD),
+                    ("dwMemoryLoad", wintypes.DWORD),
+                    ("ullTotalPhys", ctypes.c_ulonglong),
+                    ("ullAvailPhys", ctypes.c_ulonglong),
+                    ("ullTotalPageFile", ctypes.c_ulonglong),
+                    ("ullAvailPageFile", ctypes.c_ulonglong),
+                    ("ullTotalVirtual", ctypes.c_ulonglong),
+                    ("ullAvailVirtual", ctypes.c_ulonglong),
                     ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
                 ]
 
@@ -168,7 +172,9 @@ def runtime_memory() -> dict[str, Any]:
             name = (proc.info.get("name") or "").lower()
             if "ollama" in name or "llama" in name:
                 info = proc.info.get("memory_info")
-                processes.append({"name": proc.info["name"], "rss_bytes": info.rss if info else None})
+                processes.append(
+                    {"name": proc.info["name"], "rss_bytes": info.rss if info else None}
+                )
     except (ImportError, Exception) as exc:  # noqa: BLE001
         processes = [{"error": f"Process RSS unavailable: {exc}"}]
     return {"system": system, "ollama_processes": processes}
@@ -334,7 +340,12 @@ def run_benchmark(
                 ollama_loaded_before = loaded_models(base_url)
                 try:
                     response = _stream_chat(
-                        base_url, model, prompt, dataset["system_prompt"], dataset["generation"], ctx
+                        base_url,
+                        model,
+                        prompt,
+                        dataset["system_prompt"],
+                        dataset["generation"],
+                        ctx,
                     )
                     memory_after = runtime_memory()
                     ollama_loaded_after = loaded_models(base_url)
@@ -345,9 +356,9 @@ def run_benchmark(
                         try:
                             parsed = json.loads(response["text"])
                             metrics["structured_json_valid"] = isinstance(parsed, dict)
-                            metrics["structured_tool_correct"] = (
-                                parsed.get("tool") == prompt["expected_json"].get("tool")
-                            )
+                            metrics["structured_tool_correct"] = parsed.get("tool") == prompt[
+                                "expected_json"
+                            ].get("tool")
                         except (json.JSONDecodeError, TypeError):
                             metrics["structured_json_valid"] = False
                             metrics["structured_tool_correct"] = False
@@ -355,16 +366,18 @@ def run_benchmark(
                     metrics["memory_after"] = memory_after
                     metrics["ollama_loaded_before"] = ollama_loaded_before
                     metrics["ollama_loaded_after"] = ollama_loaded_after
-                    context_row["runs"].append({
-                        "prompt_id": prompt["id"],
-                        "category": prompt["category"],
-                        "response": response["text"],
-                        "metrics": metrics,
-                        "rubric": prompt.get("quality_checks", []),
-                        "expected_emotion": prompt.get("expected_emotion"),
-                        "expected_json": prompt.get("expected_json"),
-                        "structured": bool(prompt.get("structured")),
-                    })
+                    context_row["runs"].append(
+                        {
+                            "prompt_id": prompt["id"],
+                            "category": prompt["category"],
+                            "response": response["text"],
+                            "metrics": metrics,
+                            "rubric": prompt.get("quality_checks", []),
+                            "expected_emotion": prompt.get("expected_emotion"),
+                            "expected_json": prompt.get("expected_json"),
+                            "structured": bool(prompt.get("structured")),
+                        }
+                    )
                     print(f"{model} ctx={ctx}: {prompt['id']} complete", flush=True)
                     if on_update:
                         on_update(results)
@@ -397,10 +410,14 @@ def render_report(results: dict) -> str:
     lines.append(f"- Ollama API reachable: **{inventory.get('reachable', False)}**")
     lines.append(f"- Ollama executable on PATH: **{shutil.which('ollama') or 'not found'}**")
     config = inventory.get("production_config", {})
-    lines.append(f"- Configured provider/model: `{config.get('provider')}` / `{config.get('model')}`")
+    lines.append(
+        f"- Configured provider/model: `{config.get('provider')}` / `{config.get('model')}`"
+    )
     disk = inventory.get("disk", {})
     if disk.get("free_bytes"):
-        lines.append(f"- Workspace disk free: {disk['free_bytes'] / 1e9:.1f} GB of {disk['total_bytes'] / 1e9:.1f} GB")
+        lines.append(
+            f"- Workspace disk free: {disk['free_bytes'] / 1e9:.1f} GB of {disk['total_bytes'] / 1e9:.1f} GB"
+        )
     if inventory.get("error"):
         lines.append(f"- API error: `{inventory['error']}`")
     lines += ["- Production settings were not changed.", "", "## Candidate status", ""]
@@ -418,7 +435,9 @@ def render_report(results: dict) -> str:
     }
     lines += ["", "## Performance and quality comparison", ""]
     if not completed:
-        lines.append("No candidate was benchmarked because the Ollama runtime was unavailable or the models were not installed. No quality or speed winner can be claimed from this run.")
+        lines.append(
+            "No candidate was benchmarked because the Ollama runtime was unavailable or the models were not installed. No quality or speed winner can be claimed from this run."
+        )
     else:
         lines += [
             "| Model | Context | Requests | Cold TTFT ms | Warm TTFT ms | Warm tok/s | Mean response ms | Max loaded model GB | Tool JSON accuracy | Quality score |",
@@ -432,7 +451,9 @@ def render_report(results: dict) -> str:
                 structured_runs = [r for r in runs if r.get("structured")]
 
                 def mean(rows, key):
-                    values = [r["metrics"].get(key) for r in rows if r["metrics"].get(key) is not None]
+                    values = [
+                        r["metrics"].get(key) for r in rows if r["metrics"].get(key) is not None
+                    ]
                     return sum(values) / len(values) if values else None
 
                 fmt = lambda v: f"{v:.1f}" if v is not None else "—"
@@ -482,8 +503,14 @@ def render_report(results: dict) -> str:
     if review:
         lines += [review["recommendation"], "", review["context_recommendation"]]
     else:
-        lines.append("**No model winner is selected yet.** Quality review is pending; keep the configured baseline and production settings unchanged.")
-    lines += ["", "## Method and limitations", "", "- Candidates: `" + "`, `".join(CANDIDATES) + "`.",
+        lines.append(
+            "**No model winner is selected yet.** Quality review is pending; keep the configured baseline and production settings unchanged."
+        )
+    lines += [
+        "",
+        "## Method and limitations",
+        "",
+        "- Candidates: `" + "`, `".join(CANDIDATES) + "`.",
         "- Context sizes: 2048, 4096, and 8192; temperature 0.2, seed 42, maximum 120 generated tokens.",
         "- Each prompt runs with the same dataset instructions and generation settings. The benchmark sets `num_ctx` per request.",
         "- Before each model/context cell, the harness asks Ollama to unload that model. The first request is labeled cold and following requests warm; unload success is recorded. Ollama `load_duration` is retained separately.",
@@ -491,16 +518,28 @@ def render_report(results: dict) -> str:
         "- TTFT is measured from request start to the first non-empty streamed content. Token rate uses Ollama `eval_count / eval_duration`.",
         "- Outputs are saved unedited. Human reviewers should score each rubric item (pass/partial/fail) and structured JSON exact-key validity before selecting a winner.",
         "- The harness talks only to the local Ollama API for benchmark-only access to `num_ctx`, streaming timing, and runtime counters. It does not change the application's provider or tool-validation paths.",
-        "- No downloads are initiated. Missing models are skipped.", ""]
+        "- No downloads are initiated. Missing models are skipped.",
+        "",
+    ]
     return "\n".join(lines)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--url", default=os.getenv("LOCAL_HERMES_URL", DEFAULT_URL))
-    parser.add_argument("--inventory", action="store_true", help="inventory only; no model requests")
-    parser.add_argument("--max-prompts", type=int, help="run only the first N prompts (smoke runs are not comparable)")
-    parser.add_argument("--structured-only", action="store_true", help="rerun only structured prompts using Ollama JSON mode")
+    parser.add_argument(
+        "--inventory", action="store_true", help="inventory only; no model requests"
+    )
+    parser.add_argument(
+        "--max-prompts",
+        type=int,
+        help="run only the first N prompts (smoke runs are not comparable)",
+    )
+    parser.add_argument(
+        "--structured-only",
+        action="store_true",
+        help="rerun only structured prompts using Ollama JSON mode",
+    )
     parser.add_argument("--results", type=Path, default=RESULT_PATH)
     parser.add_argument("--report", type=Path, default=REPORT_PATH)
     args = parser.parse_args()
@@ -541,7 +580,11 @@ def main() -> int:
                 continue
             for new_context in new_candidate["contexts"]:
                 old_context = next(
-                    (row for row in old_candidate["contexts"] if row["num_ctx"] == new_context["num_ctx"]),
+                    (
+                        row
+                        for row in old_candidate["contexts"]
+                        if row["num_ctx"] == new_context["num_ctx"]
+                    ),
                     None,
                 )
                 if not old_context:
@@ -563,7 +606,9 @@ def main() -> int:
     if quality_path.is_file():
         results["quality_review"] = json.loads(quality_path.read_text(encoding="utf-8"))
     args.results.parent.mkdir(parents=True, exist_ok=True)
-    args.results.write_text(json.dumps(results, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    args.results.write_text(
+        json.dumps(results, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
     args.report.write_text(render_report(results), encoding="utf-8")
     if args.structured_only:
         progress_results.unlink(missing_ok=True)

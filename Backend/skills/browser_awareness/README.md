@@ -3,7 +3,7 @@
 A Sarthi capability for websites the deterministic skills cannot drive.
 It does **not** replace the Brain/Executor pipeline — it extends it.
 
-```
+```text
 User
  └▶ Brain
      ├── known deterministic flow ("open youtube and play song")  → fast, unchanged
@@ -16,7 +16,7 @@ User
              ├── Brain-validated action → safe executor
              ├── page changed → reinspect → loop
              └── temporary context destroyed when the task ends
-```
+```text
 
 Hermes answers *"what is on this page and what single action should the
 Brain take next?"* and returns structured JSON. It can only reference
@@ -30,20 +30,21 @@ generated.
 
 Both forms route into the capability:
 
-```
+```text
 /browse example.com and find the pricing page
 open example.com and find the More Information link
 browse https://example.com/pricing compare the plans
-```
+```text
 
 **The fast deterministic path is preserved.** Known sites keep their
 existing behaviour and never touch browser awareness:
 
-```
-open youtube and play motivation video   → opens youtube.com search & plays the first result (fast, unchanged)
+```text
+open youtube and play motivation video   → opens youtube.com search & plays the
+first result (fast, unchanged)
 open chatgpt and … sendit to gemini      → AI chain (unchanged)
 open github.com and …                    → deterministic, unchanged
-```
+```text
 
 Only domain/URL-shaped targets that are **not** covered by the
 deterministic skills ("example.com", "myshop.io/contact", ...) route to
@@ -76,7 +77,7 @@ page-side JavaScript.
   set BROWSER_AWARENESS_CDP_URL=http://127.0.0.1:9222
   # launch Chrome first with:
   #   chrome.exe --remote-debugging-port=9222
-  ```
+  ```text
 
   Each command opens its own tab and closes it when the run ends. There
   is no new tab per **ai_chain** command — the laptop RPA drives the
@@ -122,7 +123,7 @@ dry runs never speak.
 ```bash
 python -m pytest tests/test_browser_awareness.py -q
 python -m pytest -q                 # whole Sarthi suite
-```
+```text
 
 All tests use fake providers/components and pure logic — Selenium,
 Playwright, Chrome and the local Ollama model are not required.
@@ -135,14 +136,14 @@ project):
 ```bash
 pip install beautifulsoup4 selenium   # Selenium Manager fetches chromedriver
 # or: pip install playwright          # fallback stack, uses installed Chrome
-```
+```text
 
 Then run Sarthi (test mode first to see the plan, no browser opens):
 
 ```bash
 python -m brain... # or via the Chat UI
 /browse example.com and find the More Information link
-```
+```text
 
 For a full end-to-end check: launch Sarthi (`start.bat`), make sure the
 local Hermes model is running (Ollama, e.g. `hermes3:8b`), and send

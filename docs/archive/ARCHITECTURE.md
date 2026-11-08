@@ -12,7 +12,7 @@ never assume one is right.
 Sarthi is now a **client/backend system**. All intelligence lives in the
 **Backend**; clients are thin interfaces that talk to it over HTTP.
 
-```
+```text
 Sarthi/
 ├── Backend/     # THE INTELLIGENCE — FastAPI service
 │               #   api.py, main.py, main-test.py, desktop_agent.py,
@@ -26,11 +26,11 @@ Sarthi/
 ├── apk/         # reserved — future Android distribution (not implemented)
 ├── tests/       # the single project-wide pytest suite (root, run: pytest)
 └── docs/        # this document, PROJECT_STATE.md, CHANGELOG.md, ...
-```
+```text
 
 **The network boundary (the architectural rule):**
 
-```
+```text
 User
  ↓
 Desktop sarthi.exe                (tkinter GUI: Query → Send → Response)
@@ -40,7 +40,7 @@ Backend POST /command             (FastAPI, 127.0.0.1:8000)
 Model / Interpreter / Brain / Knowledge / Skills / Executor
  ↓ HTTP  {"success": true, "response": "...", "data": {...}|null, ...}
 Desktop sarthi.exe                (displays response)
-```
+```text
 
 - The Desktop client **never imports** brain/interpreter/model/knowledge/
   executor — only HTTP via `Desktop/client/sarthi_client/backend.py`.
@@ -62,7 +62,7 @@ Desktop sarthi.exe                (displays response)
 
 **Future direction (planned, not implemented):**
 
-```
+```text
                 Sarthi Backend (:8000)
                         │
             ┌───────────┼───────────┐
@@ -70,7 +70,7 @@ Desktop sarthi.exe                (displays response)
        Desktop       Flutter      Android
        sarthi.exe      UI           APK
         (today)     (reserved)   (reserved)
-```
+```text
 
 and, inside the Windows client: `Desktop client + Desktop Hand → Windows
 control` — the Desktop Hand moves (or federates) into the client behind a
@@ -97,7 +97,7 @@ separate conversational layer ("Hermes") handles everything the deterministic
 pipeline cannot. Clients — the Desktop `sarthi.exe`, the web UI, and future
 Flutter/Android apps — talk to it over HTTP (see §0).
 
-```
+```text
 UI (8 static pages, served by the API at /ui)
    │  fetch() only — the UI never imports backend modules
    ▼
@@ -124,7 +124,7 @@ DesktopHand (hands/desktop/hand.py)  ── the physical execution layer
    │  capability allow-list, argument validation, structured DesktopResult
    ▼
 Windows (processes, windows, clipboard, input, filesystem)
-```
+```text
 
 Two mantras hold the design together:
 
@@ -172,7 +172,7 @@ The pipeline contract is the pydantic model `Intent(action, target, confidence,
 site, raw_text)` (`brain/intent.py`). Skills return a plain dict
 `{success, status, result, error}` (visual cards inside `result.visual`).
 
-```
+```text
 text ─▶ BrainEngine.process(text)
          1. Interpreter (brain/interpreter.py, interpret_many)
               "open X and search Y" and '.'-separated queries → List[Intent]
@@ -190,7 +190,7 @@ text ─▶ BrainEngine.process(text)
               d. no handler → structured error
          Multi-step plans execute sequentially, fail-fast, every step is
          reported to the UI as a card (steps[] in the API response).
-```
+```text
 
 **"open" resolution order (user-facing contract):**
 
@@ -219,7 +219,7 @@ a skill author** (that is planned, not implemented).
 
 **Orchestration (`hermes/orchestrator.py`):**
 
-```
+```text
 Task(prompt, instructions, history, memory)
    │ process()                          ── tool path
    ▼
@@ -234,7 +234,7 @@ ProviderManager.generate() ── primary provider ──▶ ProviderResponse
         └── on failure: generate_fallback() (local Ollama, remote modes only)
    ▼
 TaskSandbox.save()  — sandbox/tasks/<id>/ + sandbox/index.json (query index)
-```
+```text
 
 **Sandbox:** every Hermes execution (chat and tool paths) is persisted under
 `HERMES_SANDBOX_PATH` (default `sandbox/`), indexed by normalized query.
@@ -252,16 +252,16 @@ change (see CONTRIBUTING.md).
 
 `hands/desktop/` is Sarthi's hand on the computer. The chain is:
 
-```
+```text
 Brain (decides)  →  Executor / Skill  →  DesktopHand (performs)  →  Windows
-```
+```text
 
 The hand executes explicit, validated operations and never reasons. It
 contains no model, no interpreter, no resolver, and no policy beyond its
 validation gate. "open chrome" is *decided* by the brain + knowledge
 layer; the hand only ever receives an explicit path, pid, URL, or text.
 
-```
+```text
 hands/
 └── desktop/
     ├── __init__.py       public exports (DesktopHand, models, backends)
@@ -277,7 +277,7 @@ hands/
     ├── filesystem.py     scoped file ops (allowed roots, 1 MB cap)
     ├── browser.py        open_url (http/https only)
     └── README.md         module documentation
-```
+```text
 
 **Contract:** `desktop.execute(action, target=None, **kwargs)` returns a
 structured dict `{success, action, target, message, error?, data?}` — a
@@ -329,7 +329,7 @@ touching any Brain module. No IPC is implemented yet.
 
 The chain below is the verified conceptual boundary:
 
-```
+```text
 Sarthi (brain, skills, api) ── never touches a provider
    ▼
 hermes.service / orchestrator        (Task / ProviderResponse)
@@ -347,7 +347,7 @@ Provider adapters
    │                             local servers send no Authorization header
    └── OpenRouterProvider    — thin subclass (endpoint/key/extra headers),
                                fails fast without a key
-```
+```text
 
 **Data contracts** (`hermes/models.py`, `hermes/providers/base.py`):
 `Task` → `Task.to_request()` → `ModelRequest(prompt, instructions, history,
@@ -402,7 +402,7 @@ Element discovery here is the semantic front of the browser priority chain
 (see §5): DOM/accessibility first, coordinates only as a calibrated last
 resort — the Desktop hand supplies the physical primitives afterwards.
 
-```
+```text
 "open example.com and find the pricing page"  → interpreter → action="browse"
 BrowserAwarenessSkill
    test mode? → plan only (no browser)
@@ -418,7 +418,7 @@ BrowserAwarenessManager   (MAX_STEPS = 8, per-run temporary context)
        uncheck|submit|scroll; inspector-generated selectors only (regex-checked,
        script/iframe tags blocked); live re-check before every action
    → reinspect → … → completed | blocked | needs_confirmation | step limit
-```
+```text
 
 - **Model independence:** the manager takes injected
   inspector/hermes/executor; `HermesInspector` defaults to a provider built via
@@ -559,7 +559,7 @@ UI can badge who handled a request. Conversation mode ("conversation mode" /
 
 Sarthi has two execution paths, gated by a complexity router:
 
-```
+```text
 FAST PATH (simple, deterministic):        COMPLEX PATH (Hermes):
 User                                      User
  ↓                                          ↓
@@ -571,10 +571,11 @@ Executor                                 Hybrid Retriever (hermes/retriever.py)
  ↓                                          ↓
 Application / Website                    Bounded agent loop (hermes/agent.py)
                                           ↓
-                                          Validator (hermes/validator.py) → ToolRegistry → tools
+                                          Validator (hermes/validator.py) →
+                                          ToolRegistry → tools
                                           ↓
                                           Hermes continues or answers
-```
+```text
 
 - The router is pure text heuristics (~0.25 ms): no model loads, no DB, no
   network. Its action-word set mirrors the interpreter's `ACTION_WORDS`, and

@@ -8,12 +8,12 @@ control of your laptop** — Sarthi moves the mouse and keyboard itself:
 3. Every response — and the image Gemini generates, when asked — is
    saved to a run folder under `results/ai_chain/`.
 
-```
+```text
 "You: make an image of the sarthi workflow"
    └─▶ ChatGPT (AI1): "Write an image prompt for the sarthi workflow…"
           └─▶ Gemini (AI2): [receives that prompt, generates the image]
                  └─▶ saves: query.txt, responses, downloaded image
-```
+```text
 
 > **Example command:** "chain make an image of the sarthi workflow from
 > chatgpt to gemini"
@@ -46,7 +46,8 @@ not need to watch the screen to know when hands-off mode ends.
 - Chrome (or your default browser) where you are **logged in** to
   [chatgpt.com](https://chatgpt.com) and
   [gemini.google.com](https://gemini.google.com).
-- Do not run anything full-screen over the browser while it works.## How it reads replies (no OCR)
+- Do not run anything full-screen over the browser while it works.## How it
+  reads replies (no OCR)
 
 v1.5, the module reads the page **HTML** first: it attaches read-only to
 the running Chrome (DevTools protocol) and **regexes the page's HTML**
@@ -78,7 +79,7 @@ copy the assistant's reply. Each site ships a `CopyAffordance`:
   "scan_region": [0.60, 0.72, 0.96, 0.92],
   "retries": 9
 }
-```
+```text
 
 - `label` names the affordance semantically (what a future vision/OCR
   locator would search for);
@@ -101,11 +102,12 @@ gracefully instead of breaking. Override any affordance in
 {
   "actions": {
     "chatgpt": {
-      "copy": {"method": "button", "label": "Copy", "point": [0.9, 0.85], "retries": 8}
+      "copy": {"method": "button", "label": "Copy", "point": [0.9, 0.85],
+      "retries": 8}
     }
   }
 }
-```
+```text
 
 The scan region can also be set per site with
 `AI_CHAIN_<SITE>_COPY_SCAN_REGION="0.6,0.72,0.96,0.92"` (or
@@ -141,7 +143,7 @@ attaching to the browser you are already logged into):
 
 ```bash
 chrome.exe --remote-debugging-port=9222
-```
+```text
 
 or set the URL in the environment. The snapshot HTML is parsed with
 **BeautifulSoup** (`bs4`) when installed, with the v1.5 attribute regex
@@ -168,7 +170,7 @@ touching code:
     }
   }
 }
-```
+```text
 
 Environment switches:
 
@@ -207,10 +209,13 @@ Window-fraction defaults usually work, but recording exact spots makes
 runs much more reliable:
 
 ```bash
-python -m skills.automation_engine.ai_chain.calibrate                       # show current values
-python -m skills.automation_engine.ai_chain.calibrate --site chatgpt --point composer --record
-python -m skills.automation_engine.ai_chain.calibrate --site gemini --point image_download_point --record
-```
+python -m skills.automation_engine.ai_chain.calibrate                       #
+show current values
+python -m skills.automation_engine.ai_chain.calibrate --site chatgpt --point
+composer --record
+python -m skills.automation_engine.ai_chain.calibrate --site gemini --point
+image_download_point --record
+```text
 
 Points: `composer`, `read_point`, `copy_point`, `image_download_point`
 (Gemini only). `copy_point` is the "Copy" button of the newest
@@ -233,7 +238,7 @@ stale — override them in `calibration.json` without touching code:
     }
   }
 }
-```
+```text
 
 ## Triggering
 
@@ -257,7 +262,7 @@ the Ctrl+A/Ctrl+C page copy. Alias the names you actually say:
 
 ```bash
 python -m brain.wordfinder add claude anthropic perplexity grok deepseek copilot
-```
+```text
 
 ## Keywords
 
@@ -267,7 +272,7 @@ and `python -m brain.wordfinder`). Add words you use often:
 
 ```bash
 python -m brain.wordfinder add telegram whatsapp
-```
+```text
 
 ## Programmatic use
 
@@ -282,7 +287,7 @@ outcome = run_ai_chain(
 )
 print(outcome.status)   # planned | completed | aborted | failed
 print(outcome.message)
-```
+```text
 
 ## v1.7 — DOM-aware browser automation (`browser_automation.py`)
 
@@ -290,11 +295,11 @@ A reusable, DOM-first browser capability for Sarthi chains — the same
 semantic resolution the v1.5 matchers do per-site, but general and
 pluggable:
 
-```
+```text
 User command → Interpreter / Chain Planner → Browser Automation
     → load website → inspect DOM (BeautifulSoup) → identify semantic element
     → perform action (Selenium) → verify result → next website → …
-```
+```text
 
 **Element resolver** — `resolve_element(driver, action, target)`:
 
@@ -305,7 +310,7 @@ resolved = resolve_element(driver, action="click", target="copy button")
 resolved.locator     # ("xpath", "/html/body/div[2]/button[1]")
 resolved.element     # the live Selenium element
 resolved.reason      # why it was chosen (logged too)
-```
+```text
 
 The resolver reads the **current** `driver.page_source` on every call,
 parses it with **BeautifulSoup** (raw-HTML regex fallback when `bs4` is
@@ -325,7 +330,7 @@ auto.navigate("https://example.com", wait=1.0)
 auto.copy("Copy", key="value")            # DOM extraction first, clipboard fallback
 value = auto.state.extracted_values["value"]
 auto.paste("Paste value here", value)       # verified the field contains it
-```
+```text
 
 - **Copy:** prefers extracting the value directly from the DOM; only when
   no DOM value exists (or the user explicitly asks for a clipboard copy)
@@ -353,7 +358,7 @@ result = run_browser_chain([
 ])
 result.success
 result.state.extracted_values
-```
+```text
 
 Every step logs `[BROWSER]` lines (loading, DOM loaded, candidates
 found, selected element + score, click/paste, verification); a failed
@@ -372,13 +377,13 @@ execution mechanism for genuinely non-DOM desktop UI.
 
 ## Result folder layout
 
-```
+```text
 results/ai_chain/<timestamp>_<query-slug>/
     01_query.txt
     02_step1_chatgpt_response.txt
     03_step2_gemini_response.txt
     gemini_image_1.png      (if an image was generated & downloaded)
-```
+```text
 
 ## Dependencies
 
@@ -386,7 +391,7 @@ Installed automation stack (already present in the Sarthi venv):
 
 ```bash
 pip install pyautogui keyboard pyperclip pywin32
-```
+```text
 
 Each is imported lazily — the module still imports cleanly (and its unit
 tests run) on machines without them.

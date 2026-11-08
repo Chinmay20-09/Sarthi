@@ -17,7 +17,9 @@ _EXPLICIT = re.compile(
 )
 _CORRECTION = re.compile(r"\b(actually|instead|i changed my mind|correction|no,? i prefer)\b", re.I)
 _FEEDBACK = {
-    "concise": re.compile(r"\b(too long|shorter please|keep it short|be concise|less detail)\b", re.I),
+    "concise": re.compile(
+        r"\b(too long|shorter please|keep it short|be concise|less detail)\b", re.I
+    ),
     "detailed": re.compile(r"\b(more detail|explain more|show more steps|too brief)\b", re.I),
     "examples": re.compile(r"\b(add an example|more examples|show me an example)\b", re.I),
 }
@@ -47,8 +49,14 @@ class PreferenceService:
         if explicit:
             value = explicit.group(1).strip(" .!\t\n")
             key = self._classify(text, value)
-            return self._save(key, value, source="explicit", confidence=1.0, confirmed=True,
-                              allow_replace=bool(_CORRECTION.search(text)))
+            return self._save(
+                key,
+                value,
+                source="explicit",
+                confidence=1.0,
+                confirmed=True,
+                allow_replace=bool(_CORRECTION.search(text)),
+            )
 
         for label, pattern in _FEEDBACK.items():
             if pattern.search(text):
@@ -56,15 +64,25 @@ class PreferenceService:
                 self._observations[label] = self._observations.get(label, 0) + 1
                 if self._observations[label] < 3:
                     continue
-                return self._save(key, label, source="repeated_feedback", confidence=0.65,
-                                  confirmed=False, allow_replace=False)
+                return self._save(
+                    key,
+                    label,
+                    source="repeated_feedback",
+                    confidence=0.65,
+                    confirmed=False,
+                    allow_replace=False,
+                )
         return None
 
     @staticmethod
     def _classify(text: str, value: str) -> str:
         lowered = f"{text} {value}".lower()
-        if any(word in lowered for word in ("concise", "short", "brief", "length", "answer", "response")) and any(
-            word in lowered for word in ("concise", "short", "brief", "detailed", "answer", "response")
+        if any(
+            word in lowered
+            for word in ("concise", "short", "brief", "length", "answer", "response")
+        ) and any(
+            word in lowered
+            for word in ("concise", "short", "brief", "detailed", "answer", "response")
         ):
             return "communication.response_style"
         if any(word in lowered for word in ("technical", "jargon", "beginner", "detail")):
@@ -75,8 +93,16 @@ class PreferenceService:
             return "coding.workflow"
         return "communication.preference"
 
-    def _save(self, key: str, value: str, *, source: str, confidence: float,
-              confirmed: bool, allow_replace: bool) -> dict | None:
+    def _save(
+        self,
+        key: str,
+        value: str,
+        *,
+        source: str,
+        confidence: float,
+        confirmed: bool,
+        allow_replace: bool,
+    ) -> dict | None:
         memory_key = PREFERENCE_PREFIX + key
         old_raw = self._memory.recall_long(memory_key)
         old = self._decode(old_raw)

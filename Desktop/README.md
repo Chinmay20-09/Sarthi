@@ -4,9 +4,9 @@ A thin Windows client for the Sarthi Backend. The client contains **no
 assistant intelligence** — it sends the user's query to the Backend API
 (`POST /command`) and displays the response.
 
-```
+```text
 Desktop (sarthi.exe)  --HTTP-->  Backend (:8000)  --HTTP-->  Desktop
-```
+```text
 
 ## Layout
 
@@ -36,11 +36,11 @@ Examples:
 ```json
 // sarthi_client.json — point the client at a LAN backend
 { "backend_url": "http://192.168.1.20:8000" }
-```
+```text
 
 ```powershell
 $env:SARTHI_BACKEND_URL = "https://sarthi.example.com"   # cloud backend
-```
+```text
 
 The default stays on loopback; the Backend is not exposed publicly by
 default.
@@ -53,7 +53,7 @@ Backend\sarthi.bat
 
 # terminal 2 — start the client
 python Desktop/run.py
-```
+```text
 
 ## Build sarthi.exe
 
@@ -61,7 +61,7 @@ python Desktop/run.py
 pip install pyinstaller
 pyinstaller Desktop/sarthi_client.spec --noconfirm --distpath Desktop/dist
 copy Desktop\dist\sarthi.exe Desktop\sarthi.exe
-```
+```text
 
 Double-click `Desktop/sarthi.exe` → the SARTHI window opens. Type
 `open chrome`, press **Send** (or Enter), and the Backend's response

@@ -46,7 +46,7 @@ changed.
              └─ HermesOrchestrator.process → ToolPlanner  ← SECOND loop,
                 no validator, no retrieval, own cap of 5
 sandbox root = relative "sandbox" → Backend/sandbox OR ./sandbox per cwd
-```
+```text
 
 - 4 "agent" components, 2 of them model-driven tool loops.
 - 1021 tests collected in 53 files.
@@ -64,7 +64,7 @@ sandbox root = relative "sandbox" → Backend/sandbox OR ./sandbox per cwd
 /UI chat ──► /command, then POST /hermes/chat → HermesOrchestrator.process
              └─ HermesAgent   ← the ONE model/tool loop
 sandbox root = Backend/sandbox (absolute, cwd-independent)
-```
+```text
 
 - Hermes = one bounded loop (`hermes/agent.py`); `hermes/tool_planner.py` is
   now only the tool-call protocol (prompt builders + parser).
@@ -183,15 +183,17 @@ place by explicit user decision and simply stops receiving new records.
 USER → SARTHI (/command: modes → interpreter → planner → resolver → executor)
                        │ simple/deterministic: execute, done
                        └ task-shaped or failed + router says complex:
-                            HERMES (retrieve → model → one validated tool → repeat, ≤3)
+                            HERMES (retrieve → model → one validated tool →
+                            repeat, ≤3)
                                 │ requests a capability
                             SARTHI executes it (skill / hand) and records the run
-                                └ result → HERMES decides: finish / retry (bounded) / answer
+                                └ result → HERMES decides: finish / retry
+                                (bounded) / answer
 Sarthi owns: lifecycle, current step, retry mechanics, permissions, memory,
 knowledge, sandbox, completion. Hermes proposes the next step; the user
 remains the authority for risky or ambiguous actions (the validator refuses
 malformed/unregistered calls, and refusals are fed back exactly once).
-```
+```text
 
 ## Tests
 

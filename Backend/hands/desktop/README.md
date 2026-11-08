@@ -3,9 +3,9 @@
 The **physical execution layer** of Sarthi. The Brain decides what should
 happen; the Desktop hand performs the actual computer interaction.
 
-```
+```text
 Brain  →  Executor / Skill  →  DesktopHand  →  Windows
-```
+```text
 
 Desktop is **not** a reasoning engine: it executes explicit, validated
 operations and reports structured results. Failures are returned, never
@@ -30,7 +30,7 @@ result = desktop.execute("read_clipboard")   # data.text
 desktop.execute("list_windows")              # data.windows
 desktop.execute("get_processes")             # data.processes
 desktop.execute("read_file", path=r"C:\Users\me\notes.txt")   # scope-checked
-```
+```text
 
 Convenience wrappers exist for the most common actions and return the
 same structured dict: `open_application`, `close_application`, `open_url`,
@@ -65,11 +65,11 @@ any layer.
 The hand never guesses coordinates as a strategy. For browser interaction
 the project priority is:
 
-```
+```text
 DOM / browser automation  →  accessibility / semantic UI
                           →  visual/UI automation
                           →  coordinate fallback (calibrated, never random)
-```
+```text
 
 Element discovery lives in **Browser Awareness** (`skills/browser_awareness/`)
 and the ai_chain DOM layer (`skills/automation_engine/ai_chain/`); Desktop

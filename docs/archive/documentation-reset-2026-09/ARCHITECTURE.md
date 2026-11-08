@@ -46,7 +46,7 @@ before it only when the interpreter's only reading is a plain search — AD-04).
 
 ### Current vs target topology
 
-```
+```text
 CURRENT:  User → Sarthi Brain → deterministic route (Skill/Tool)
                 │ (no deterministic route)
                 └→ Hermes (reasoning/planning → tool call → validation)
@@ -57,7 +57,7 @@ TARGET:   Sarthi Server (Brain/Hermes/Memory/Knowledge/Skills/Tools)
                 ↓ structured request over a protocol (PLANNED)
           registered Hands (Desktop / Android / Browser / IoT) with
           capability discovery: capability → provider → Hand
-```
+```text
 
 Only the CURRENT half describes code that exists. The TARGET half (server
 independence, remote Hands, discovery/registration) is documented as PLANNED
@@ -76,7 +76,7 @@ in PROJECT_STATE.md and AD-16 — it is intent, not implementation.
 
 ## Runtime architecture (real request flow)
 
-```
+```text
 User
  │  tkinter Desktop client (Desktop/client/sarthi_client/gui.py, HTTP only)
  │  or web dashboard (Backend/UI/*.html, served at /ui)
@@ -89,7 +89,8 @@ Sarthi Brain: BrainEngine.process  (Backend/brain/engine.py)
  │    2. Planner       plan(intent)  [pass-through]  (brain/planner.py)
  │    3. Resolver      EntityResolver.resolve(target) (knowledge/entity_resolver.py)
  │    4. Executor      BrainExecutor.execute(intent)  (brain/executor.py)
- │           ├── built-in handlers: open, close, browse, remember, recall, forget, clean
+ │           ├── built-in handlers: open, close, browse, remember, recall,
+ forget, clean
  │           └── registered skills (skills/registry.py), fallback skill LAST
  ▼
 complexity gate / fallback        (api.py; hermes/router.py)
@@ -106,7 +107,7 @@ HermesAgent.run(query)            (Backend/hermes/agent.py — the ONE loop)
  ▼
 response dict → _client_envelope  → client / dashboard
         plus: command_completed event → voice reply (utils/spoken_replies.py)
-```
+```text
 
 ## Module architecture
 
@@ -197,10 +198,10 @@ raised.
 differ between them (see the canonical terminology map above for the full
 CURRENT/TARGET split):
 
-```
+```text
 CURRENT:  Backend Brain ──in-process──► DesktopHand ──► same computer
 TARGET:   Backend Brain ──network protocol──► RemoteDesktopHand ──► target device
-```
+```text
 
 A `RemoteDesktopHand` is **not implemented**; the interface and the import
 boundary (`hands/` imports nothing from `brain`/`hermes`/`knowledge`/`skills` —

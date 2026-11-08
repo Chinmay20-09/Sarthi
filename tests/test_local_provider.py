@@ -62,7 +62,9 @@ def test_default_low_profile_uses_installed_small_model(monkeypatch):
 
 def test_high_profile_respects_existing_local_model_setting(monkeypatch):
     """The High preset keeps the existing configurable baseline model available."""
-    config = HermesConfig(model="openai/gpt-5", local_model="hermes3:8b", local_model_profile="high")
+    config = HermesConfig(
+        model="openai/gpt-5", local_model="hermes3:8b", local_model_profile="high"
+    )
     provider = LocalHermesProvider(config)
 
     captured = {}

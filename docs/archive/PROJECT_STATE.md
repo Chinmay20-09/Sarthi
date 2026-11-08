@@ -10,7 +10,7 @@ that touches Windows; Hermes is the conversational layer for everything else.
 
 ## Repository layout (client/backend, September 12, 2026)
 
-```
+```text
 Sarthi/
 ├── Backend/     # THE INTELLIGENCE — api.py, brain/, knowledge/, skills/,
 │               #   hermes/, hands/, speech/, connectors/, database/, UI/,
@@ -20,7 +20,7 @@ Sarthi/
 ├── apk/         # reserved — future Android distribution (not implemented)
 ├── tests/       # the single, project-wide pytest suite (root)
 └── docs/        # ARCHITECTURE.md, PROJECT_STATE.md, CHANGELOG.md, ...
-```
+```text
 
 The Desktop client contains **no** assistant intelligence: it sends
 `{"query": ...}` to the Backend and displays `{success, response, data}`.

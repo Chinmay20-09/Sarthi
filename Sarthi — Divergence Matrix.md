@@ -7,7 +7,8 @@
 > ARCHITECTURAL_DECISIONS.md in the same folder holds the reasoning).
 > Current project state: `docs/dev/PROJECT_STATE.md`.
 
-**Purpose:** Compare the intended Sarthi architecture with the architecture observed in the repository.
+**Purpose:** Compare the intended Sarthi architecture with the architecture
+observed in the repository.
 
 **Authority order:**
 
@@ -16,7 +17,8 @@
 3. Existing documentation
 4. Architectural inference
 
-A divergence does not automatically mean that something should be deleted. It means the implementation and intended architecture require investigation.
+A divergence does not automatically mean that something should be deleted. It
+means the implementation and intended architecture require investigation.
 
 ---
 
@@ -214,7 +216,8 @@ These are the items that should be investigated before adding significant new fu
 
 This is NOT a refactoring specification yet.
 
-It is the architectural hypothesis produced by comparing the intended behavior against the repository evidence.
+It is the architectural hypothesis produced by comparing the intended behavior
+against the repository evidence.
 
 ```text
                               USER
@@ -264,7 +267,7 @@ It is the architectural hypothesis produced by comparing the intended behavior a
                               │
                               ▼
                              User
-```
+```text
 
 ### Conceptual ownership
 
@@ -279,7 +282,7 @@ Sarthi
 ├── Sandbox
 └── Hermes
      └── Tools
-```
+```text
 
 Where:
 
@@ -300,7 +303,7 @@ Sandbox = temporary task state/artifacts
 
 AI Chain = automation capability used when appropriate,
            not a second competing Sarthi brain
-```
+```text
 
 This last point is a **hypothesis**, not yet a confirmed implementation requirement.
 
@@ -310,7 +313,8 @@ This last point is a **hypothesis**, not yet a confirmed implementation requirem
 
 For every divergence, ask:
 
-> "Is this component violating Sarthi's intended ownership boundary, or is it simply implementing the boundary differently?"
+> "Is this component violating Sarthi's intended ownership boundary, or is it
+> simply implementing the boundary differently?"
 
 Only the first case should trigger architectural removal/refactoring.
 
@@ -330,7 +334,8 @@ First prove that:
 
 Sarthi does NOT currently require a rewrite.
 
-The strongest evidence points toward **architectural consolidation**, particularly around:
+The strongest evidence points toward **architectural consolidation**,
+particularly around:
 
 - Hermes orchestration
 - AI chaining
@@ -340,6 +345,8 @@ The strongest evidence points toward **architectural consolidation**, particular
 - memory/conversation state
 - execution/observation boundaries
 
-The deterministic core, skill system, tool boundary, and general local-first philosophy appear substantially aligned with the intended Sarthi architecture.
+The deterministic core, skill system, tool boundary, and general local-first
+philosophy appear substantially aligned with the intended Sarthi architecture.
 
-The next step is to validate each high-severity divergence against the actual source code before making any deletion/refactoring decision.
+The next step is to validate each high-severity divergence against the actual
+source code before making any deletion/refactoring decision.

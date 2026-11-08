@@ -60,11 +60,11 @@ between commands.
 
 Example sequence:
 
-```
+```text
 cd documents
 create file notes.txt with content hello world
 echo done to status.txt
-```
+```text
 
 Every path stays inside the allowed roots — `cd` outside them, `..` traversal
 and unknown actions are refused with a structured error message.

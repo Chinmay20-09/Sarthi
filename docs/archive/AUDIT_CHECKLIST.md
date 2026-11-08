@@ -1,3 +1,5 @@
+# Audit Checklist
+>
 > ⚠️ **Historical document.** Record of the August 2026 audit actions.
 > The current compatibility audit lives at
 > [`AUDIT_REPORT.md`](../AUDIT_REPORT.md) (repo root).
@@ -121,7 +123,7 @@ from brain.engine import BrainEngine
 from knowledge.entity_resolver import EntityResolver
 from brain.interpreter import interpret
 from skills.registry import get_registry
-```
+```text
 
 ### Recommended Pattern
 
@@ -132,7 +134,7 @@ from brain.engine import BrainEngine
 engine = BrainEngine()
 response = engine.process("open Chrome")
 print(response.status)  # "executed"
-```
+```text
 
 ## 📅 Timeline
 
@@ -148,7 +150,7 @@ All changes verified with:
 ```bash
 python -m pytest tests/ -v
 # Result: 549 passed, 0 warnings (normalizer.py removed in September 2026)
-```
+```text
 
 No regressions introduced.
 

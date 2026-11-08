@@ -118,4 +118,6 @@ class SarthiMoodEngine:
 
 def re_seeking_curiosity(message: str) -> bool:
     lowered = (message or "").lower()
-    return any(lowered.startswith(prefix) for prefix in ("why ", "how does ", "what causes ", "i wonder "))
+    return any(
+        lowered.startswith(prefix) for prefix in ("why ", "how does ", "what causes ", "i wonder ")
+    )

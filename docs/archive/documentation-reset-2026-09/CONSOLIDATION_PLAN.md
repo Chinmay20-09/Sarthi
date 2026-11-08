@@ -215,7 +215,7 @@ SARTHI (authority: lifecycle, execution, permissions, memory, knowledge, sandbox
 │     └── tools/      10 Hermes-facing adapters → existing skills
 ├── skills/           portable capabilities (browser, awareness, chain, tracker…)
 └── sandbox/          temporary task state (ONE canonical root)
-```
+```text
 
 Hermes may request; only Sarthi executes. AI chain stays a **capability**
 invoked through the skill walk, never a peer brain.

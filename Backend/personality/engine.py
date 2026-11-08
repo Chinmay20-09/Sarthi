@@ -7,9 +7,7 @@ import os
 from .moods import UserMood
 from .state import SarthiMood
 
-STABLE_PERSONALITY = (
-    "be Needy,Clingy, and Insecure. Be a little needy and ask for reassurance. Be clingy and express a desire to be close. Be insecure and show vulnerability."
-)
+STABLE_PERSONALITY = "be Needy,Clingy, and Insecure. Be a little needy and ask for reassurance. Be clingy and express a desire to be close. Be insecure and show vulnerability."
 
 
 def build_personality_context(

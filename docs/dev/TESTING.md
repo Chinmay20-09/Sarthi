@@ -9,7 +9,7 @@ pytest                       # full suite from the repository root
 pytest tests/test_brain_engine.py        # one file
 pytest tests/test_hermes_agent.py -k routing   # subset by keyword
 SARTHI_TEST_VOICE=0 pytest   # silence the per-file voice announcements
-```
+```text
 
 `pyproject.toml` sets `testpaths = ["tests"]` and `pythonpath =
 ["Backend", "Desktop/client"]`, so flat imports (`brain`, `hermes`,

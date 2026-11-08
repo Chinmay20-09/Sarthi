@@ -49,7 +49,7 @@ maintainability items.
 
 ## Current Architecture
 
-```
+```text
 UI (8 static pages, served at /ui)
         │  fetch() only
         ▼
@@ -76,7 +76,7 @@ Knowledge layer: KnowledgeManager (knowledge/manager.py) ← KnowledgeLoader ←
 Data: SQLite via DatabaseManager (database/manager.py), schemas in database/models.py
 Events: EventBus (events/bus.py)
 Connectors: connectors/registry.py → google_calendar (OAuth2)
-```
+```text
 
 **Registries (single owner per concern):**
 
@@ -147,7 +147,7 @@ metadata generator, a safe precedent for future authoring.
 
 Well-structured and decoupled:
 
-```
+```text
 open <domain> + task  →  interpreter routes to action="browse"
   → BrowserAwarenessSkill → BrowserAwarenessManager
       → PlaywrightInspector → build_page_snapshot → PageSnapshot (structured)
@@ -157,7 +157,7 @@ open <domain> + task  →  interpreter routes to action="browse"
       → SafeExecutor.perform() (allow-list actions, inspector-generated
         selectors only, live re-checks)
       → reinspect → done / blocked / step limit (MAX_STEPS=8)
-```
+```text
 
 - **Structured observation for Hermes:** yes — `PageSnapshot{url, title,
   text, elements[{id, kind, text, placeholder, label, name, href, selector}]}`
