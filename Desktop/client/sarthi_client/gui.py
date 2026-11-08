@@ -101,6 +101,8 @@ class SarthiApp:
 
         self._show_response(result.display_text)
         self.status_var.set(result.status_text)
+        if result.pet_state:
+            self.pet.set_state(result.pet_state)
 
     # ------------------------------------------------------------------
     # Rendering helpers (overridable seams for tests)

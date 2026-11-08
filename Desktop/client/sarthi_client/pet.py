@@ -65,7 +65,7 @@ def _resolve_image_path(filename: str) -> Path:
     return _HITORI_DIR / filename
 
 
-def _load_photoimage(filename: str) -> ImageTk.PhotoImage | None:
+def _load_photoimage(filename: str, master: tk.Misc | None = None) -> ImageTk.PhotoImage | None:
     """Load a PNG from the Hitori folder and return a Tkinter PhotoImage.
 
     Returns None if the file cannot be opened — the caller must handle
@@ -82,7 +82,7 @@ def _load_photoimage(filename: str) -> ImageTk.PhotoImage | None:
         if h > max_h:
             ratio = max_h / h
             img = img.resize((int(w * ratio), max_h), Image.LANCZOS)
-        return ImageTk.PhotoImage(img)
+        return ImageTk.PhotoImage(img, master=master)
     except Exception:  # pylint: disable=broad-except
         return None
 
@@ -139,9 +139,9 @@ class DesktopPet(tk.Toplevel):
 
         # Load the image.
         if image_filename is not None:
-            photo = _load_photoimage(image_filename)
+            photo = _load_photoimage(image_filename, master=self)
         else:
-            photo = _load_photoimage(_STATE_TO_FILENAME.get(DEFAULT_STATE, ""))
+            photo = _load_photoimage(_STATE_TO_FILENAME.get(DEFAULT_STATE, ""), master=self)
 
         if photo is not None:
             self._photo = photo  # keep reference to prevent GC
@@ -191,7 +191,7 @@ class DesktopPet(tk.Toplevel):
             return
 
         self._current_state = normalized
-        photo = _load_photoimage(filename)
+        photo = _load_photoimage(filename, master=self)
 
         if photo is not None:
             self._photo = photo  # keep reference

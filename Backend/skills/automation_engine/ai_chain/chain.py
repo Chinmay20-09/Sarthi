@@ -24,10 +24,12 @@ from brain.modes import get_test_mode
 from utils.logger import get_logger
 from utils.voice import announce
 
-from . import handoff
 from .calibration import get_downloads_dir, resolve_site
 from .control import AbortError, ScreenController
 from .dom import reset_dom_reader
+from .handoff import load as load_handoff
+from .handoff import reset as reset_handoff
+from .handoff import save as save_handoff
 from .models import ChainOutcome, ChainRequest, SiteSpec, StepOutcome
 from .sites import WebAiDriver
 from .storage import ChainRun
@@ -119,7 +121,7 @@ def run_ai_chain(
 
     run = ChainRun(request.query, root=results_root)
     run.write_text("01_query.txt", request.query)
-    handoff.reset()  # the backend starts clean with every run
+    reset_handoff()  # the backend starts clean with every run
     steps: list[StepOutcome] = []
 
     try:
@@ -139,7 +141,7 @@ def run_ai_chain(
         # sourced FROM the backend hand-off (the saved copy), not from the
         # clipboard or the in-memory step result — the clipboard is scratch
         # space the verification copies keep overwriting.
-        backend_prompt = handoff.load("step1_response") or step1.response
+        backend_prompt = load_handoff("step1_response") or step1.response
         step2 = _drive(ctrl, run, spec2, backend_prompt, index=2)
         steps.append(step2)
         if not step2.success:
@@ -193,14 +195,14 @@ def _drive(
     """Drive one AI site: send the prompt, capture and save the reply."""
     started = time.perf_counter()
     outcome = StepOutcome(index=index, site_key=spec.key, site_label=spec.label, prompt=prompt)
-    handoff.save(f"step{index}_prompt", prompt)  # backend copy for paste retries
+    save_handoff(f"step{index}_prompt", prompt)  # backend copy for paste retries
     try:
         response = WebAiDriver(ctrl).ask(spec, prompt, prompt_key=f"step{index}_prompt")
         outcome.response = response
         if response.strip():
             artifact = run.write_text(f"0{index}_step{index}_{spec.key}_response.txt", response)
             outcome.artifacts.append(artifact)
-            handoff.save(f"step{index}_response", response)
+            save_handoff(f"step{index}_response", response)
         else:
             outcome.error = "AI returned an empty reply"
     except AbortError as exc:

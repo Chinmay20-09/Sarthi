@@ -337,6 +337,71 @@ empty context.
 `GET /command-history`, deletable per entry, searched by the retriever and
 history_search tool.
 
+## Personality and mood (initial implementation)
+
+`Backend/personality/` is a deterministic layer around the existing Hermes
+provider boundary. `moods.py` estimates the user's current tone from contextual
+phrases and recent conversation; this estimate is request-scoped and is never
+stored as a user trait. Ambiguous text stays `unknown`/neutral with a lower
+confidence. The current detector does not call Hermes for low-confidence cases.
+
+`state.py` tracks Sarthi's separate simulated mood (`neutral`, `happy`,
+`curious`, `calm`, `focused`, `sleepy`, `concerned`, `playful`). Successful or
+failed deterministic commands, user tone, and curiosity cues cause deterministic
+transitions. Neutral turns preserve the current state; after the configured
+idle/decay window it returns to calm. Only this small state and learned
+preference records are stored in the existing `knowledge_memory` table under
+`personality:` keys. No new database or table is introduced.
+
+`preferences.py` saves explicit safe communication/coding preferences and
+communication feedback repeated three times. Records include source,
+confidence, confirmation, status, scope, and timestamps. Confirmed values are
+not replaced by weak feedback. Credentials and secret-like statements are
+excluded. `GET /memory` lists the namespaced records; `/recall` and `/forget`
+continue to use the displayed full keys. `/reject <preference-key>` marks a
+learned preference rejected without deleting its audit metadata.
+
+`engine.py` combines stable style, the temporary user mood, Sarthi's mood, and
+up to three relevant preferences into a compact (700 character maximum)
+instruction. It is attached only to `hermes.service.chat`, the plain
+conversation path. The complex Hermes task path and its tool-selection prompts
+are unchanged. `/command` adds `pet_state` to its existing response envelope;
+the Desktop client forwards it to `DesktopPet.set_state()` and performs no
+mood detection, polling, memory access, or model calls.
+
+Mood-to-image mapping lives separately in `personality/pet_mapping.py`:
+`sleepy|calm|neutral → sleeping`, `happy|playful → happy`,
+`curious → thinking`, `focused → working`, and `concerned → confused` (the
+existing sad image). For example, say “I'm tired” to get the concise style and
+calm/sleeping state, or “this is frustrating” for patient style and the
+concerned/confused state. An explicit preference can be saved with the existing
+`/remember` flow or expressed conversationally (“I prefer concise answers”);
+correct it with an explicit “Actually, I prefer …”, inspect `/memory`, reject
+with `/reject communication.response_style`, or forget with `/forget` and the
+full key shown by `/memory`.
+
+Optional environment variables: `SARTHI_PERSONALITY_MOOD_PERSISTENCE=true|false`
+controls persistence, `SARTHI_PERSONALITY_MOOD_DECAY_MINUTES=120` sets the
+simulated mood decay, and `SARTHI_PERSONALITY_STYLE` overrides the stable style
+text. These do not change the provider, model, or context settings. This initial
+version does not use model-assisted emotion interpretation or infer project
+goals; repeated feedback observations reset when the backend process restarts.
+
+## Local model resource profiles
+
+System Settings stores `hermes_model_profile` through the existing `/settings`
+API. Low is the default; all three profiles use a 2048-token context and Ollama
+releases the model after 30 seconds idle. Low selects `hermes3:3b` (about 2.3 GB
+measured loaded allocation), Medium selects `hermes3:8b-llama3.1-q3_K_M` (about
+4.4 GB), and High selects the existing `hermes3:8b` baseline (about 5.1 GB).
+These numbers are from the Phase 2A benchmark and are estimates of loaded model
+allocation, not a guarantee for total Windows RAM use. The tier applies to both
+conversation and structured tool selection. Benchmark quality/tool JSON scores
+were 3.2/5 and 2/3 for Low, 4.2/5 and 2/3 for Medium, and 4.6/5 and 3/3 for
+High. The selected profile is read for each local model request, so it takes
+effect without restarting the backend. The 8B fallback remains available as
+the High tier.
+
 ## Database & storage
 
 Primary database: **SQLite** `Backend/database/sarthi.db` (created on first
@@ -788,6 +853,9 @@ Agent loop + router:
 | HERMES_AGENT_TIMEOUT | 300 | wall-clock budget (s) |
 | HERMES_ROUTER_MODE | auto | auto \| always \| off |
 | HERMES_ROUTER_MIN_SCORE | 1 | heuristic score threshold |
+| SARTHI_PERSONALITY_MOOD_PERSISTENCE | true | persist Sarthi's simulated mood only |
+| SARTHI_PERSONALITY_MOOD_DECAY_MINUTES | 120 | idle mood decay window |
+| SARTHI_PERSONALITY_STYLE | built-in friendly/practical style | stable style override for plain chat |
 
 ### Feature-specific environment variables
 

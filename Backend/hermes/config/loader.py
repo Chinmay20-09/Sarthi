@@ -64,6 +64,8 @@ class ConfigLoader:
                 "LOCAL_HERMES_API_KEY", HermesConfig.local_hermes_api_key
             ),
             local_model=os.getenv("LOCAL_HERMES_MODEL", HermesConfig.local_model),
+            local_model_profile=os.getenv("LOCAL_HERMES_PROFILE", HermesConfig.local_model_profile),
+            local_keep_alive=os.getenv("LOCAL_HERMES_KEEP_ALIVE", HermesConfig.local_keep_alive),
             local_timeout=float(os.getenv("LOCAL_HERMES_TIMEOUT", HermesConfig.local_timeout)),
             # Agent loop bounds (Phase 3f)
             agent_max_iterations=int(

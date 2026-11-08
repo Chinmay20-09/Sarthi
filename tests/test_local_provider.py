@@ -30,8 +30,8 @@ def _make_response_404() -> httpx2.Response:
     )
 
 
-def test_uses_local_model_not_openrouter_model(monkeypatch):
-    """The request to Ollama must use local_model, not the OpenRouter model name."""
+def test_default_low_profile_uses_installed_small_model(monkeypatch):
+    """The default resource profile selects the benchmarked low-RAM model."""
     config = HermesConfig(model="openai/gpt-5", local_model="hermes3:8b")
     provider = LocalHermesProvider(config)
 
@@ -48,19 +48,21 @@ def test_uses_local_model_not_openrouter_model(monkeypatch):
 
     assert response.success is True
     assert response.provider == "Ollama"
-    assert response.model == "hermes3:8b"
+    assert response.model == "hermes3:3b"
     assert response.text == "Hello from Ollama"
 
     # The model sent to Ollama must be the local one, never the OpenRouter model.
-    assert captured["json"]["model"] == "hermes3:8b"
+    assert captured["json"]["model"] == "hermes3:3b"
     assert captured["json"]["model"] != config.model
     assert captured["url"] == "http://localhost:11434/api/chat"
     assert captured["json"]["messages"] == [{"role": "user", "content": "Say hello"}]
+    assert captured["json"]["options"]["num_ctx"] == 2048
+    assert captured["json"]["keep_alive"] == "30s"
 
 
-def test_falls_back_to_generic_model_when_local_model_empty(monkeypatch):
-    """Backward compatibility: empty local_model falls back to config.model."""
-    config = HermesConfig(model="openai/gpt-5", local_model="")
+def test_high_profile_respects_existing_local_model_setting(monkeypatch):
+    """The High preset keeps the existing configurable baseline model available."""
+    config = HermesConfig(model="openai/gpt-5", local_model="hermes3:8b", local_model_profile="high")
     provider = LocalHermesProvider(config)
 
     captured = {}
@@ -74,8 +76,34 @@ def test_falls_back_to_generic_model_when_local_model_empty(monkeypatch):
     response = provider.generate(Task(prompt="Say hello"))
 
     assert response.success is True
-    assert response.model == "openai/gpt-5"
-    assert captured["json"]["model"] == "openai/gpt-5"
+    assert response.model == "hermes3:8b"
+    assert captured["json"]["model"] == "hermes3:8b"
+
+
+def test_medium_and_high_profiles_map_to_verified_models(monkeypatch):
+    """The selector maps only to models measured by the reproducible benchmark."""
+    from hermes.providers.local_provider import MODEL_PROFILES
+
+    assert MODEL_PROFILES["low"] == {"model": "hermes3:3b", "num_ctx": 2048}
+    assert MODEL_PROFILES["medium"] == {
+        "model": "hermes3:8b-llama3.1-q3_K_M",
+        "num_ctx": 2048,
+    }
+    assert MODEL_PROFILES["high"] == {"model": "hermes3:8b", "num_ctx": 2048}
+
+
+def test_selected_profile_is_used_in_request_payload(monkeypatch):
+    """Profiles affect the next request without changing the provider boundary."""
+    provider = LocalHermesProvider(HermesConfig())
+    monkeypatch.setattr(
+        provider,
+        "_active_profile",
+        lambda: {"model": "hermes3:8b-llama3.1-q3_K_M", "num_ctx": 2048},
+    )
+    payload = provider._build_payload(provider.as_request(Task(prompt="hello")))
+    assert payload["model"] == "hermes3:8b-llama3.1-q3_K_M"
+    assert payload["options"]["num_ctx"] == 2048
+    assert payload["keep_alive"] == "30s"
 
 
 def test_404_reports_ollama_error_body(monkeypatch):

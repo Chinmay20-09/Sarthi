@@ -41,10 +41,11 @@ from pathlib import Path
 
 from utils.logger import get_logger
 
-from . import handoff
 from .awareness import AwarenessExtractor, needs_awareness
 from .control import ScreenController
 from .dom import get_dom_reader, keyword_for
+from .handoff import describe as describe_handoff
+from .handoff import load as load_handoff
 from .models import SiteSpec
 from .parsing import extract_reply, paste_verify_prefix, prompt_present
 from .registry import (
@@ -290,11 +291,11 @@ class WebAiDriver:
                 )
                 self._focus_composer(spec, point)
                 self._clear_composer()
-                backend = handoff.load(prompt_key) if prompt_key else ""
+                backend = load_handoff(prompt_key) if prompt_key else ""
                 self.ctrl.paste(backend or prompt)
 
         saved = (
-            f" The prompt is safe in the backend hand-off ({handoff.describe()})."
+            f" The prompt is safe in the backend hand-off ({describe_handoff()})."
             if prompt_key
             else ""
         )

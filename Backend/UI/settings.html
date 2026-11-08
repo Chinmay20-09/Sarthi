@@ -304,6 +304,26 @@
                     </div>
                 </div>
             </section>
+            <!-- Local model resource profile — persisted through existing /settings API -->
+            <section class="col-span-12 glass-panel rounded-xl p-8 space-y-5">
+                <div>
+                    <h3 class="font-label-caps text-label-caps text-primary mb-2">LOCAL MODEL PERFORMANCE</h3>
+                    <p class="text-on-surface-variant font-body-sm">Choose how much memory Sarthi's local model may use.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                    <label class="space-y-2">
+                        <span class="font-body-sm">Inference profile</span>
+                        <select id="hermes-model-profile"
+                            class="w-full bg-surface-container-low border border-white/10 rounded-lg px-4 py-3 focus:outline-none focus:border-primary-container">
+                            <option value="low">Low · Hermes 3B · about 2.3 GB</option>
+                            <option value="medium">Medium · Hermes 8B Q3 · about 4.4 GB</option>
+                            <option value="high">High · Hermes 8B Q4 · about 5.1 GB</option>
+                        </select>
+                    </label>
+                    <p id="hermes-profile-description" class="text-xs text-on-surface-variant">Loading saved profile…</p>
+                </div>
+                <p id="hermes-profile-status" class="font-label-caps text-[10px] text-on-surface-variant" aria-live="polite"></p>
+            </section>
             <!-- Voice & Personality — visual preview only (no backing settings exist yet) -->
             <section class="col-span-12 lg:col-span-6 glass-panel rounded-xl p-8 space-y-8">
                 <div>
@@ -596,6 +616,45 @@
             }
 
             document.getElementById("sync-connectors-btn").addEventListener("click", loadConnectors);
+
+            const modelProfileSelect = document.getElementById("hermes-model-profile");
+            const modelProfileStatus = document.getElementById("hermes-profile-status");
+            const modelProfileDescription = document.getElementById("hermes-profile-description");
+            const profileDescriptions = {
+                low: "Lowest memory use. Best fit when RAM is tight; weaker on complex reasoning and tool selection.",
+                medium: "Balanced quality and memory. Stronger conversation, but structured tool choices were less reliable than High in the benchmark.",
+                high: "Best benchmark quality and tool reliability. Uses the most memory and may cause paging on low-memory systems."
+            };
+            async function loadModelProfile() {
+                try {
+                    const response = await fetch(API + "/settings/hermes_model_profile");
+                    const setting = await response.json();
+                    modelProfileSelect.value = profileDescriptions[setting.value] ? setting.value : "low";
+                    modelProfileDescription.textContent = profileDescriptions[modelProfileSelect.value];
+                } catch (_) {
+                    modelProfileSelect.value = "low";
+                    modelProfileDescription.textContent = profileDescriptions.low;
+                    modelProfileStatus.textContent = "Could not load the saved profile; Low is active by default.";
+                }
+            }
+            modelProfileSelect.addEventListener("change", async () => {
+                const selected = modelProfileSelect.value;
+                modelProfileStatus.textContent = "Saving…";
+                try {
+                    const response = await fetch(API + "/settings", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ key: "hermes_model_profile", value: selected })
+                    });
+                    const result = await response.json();
+                    if (!response.ok || !result.success) throw new Error("save failed");
+                    modelProfileDescription.textContent = profileDescriptions[selected];
+                    modelProfileStatus.textContent = "Saved. Applies to the next model request.";
+                } catch (_) {
+                    modelProfileStatus.textContent = "Could not save the profile. Check that Sarthi API is running.";
+                }
+            });
+            loadModelProfile();
 
             // ----------------------------------------------------------------
             // Clear interaction logs (DELETE /command-history entries one by one)

@@ -87,10 +87,22 @@ def chat(message: str, session_id: str | None = None) -> ProviderResponse:
     session_id = session_id or DEFAULT_SESSION
     history = store.get_history(session_id)
 
+    # Personality guidance belongs only to the plain conversation path; it is
+    # deliberately not injected into Hermes' tool-planning agent prompts.
+    personality_context = None
+    try:
+        from personality.runtime import prepare_chat_personality
+
+        personality_context, _mood_snapshot = prepare_chat_personality(message, history)
+    except Exception:
+        # Mood, preferences, and style adaptation are optional.
+        personality_context = None
+
     # Inject /remember facts as a system message so the model remembers them.
     task = Task(
         prompt=message,
         task_type="chat",
+        instructions=personality_context,
         history=history,
         memory=build_memory_prompt(),
     )

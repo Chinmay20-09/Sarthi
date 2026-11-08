@@ -42,7 +42,7 @@ from brain.modes import (
     set_test_mode,
 )
 from events import get_bus
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -408,6 +408,36 @@ def _process_command_text(text: str, session_id: str | None) -> dict:
 
     bus.publish("intent_received", {"text": text}, source="api")
 
+    # Reject a learned preference without routing the control string to Hermes
+    # or the desktop automation pipeline. Existing /forget remains available
+    # for deleting saved memories outright.
+    if text.strip().lower().startswith("/reject "):
+        key = text.strip()[8:].strip()
+        try:
+            from personality.preferences import PreferenceService
+
+            rejected = PreferenceService().reject(key)
+        except Exception:
+            rejected = False
+        response_text = (
+            f"Rejected learned preference: {key}."
+            if rejected
+            else f"No learned preference found for: {key}."
+        )
+        rejection_result = {
+            "action": "reject_preference",
+            "target": key,
+            "status": "completed" if rejected else "not_found",
+            "success": rejected,
+            "text": response_text,
+            "result": {"message": response_text, "preference_key": key},
+            "input": text,
+            "mode": get_mode(),
+            "routing": "command",
+        }
+        bus.publish("command_completed", rejection_result, source="api")
+        return rejection_result
+
     # Mode commands ("conversation mode", "/exit", ...) work in every mode.
     mode_cmd = detect_mode_command(text)
     if mode_cmd is not None:
@@ -483,6 +513,13 @@ def command(request: ClientCommandRequest):
     legacy payload plus the client envelope fields ``response``/``data``.
     """
     result = _process_command_text(request.command_text, request.session_id)
+    try:
+        from personality.runtime import decorate_command_result
+
+        result = decorate_command_result(result, request.command_text)
+    except Exception:
+        # Preserve existing behavior if the optional personality code fails.
+        pass
     return _client_envelope(result)
 
 
@@ -677,6 +714,12 @@ def save_setting(request: SettingRequest):
     """Persist a user setting (e.g. github_username) so it survives restarts."""
     from database.manager import get_database
 
+    if request.key == "hermes_model_profile":
+        from hermes.config.model_profiles import MODEL_PROFILES
+
+        if request.value not in MODEL_PROFILES:
+            raise HTTPException(status_code=422, detail="Profile must be low, medium, or high")
+
     db = get_database()
     db.execute(
         "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))",
@@ -693,7 +736,12 @@ def get_setting(key: str):
 
     db = get_database()
     row = db.fetch_one("SELECT value FROM settings WHERE key = ?", (key,))
-    return {"key": key, "value": row["value"] if row else None}
+    value = row["value"] if row else None
+    if key == "hermes_model_profile" and value is None:
+        from hermes.config.loader import ConfigLoader
+
+        value = ConfigLoader().load().local_model_profile
+    return {"key": key, "value": value}
 
 
 @app.post("/settings/voice-replies")

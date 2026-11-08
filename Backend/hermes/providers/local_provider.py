@@ -3,6 +3,7 @@ import logging
 import httpx2
 
 from hermes.config.settings import HermesConfig
+from hermes.config.model_profiles import DEFAULT_MODEL_PROFILE, MODEL_PROFILES
 from hermes.models import ModelRequest, Task
 
 from .base import AIProvider, ModelCapabilities, ProviderResponse, ProviderStreamEvent
@@ -31,8 +32,26 @@ class LocalHermesProvider(AIProvider):
 
     @property
     def model(self) -> str:
-        """Local model name as installed in Ollama, falling back to the generic model."""
-        return self._config.local_model or self._config.model
+        """Model selected by the active local resource profile."""
+        return self._active_profile()["model"]
+
+    def _active_profile(self) -> dict:
+        profile_name = getattr(self._config, "local_model_profile", DEFAULT_MODEL_PROFILE)
+        try:
+            from database.manager import get_database
+
+            row = get_database().fetch_one(
+                "SELECT value FROM settings WHERE key = ?", ("hermes_model_profile",)
+            )
+            saved_profile = row["value"] if row else None
+            if saved_profile in MODEL_PROFILES:
+                profile_name = saved_profile
+        except Exception:
+            pass
+        profile = dict(MODEL_PROFILES.get(profile_name, MODEL_PROFILES[DEFAULT_MODEL_PROFILE]))
+        if profile_name == "high":
+            profile["model"] = self._config.local_model or self._config.model or profile["model"]
+        return profile
 
     def capabilities(self) -> ModelCapabilities:
         """Ollama JSON mode is honored (format=json); native tool schemas are not
@@ -67,29 +86,31 @@ class LocalHermesProvider(AIProvider):
         # timeout: by the second attempt the model is warm, so a slow first
         # call no longer fails the whole task. Non-timeout errors (HTTP errors,
         # bad payloads) are never retried.
-        response = self._attempt(request)
+        profile = self._active_profile()
+        response = self._attempt(request, profile)
         if not response.success and response.error == "Connection timeout":
             logger.warning("Ollama generation timed out (model %s) — retrying once", self.model)
-            response = self._attempt(request)
+            response = self._attempt(request, profile)
         return response
 
-    def _attempt(self, request: ModelRequest) -> ProviderResponse:
+    def _attempt(self, request: ModelRequest, profile: dict | None = None) -> ProviderResponse:
         """One post/parse round-trip to Ollama, mapping failures to a response."""
         try:
-            response = self._post(request)
+            profile = profile or self._active_profile()
+            response = self._post(request, profile)
             response.raise_for_status()
             content = response.json()["message"]["content"]
             return ProviderResponse(
                 success=True,
                 provider=self.name,
-                model=self.model,
+                model=profile["model"],
                 text=content,
             )
         except httpx2.TimeoutException:
             return ProviderResponse(
                 success=False,
                 provider=self.name,
-                model=self.model,
+                model=(profile or self._active_profile())["model"],
                 text="",
                 error="Connection timeout",
             )
@@ -98,7 +119,7 @@ class LocalHermesProvider(AIProvider):
             return ProviderResponse(
                 success=False,
                 provider=self.name,
-                model=self.model,
+                model=(profile or self._active_profile())["model"],
                 text="",
                 error=reason,
             )
@@ -106,7 +127,7 @@ class LocalHermesProvider(AIProvider):
             return ProviderResponse(
                 success=False,
                 provider=self.name,
-                model=self.model,
+                model=(profile or self._active_profile())["model"],
                 text="",
                 error=f"Connection error: {exc}",
             )
@@ -114,7 +135,7 @@ class LocalHermesProvider(AIProvider):
             return ProviderResponse(
                 success=False,
                 provider=self.name,
-                model=self.model,
+                model=(profile or self._active_profile())["model"],
                 text="",
                 error="Invalid response",
             )
@@ -127,24 +148,33 @@ class LocalHermesProvider(AIProvider):
                 error="Unexpected error",
             )
 
-    def _post(self, request: ModelRequest) -> httpx2.Response:
+    def _post(self, request: ModelRequest, profile: dict | None = None) -> httpx2.Response:
         """Post to Ollama chat API."""
         url = f"{self._config.local_hermes_url}/api/chat"
         headers = {
             "Content-Type": "application/json",
         }
+        profile = profile or self._active_profile()
+        payload = self._build_payload(request, profile=profile)
+        return self._client.post(url, headers=headers, json=payload)
+
+    def _build_payload(
+        self, request: ModelRequest, *, profile: dict | None = None, stream: bool = False
+    ) -> dict:
+        """Build a bounded Ollama payload for the selected resource tier."""
+        profile = profile or self._active_profile()
         payload: dict = {
-            "model": self.model,
+            "model": profile["model"],
             "messages": _build_messages(request),
-            "stream": False,
+            "stream": stream,
+            "keep_alive": getattr(self._config, "local_keep_alive", "30s"),
+            "options": {"num_ctx": profile["num_ctx"]},
         }
-        # Structured-output requirement: Ollama JSON mode biases the model
-        # toward valid JSON (Hermes still parses + validates the answer).
         if request.structured_output and self.capabilities().structured_output:
             payload["format"] = "json"
         if request.temperature is not None:
-            payload["temperature"] = request.temperature
-        return self._client.post(url, headers=headers, json=payload)
+            payload["options"]["temperature"] = request.temperature
+        return payload
 
     def _post_stream(self, request: ModelRequest) -> list[ProviderStreamEvent]:
         """Incremental Ollama `/api/chat` pull ("stream": true). The server
@@ -162,7 +192,7 @@ class LocalHermesProvider(AIProvider):
             response = self._client.post(
                 f"{self._config.local_hermes_url}/api/chat",
                 headers={"Content-Type": "application/json"},
-                json=self._build_payload(request),
+                json=self._build_payload(request, stream=True),
                 timeout=self._config.local_timeout,
             )
             response.raise_for_status()

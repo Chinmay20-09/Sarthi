@@ -24,21 +24,26 @@ STATUS_BAD_RESPONSE = "Backend returned an invalid response."
 class SendResult:
     """What the GUI needs to render one send action."""
 
-    __slots__ = ("display_text", "status_text")
+    __slots__ = ("display_text", "status_text", "pet_state")
 
-    def __init__(self, display_text: str, status_text: str):
+    def __init__(self, display_text: str, status_text: str, pet_state: str | None = None):
         self.display_text = display_text
         self.status_text = status_text
+        self.pet_state = pet_state
 
     def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, SendResult)
             and self.display_text == other.display_text
             and self.status_text == other.status_text
+            and self.pet_state == other.pet_state
         )
 
     def __repr__(self) -> str:  # pragma: no cover - debugging aid
-        return f"SendResult(display={self.display_text!r}, status={self.status_text!r})"
+        return (
+            f"SendResult(display={self.display_text!r}, status={self.status_text!r}, "
+            f"pet_state={self.pet_state!r})"
+        )
 
 
 def is_valid_query(query: str | None) -> bool:
@@ -76,11 +81,20 @@ class SarthiController:
             )
 
         response_text = str(result.get(backend.FIELD_RESPONSE, "")).strip()
+        data = result.get(backend.FIELD_DATA)
+        pet_state = result.get("pet_state")
+        if not pet_state and isinstance(data, dict):
+            pet_state = data.get("pet_state")
         if not result.get(backend.FIELD_SUCCESS):
             status = "Failed"
-            return SendResult(display_text=response_text or status, status_text=status)
+            return SendResult(
+                display_text=response_text or status,
+                status_text=status,
+                pet_state=pet_state,
+            )
 
         return SendResult(
             display_text=response_text or "Done.",
             status_text=f"Backend: {self.backend_url}",
+            pet_state=pet_state,
         )

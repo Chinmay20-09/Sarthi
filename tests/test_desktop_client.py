@@ -223,6 +223,22 @@ class TestController:
         assert result.display_text == "Opening Chrome."
         assert result.status_text == "Backend: http://x"
 
+    def test_pet_state_passes_through_existing_command_response(self, monkeypatch):
+        body = successful_body(pet_state="thinking")
+        monkeypatch.setattr(
+            client_backend.httpx2, "post", lambda *a, **k: FakeHttpResponse(200, body)
+        )
+        result = SarthiController("http://x").send("Why is the sky blue?")
+        assert result.pet_state == "thinking"
+
+    def test_pet_state_can_be_read_from_extensible_data(self, monkeypatch):
+        body = successful_body(data={"pet_state": "confused"})
+        monkeypatch.setattr(
+            client_backend.httpx2, "post", lambda *a, **k: FakeHttpResponse(200, body)
+        )
+        result = SarthiController("http://x").send("help")
+        assert result.pet_state == "confused"
+
     def test_unavailable_renders_offline_status(self, monkeypatch):
         def refused(*_a, **_k):
             raise OSError("no route")
@@ -336,7 +352,7 @@ class TestGui:
             def send(self, _query):
                 # The button is disabled while the controller runs.
                 assert app.send_button["state"] == str(tk.DISABLED)
-                return SendResult("Done.", "Backend: http://stub")
+                return SendResult("Done.", "Backend: http://stub", pet_state="thinking")
 
         app = SarthiApp(controller=StubController())
         app.query_entry.insert(0, "open chrome")
@@ -344,5 +360,6 @@ class TestGui:
         assert app.send_button["state"] == str(tk.NORMAL)
         assert app.response_box.get("1.0", tk.END).strip() == "Done."
         assert app.status_var.get() == "Backend: http://stub"
+        assert app.pet._current_state == "thinking"
         app.root.destroy()
         root.destroy()

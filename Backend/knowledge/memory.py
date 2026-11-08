@@ -203,13 +203,18 @@ class KnowledgeMemory:
             logger.error(f"Failed to forget long-term memory '{key}': {e}")
             return False
 
-    def list_memories(self) -> list[dict[str, Any]]:
-        """List all long-term memories."""
+    def list_memories(self, key_prefix: str | None = None) -> list[dict[str, Any]]:
+        """List long-term memories, optionally limited to a key namespace."""
         try:
             self._ensure_tables()
             from database.manager import get_database
 
             db = get_database()
+            if key_prefix is not None:
+                return db.fetch_all(
+                    "SELECT * FROM knowledge_memory WHERE key LIKE ? ORDER BY key",
+                    (f"{key_prefix}%",),
+                )
             return db.fetch_all("SELECT * FROM knowledge_memory ORDER BY key")
         except Exception as e:
             logger.error(f"Failed to list memories: {e}")
@@ -311,7 +316,14 @@ def build_memory_prompt() -> str | None:
         A block like "The user asked you to remember: ..." or None.
     """
     try:
-        memories = get_memory().list_memories()
+        # Personality records use the same SQLite table but have a dedicated,
+        # compact relevance path. Do not dump their metadata JSON into every
+        # chat prompt; /remember facts retain their existing behavior.
+        memories = [
+            row
+            for row in get_memory().list_memories()
+            if not str(row.get("key", "")).startswith("personality:")
+        ]
     except Exception:
         return None
     if not memories:

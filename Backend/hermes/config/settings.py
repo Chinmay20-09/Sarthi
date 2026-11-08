@@ -30,6 +30,10 @@ class HermesConfig:
     local_hermes_api_key: str = ""
     # Local model name as installed in Ollama (distinct from the OpenRouter model)
     local_model: str = "hermes3:8b"
+    # Runtime preset selected in Settings; all preset model IDs are verified
+    # against the Phase 2A local benchmark inventory.
+    local_model_profile: str = "low"
+    local_keep_alive: str = "30s"
     # CPU-only inference is slow — default 180s (3x the base timeout)
     local_timeout: float = 180.0
     # legacy (falls back for providers without their own key field)

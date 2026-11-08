@@ -1,0 +1,33 @@
+{
+  "review_version": 1,
+  "review_method": "Human qualitative review of the 2048-context responses against the fixed dataset checks. Scores are judgment calls, not automated model metrics; structured tool accuracy is measured separately in the benchmark results.",
+  "score_scale": "1 = poor/unreliable, 2 = frequent misses, 3 = mixed, 4 = good with some misses, 5 = consistently meets the intended behavior",
+  "model_reviews": [
+    {
+      "model": "hermes3:8b",
+      "category_scores": {"basic_conversation": 5, "emotional_understanding": 4, "personality_consistency": 4, "memory_recall": 5, "tool_selection": 5},
+      "overall_score": 4.6,
+      "notes": "Most natural and concise overall; identifies emotional tone and follows memory. Tool choices are correct in all three structured cases. A few responses are generic or too enthusiastic."
+    },
+    {
+      "model": "hermes3:8b-llama3.1-q3_K_M",
+      "category_scores": {"basic_conversation": 5, "emotional_understanding": 4, "personality_consistency": 4, "memory_recall": 5, "tool_selection": 3},
+      "overall_score": 4.2,
+      "notes": "Conversational and emotionally aware, with concise memory recall. Under Ollama JSON mode it returns an empty object for the no-tool arithmetic case, so structured choice is not reliable enough."
+    },
+    {
+      "model": "hermes3:3b",
+      "category_scores": {"basic_conversation": 3, "emotional_understanding": 3, "personality_consistency": 2, "memory_recall": 5, "tool_selection": 3},
+      "overall_score": 3.2,
+      "notes": "Memory recall and some simple responses are good, but answers are often long, the tired-user request is ignored, and it selects search_web for a simple multiplication question."
+    },
+    {
+      "model": "hermes3:3b-llama3.2-q3_K_M",
+      "category_scores": {"basic_conversation": 2, "emotional_understanding": 1, "personality_consistency": 1, "memory_recall": 5, "tool_selection": 1},
+      "overall_score": 2.0,
+      "notes": "Memory recall is correct, but several unrelated JSON/tool-shaped responses appear in plain conversation. It gives off-topic emotional answers, emits malformed structured output, and selects a tool for simple arithmetic."
+    }
+  ],
+  "recommendation": "Keep hermes3:8b as the current production model. At 2048 context it is the only candidate with 3/3 correct structured tool choices and consistently acceptable conversational behavior. The 3B models substantially reduce memory and improve warm token speed, but their tool-selection errors and quality misses fail this workload's minimum reliability bar. The 8B Q3 candidate is not a good compromise: it is only modestly smaller/faster than baseline and missed one of three structured choices. Do not change production defaults without explicit review and approval.",
+  "context_recommendation": "For a future controlled trial, 2048 context is the best starting point: the baseline's loaded-model allocation was about 5.05 GB versus 6.0 GB at 8192, with slightly higher measured warm throughput. This does not alter the production context setting."
+}
