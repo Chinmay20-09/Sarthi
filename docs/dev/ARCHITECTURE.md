@@ -11,10 +11,12 @@ BROWSER_AUTOMATION, KNOWLEDGE, MEMORY, DATABASE, API.
 
 ## The one-sentence version
 
-A FastAPI backend (`Backend/api.py`) receives commands from a tkinter desktop
-client or a browser dashboard, runs them through a deterministic NLP pipeline
-(`Backend/brain/`), and falls back to a bounded LLM agent (`Backend/hermes/`)
-when the deterministic pipeline cannot handle the request.
+A FastAPI backend (`Backend/api.py`) serves the browser dashboard's
+deterministic `/command` pipeline and a focused Phase One desktop path
+(`POST /desktop/query`). The Windows client uses the latter: the backend calls
+its configured model, optionally executes one allow-listed Desktop Hand action,
+then returns the response and any narrowly allow-listed client action. The
+client uses HTTP for backend work and applies pet/browser actions locally.
 
 ## Canonical terminology map
 
@@ -171,7 +173,7 @@ Hermes sandbox. Details in [AI chaining](#ai-chaining) below.
 | `Backend/skills/speech/` | Speech skill wrapping the above for the brain pipeline | `skills/speech/main.py` |
 | `Backend/utils/` | logger, voice announcements (TTS), spoken replies responder, test telemetry | `utils/voice.py`, `utils/spoken_replies.py` |
 | `Backend/UI/` | Static dashboard (7 HTML pages + components), served at `/ui` | `api.py` |
-| `Desktop/client/` | tkinter client, HTTP-only boundary (`backend.py`), controller, GUI | `Desktop/client/sarthi_client/__init__.py` |
+| `Desktop/client/` | tkinter client, HTTP-only backend boundary (`backend.py`), controller, GUI-side allow-listed pet/browser actions | `Desktop/client/sarthi_client/__init__.py` |
 | `tests/` | 56 test files, 50 pytest-collected, 1172 tests (see [TESTING.md](TESTING.md)) | `pyproject.toml` pythonpath |
 
 Backend root files: `config.py` (central constants), `main.py` (voice CLI
@@ -402,7 +404,9 @@ conversation and structured tool selection. Benchmark quality/tool JSON scores
 were 3.2/5 and 2/3 for Low, 4.2/5 and 2/3 for Medium, and 4.6/5 and 3/3 for
 High. The selected profile is read for each local model request, so it takes
 effect without restarting the backend. The 8B fallback remains available as
-the High tier.
+the High tier. `Backend/scripts/ensure_ollama.py`, called by the backend
+launcher, starts Ollama when the configured endpoint is local and not ready;
+it reports a missing model but never downloads model weights.
 
 ## Database & storage
 
@@ -449,6 +453,57 @@ KnowledgeManager; `Backend/scripts/check_no_db_staged.py` guards against
 committing the DB.
 
 ## Hands & the Brain/Hand boundary
+
+### Phase One Windows desktop request path
+
+`Desktop/client/sarthi_client/backend.py::send_query` posts
+`{"query": ..., "session_id": ...}` to `/desktop/query`. The API validates
+the request and delegates to `hermes.desktop_query.run_desktop_query`. That
+flow reuses the configured provider stack from `hermes.service` and the
+conversation store, while exposing only these implemented Hand actions to the
+model: `get_active_window`, `list_windows`, `open_url`, `type_text`,
+`press_key`, and `hotkey`. It validates the parsed tool name and arguments,
+then calls `hands.local.get_desktop_hand().execute` for Hand actions; the
+Hand's capability validation remains the execution gate. Pet-state changes
+and HTTP(S) URL opening are returned as explicit `client_action` values and
+executed by the Windows GUI, so a browser opens on the desktop the user is
+using. The GUI validates these action types and arguments. The backend returns
+`success`, `response`, `error`, `session_id`, and action status. If the Hand
+reports failure, the backend returns failure directly and does not ask the
+model to reinterpret that outcome.
+Direct pet-state commands (for example, `turn sad`, `make Hitori happy`, or
+`turn sleeping`) and YouTube play/search commands map to validated client
+actions before model initialization, so they remain responsive even if the
+local provider is unavailable. Pet-state matching is deterministic and
+limited to the GUI's supported Hitori states: sleeping, happy, thinking,
+working, sad, and confused (which currently reuses the sad image). Song titles
+are resolved to the first matching YouTube watch URL and opened by the client,
+so playback takes place in the user's browser. If the resolver cannot find a
+video, it falls back to a YouTube search page. For a compound
+pet-state plus YouTube command, Hermes runs once to split the request into
+subcommands; the backend resolves and validates each against the same
+deterministic allowlist, then returns an ordered `client_actions` array. The
+client executes those actions in order and stops on the first failure. Hermes
+does not select executable tools or perform the resulting desktop actions.
+Other ordinary questions and model-selected Hand actions use the configured
+provider.
+
+The legacy desktop path was `POST /command`: the client sent only `query`,
+then `api.py` routed through `BrainEngine` and sometimes escalated to Hermes.
+`/command` stays available for the dashboard and existing callers. The desktop
+client no longer uses it; `/hermes/chat` remains a separate general Hermes API.
+The model never runs code or reaches the OS directly.
+
+Run from the repository root with `Backend\\sarthi.bat` (or `start.bat`) and
+`python Desktop/run.py`. Provider configuration is in `Backend/.env`, copied
+from `Backend/.env.example`; local Ollama is the default. Set
+`SARTHI_BACKEND_URL` to point the client at a different backend. Example
+queries: `Why is the sky blue?`, `What window is active?`,
+`turn sad`, `play youtube`, `Open https://example.com`, and
+`Type hello into the active window`.
+The desktop GUI reads and saves the local model profile over HTTP using the
+existing `GET /settings/hermes_model_profile` and `POST /settings` routes;
+profile changes apply on the next model request.
 
 Sarthi thinks through the Backend (the Sarthi Brain) and acts through the
 Desktop Hand:
@@ -940,8 +995,8 @@ imports nothing else from third parties.
 
 | Command | What it does |
 | --- | --- |
-| `Backend\sarthi.bat` | Starts the API server in a visible window; health-checks and prints Local/LAN URLs |
-| `Backend\sarthi.bat background` | Windowless server via pythonw + uvicorn |
+| `Backend\sarthi.bat` | Starts local Ollama if needed, then the API server in a visible window; health-checks and prints Local/LAN URLs |
+| `Backend\sarthi.bat background` | Starts local Ollama if needed, then a windowless server via pythonw + uvicorn |
 | `python Backend/api.py` | Direct server start (uvicorn run in-module) |
 | `python Backend/main.py` | Voice CLI: ENTER to speak → record → whisper → BrainEngine → print intent/result |
 | `python Backend/main-test.py` | Smoke test: a few prompts through BrainEngine (NOT the test suite) |

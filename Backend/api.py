@@ -131,6 +131,25 @@ class ClientCommandRequest(BaseModel):
         return self.text if self.text is not None else (self.query or "")
 
 
+class DesktopQueryRequest(BaseModel):
+    """Phase One Windows client request contract."""
+
+    model_config = {"extra": "forbid"}
+
+    query: str
+    session_id: str | None = None
+
+    @model_validator(mode="after")
+    def _validate_query(self) -> "DesktopQueryRequest":
+        if not self.query.strip():
+            raise ValueError("query must not be empty")
+        if len(self.query) > 10000:
+            raise ValueError("query must be at most 10000 characters")
+        if self.session_id is not None and len(self.session_id) > 200:
+            raise ValueError("session_id must be at most 200 characters")
+        return self
+
+
 class ModeRequest(BaseModel):
     mode: str
 
@@ -521,6 +540,19 @@ def command(request: ClientCommandRequest):
         # Preserve existing behavior if the optional personality code fails.
         pass
     return _client_envelope(result)
+
+
+@app.post("/desktop/query")
+def desktop_query(request: DesktopQueryRequest):
+    """Run the focused Windows desktop model → validated Hand flow."""
+    from hermes.desktop_query import run_desktop_query
+
+    session_id = request.session_id or "default"
+    result = run_desktop_query(request.query.strip(), session_id=session_id)
+    # Keep a consistent response envelope even for early action validation
+    # failures, where no model-generated response is appropriate.
+    result.setdefault("session_id", session_id)
+    return result
 
 
 @app.get("/mode")

@@ -48,6 +48,14 @@ if errorlevel 1 (
     exit /b 1
 )
 
+:: Start the local Ollama service when configured and not already running.
+:: Missing model weights are reported by the helper; they are never
+:: downloaded automatically.
+python scripts\ensure_ollama.py
+if errorlevel 1 (
+    echo [Sarthi] Ollama could not be started. The backend will still launch.
+)
+
 :: Start backend.
 :: api.py should start Uvicorn using host 0.0.0.0 and port 8000.
 start "Sarthi Backend" cmd /k python api.py
@@ -58,6 +66,12 @@ goto wait
 ::    window appears when the backend launches windowless. ──────────
 :background
 set "PYW=pythonw"
+set "PY=python"
+if exist "%VENV%\Scripts\python.exe" set "PY=%VENV%\Scripts\python.exe"
+"%PY%" scripts\ensure_ollama.py
+if errorlevel 1 (
+    echo [Sarthi] Ollama could not be started. The backend will still launch.
+)
 if exist "%VENV%\Scripts\pythonw.exe" set "PYW=%VENV%\Scripts\pythonw.exe"
 
 start "" "%PYW%" -m uvicorn api:app --host %API_HOST% --port %API_PORT%

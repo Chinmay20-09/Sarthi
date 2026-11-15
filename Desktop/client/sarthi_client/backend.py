@@ -4,10 +4,10 @@ The ONLY module allowed to talk to the Backend — and only over HTTP.
 Nothing here imports backend internals (brain, interpreter, model,
 knowledge, executor); that separation is the point of the architecture.
 
-Request/response shapes (see Backend/api.py ``/command``):
+Request/response shapes (see Backend/api.py ``/desktop/query``):
 
-    request:  {"query": "<user text>"}
-    response: {"success": bool, "response": str, "data": {...}|None, ...}
+    request:  {"query": "<user text>", "session_id": "<conversation>"}
+    response: {"success": bool, "response": str, "action": {...}|None, ...}
 
 ``send_query`` always returns a structured dict, even on connection
 errors and malformed responses — the GUI never has to handle exceptions.
@@ -25,17 +25,19 @@ from .config import REQUEST_TIMEOUT, get_backend_url
 FIELD_SUCCESS = "success"
 FIELD_RESPONSE = "response"
 FIELD_DATA = "data"
+MODEL_PROFILES = ("low", "medium", "high")
 
 
-def build_command_payload(query: str) -> dict[str, str]:
-    """Build the request body sent to ``POST /command``."""
-    return {"query": query}
+def build_command_payload(query: str, session_id: str | None = None) -> dict[str, str | None]:
+    """Build the request body sent to ``POST /desktop/query``."""
+    return {"query": query, "session_id": session_id}
 
 
 def send_query(
     query: str,
     base_url: str | None = None,
     timeout: float = REQUEST_TIMEOUT,
+    session_id: str | None = None,
 ) -> dict[str, Any]:
     """Send one user query to the Backend and return a structured result.
 
@@ -49,8 +51,8 @@ def send_query(
     Connection failures and malformed responses are converted into
     structured results — they are never raised past this boundary.
     """
-    url = (base_url or get_backend_url()).rstrip("/") + "/command"
-    payload = build_command_payload(query)
+    url = (base_url or get_backend_url()).rstrip("/") + "/desktop/query"
+    payload = build_command_payload(query, session_id)
 
     try:
         http_response = httpx2.post(url, json=payload, timeout=timeout)
@@ -100,3 +102,76 @@ def send_query(
         FIELD_DATA: body.get(FIELD_DATA) if isinstance(body.get(FIELD_DATA), dict | list) else None,
         **{k: v for k, v in body.items() if k not in (FIELD_SUCCESS, FIELD_RESPONSE, FIELD_DATA)},
     }
+
+
+def get_model_profile(base_url: str | None = None, timeout: float = 5.0) -> dict[str, Any]:
+    """Read the saved local model profile through the backend settings API."""
+    url = (base_url or get_backend_url()).rstrip("/") + "/settings/hermes_model_profile"
+    try:
+        response = httpx2.get(url, timeout=timeout)
+    except (httpx2.HTTPError, OSError) as exc:
+        return {"success": False, "error": "unavailable", "detail": str(exc)}
+    if response.status_code != 200:
+        return {
+            "success": False,
+            "error": "bad_response",
+            "detail": f"Backend returned HTTP {response.status_code}",
+        }
+    try:
+        body = response.json()
+    except ValueError:
+        return {
+            "success": False,
+            "error": "bad_response",
+            "detail": "Backend returned invalid JSON.",
+        }
+    profile = body.get("value") if isinstance(body, dict) else None
+    if profile not in MODEL_PROFILES:
+        return {
+            "success": False,
+            "error": "bad_response",
+            "detail": "Backend returned an unsupported model profile.",
+        }
+    return {"success": True, "profile": profile}
+
+
+def set_model_profile(
+    profile: str, base_url: str | None = None, timeout: float = 5.0
+) -> dict[str, Any]:
+    """Persist a low/medium/high model profile through the backend settings API."""
+    if profile not in MODEL_PROFILES:
+        return {
+            "success": False,
+            "error": "invalid_profile",
+            "detail": "Choose Low, Medium, or High.",
+        }
+    url = (base_url or get_backend_url()).rstrip("/") + "/settings"
+    try:
+        response = httpx2.post(
+            url,
+            json={"key": "hermes_model_profile", "value": profile},
+            timeout=timeout,
+        )
+    except (httpx2.HTTPError, OSError) as exc:
+        return {"success": False, "error": "unavailable", "detail": str(exc)}
+    if response.status_code != 200:
+        return {
+            "success": False,
+            "error": "bad_response",
+            "detail": f"Backend returned HTTP {response.status_code}",
+        }
+    try:
+        body = response.json()
+    except ValueError:
+        return {
+            "success": False,
+            "error": "bad_response",
+            "detail": "Backend returned invalid JSON.",
+        }
+    if not isinstance(body, dict) or not body.get("success") or body.get("value") != profile:
+        return {
+            "success": False,
+            "error": "bad_response",
+            "detail": "Backend did not confirm the saved profile.",
+        }
+    return {"success": True, "profile": profile}

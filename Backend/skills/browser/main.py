@@ -11,8 +11,6 @@ ARCHITECTURE:
 """
 
 import logging
-import re
-import urllib.request
 import webbrowser
 from typing import Any
 
@@ -20,6 +18,7 @@ from brain.intent import Intent
 from brain.modes import get_test_mode
 
 from skills.base import BaseSkill
+from skills.browser.youtube import get_first_youtube_video_url
 
 logger = logging.getLogger(__name__)
 
@@ -188,18 +187,7 @@ class BrowserSkill(BaseSkill):
 
     def _get_first_youtube_video(self, query: str) -> str | None:
         """Fetch the first YouTube video URL for a search query without an API key."""
-        try:
-            search_url = f"https://www.youtube.com/results?search_query={query.replace(' ', '+')}"
-            req = urllib.request.Request(search_url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                html = resp.read().decode("utf-8", errors="ignore")
-            # Extract video IDs from the rendered page data
-            match = re.search(r'"videoId":"([a-zA-Z0-9_-]{11})"', html)
-            if match:
-                return f"https://www.youtube.com/watch?v={match.group(1)}"
-        except Exception as e:
-            logger.debug(f"Could not fetch first YouTube video: {e}")
-        return None
+        return get_first_youtube_video_url(query)
 
     def _google_search(self, query: str) -> dict[str, Any]:
         """Perform a Google search."""

@@ -41,6 +41,7 @@ _STATE_TO_FILENAME: dict[str, str] = {
     "thinking": "thinking-removebg-preview.png",
     "working": "working-removebg-preview.png",
     "confused": "sad-removebg-preview.png",  # reuse sad as confused placeholder
+    "sad": "sad-removebg-preview.png",
 }
 
 # Default state when the pet launches (Phase 1 MVP).
@@ -182,7 +183,7 @@ class DesktopPet(tk.Toplevel):
         Parameters
         ----------
         state: str
-            One of: "sleeping", "happy", "thinking", "working", "confused".
+            One of: "sleeping", "happy", "thinking", "working", "confused", "sad".
         """
         normalized = state.lower().strip()
         filename = _STATE_TO_FILENAME.get(normalized)

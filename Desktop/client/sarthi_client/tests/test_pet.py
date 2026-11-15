@@ -151,13 +151,14 @@ def test_load_photoimage_returns_photoimage_when_file_exists(monkeypatch):
 
 
 def test_state_to_filename_mapping():
-    """All five states should map to filenames."""
+    """All supported states, including sad, map to pet image files."""
     expected = {
         "sleeping": "sleeping-removebg-preview.png",
         "happy": "happy-removebg-preview.png",
         "thinking": "thinking-removebg-preview.png",
         "working": "working-removebg-preview.png",
         "confused": "sad-removebg-preview.png",
+        "sad": "sad-removebg-preview.png",
     }
     assert _STATE_TO_FILENAME == expected
 

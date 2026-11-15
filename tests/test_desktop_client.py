@@ -3,7 +3,7 @@
 All network calls are mocked — no test contacts a real backend. The
 tests lock the client-side contract:
 
-    - request construction: {"query": ...} to POST /command
+    - request construction: query + session to POST /desktop/query
     - response handling: success, failure, malformed, non-JSON
     - backend unavailable → structured failure (never an exception)
     - controller translation of every result kind into display/status text
@@ -51,7 +51,10 @@ def successful_body(**overrides: Any) -> dict[str, Any]:
 
 class TestRequestConstruction:
     def test_payload_is_query_schema(self):
-        assert client_backend.build_command_payload("open chrome") == {"query": "open chrome"}
+        assert client_backend.build_command_payload("open chrome", "desk-1") == {
+            "query": "open chrome",
+            "session_id": "desk-1",
+        }
 
     def test_send_posts_query_json_to_backend_command(self, monkeypatch):
         captured: dict[str, Any] = {}
@@ -62,10 +65,12 @@ class TestRequestConstruction:
             return FakeHttpResponse(200, successful_body())
 
         monkeypatch.setattr(client_backend.httpx2, "post", fake_post)
-        result = client_backend.send_query("open chrome", base_url="http://127.0.0.1:8000")
+        result = client_backend.send_query(
+            "open chrome", base_url="http://127.0.0.1:8000", session_id="desk-1"
+        )
 
-        assert captured["url"] == "http://127.0.0.1:8000/command"
-        assert captured["json"] == {"query": "open chrome"}
+        assert captured["url"] == "http://127.0.0.1:8000/desktop/query"
+        assert captured["json"] == {"query": "open chrome", "session_id": "desk-1"}
         assert result["success"] is True
         assert result["response"] == "Opening Chrome."
 
@@ -78,7 +83,7 @@ class TestRequestConstruction:
 
         monkeypatch.setattr(client_backend.httpx2, "post", fake_post)
         client_backend.send_query("hi", base_url="http://127.0.0.1:8000/")
-        assert seen["url"] == "http://127.0.0.1:8000/command"
+        assert seen["url"] == "http://127.0.0.1:8000/desktop/query"
 
 
 # ---------------------------------------------------------------------------
@@ -150,6 +155,41 @@ class TestResponseHandling:
         assert result["response"] == "Opening Chrome."
 
 
+class TestModelProfiles:
+    def test_get_profile_reads_saved_value_from_backend(self, monkeypatch):
+        captured = {}
+
+        def fake_get(url, timeout=None):
+            captured["url"] = url
+            return FakeHttpResponse(200, {"key": "hermes_model_profile", "value": "medium"})
+
+        monkeypatch.setattr(client_backend.httpx2, "get", fake_get)
+        result = client_backend.get_model_profile(base_url="http://127.0.0.1:8000")
+        assert captured["url"] == "http://127.0.0.1:8000/settings/hermes_model_profile"
+        assert result == {"success": True, "profile": "medium"}
+
+    def test_set_profile_posts_existing_backend_setting(self, monkeypatch):
+        captured = {}
+
+        def fake_post(url, json=None, timeout=None):
+            captured.update(url=url, json=json)
+            return FakeHttpResponse(200, {"success": True, "value": "high"})
+
+        monkeypatch.setattr(client_backend.httpx2, "post", fake_post)
+        result = client_backend.set_model_profile("high", base_url="http://localhost:8000")
+        assert captured["url"] == "http://localhost:8000/settings"
+        assert captured["json"] == {"key": "hermes_model_profile", "value": "high"}
+        assert result == {"success": True, "profile": "high"}
+
+    def test_set_profile_rejects_unknown_value_without_http(self, monkeypatch):
+        monkeypatch.setattr(
+            client_backend.httpx2, "post", lambda *a, **k: (_ for _ in ()).throw(AssertionError())
+        )
+        result = client_backend.set_model_profile("ultra")
+        assert result["success"] is False
+        assert result["error"] == "invalid_profile"
+
+
 # ---------------------------------------------------------------------------
 # Backend unavailable
 # ---------------------------------------------------------------------------
@@ -215,13 +255,52 @@ class TestController:
 
     def test_success_renders_backend_response(self, monkeypatch):
         def ok(url, json=None, timeout=None):
-            assert json == {"query": "open chrome"}
+            assert json["query"] == "open chrome"
+            assert json["session_id"].startswith("desktop_")
             return FakeHttpResponse(200, successful_body())
 
         monkeypatch.setattr(client_backend.httpx2, "post", ok)
         result = SarthiController("http://x").send("open chrome")
         assert result.display_text == "Opening Chrome."
         assert result.status_text == "Backend: http://x"
+
+    def test_controller_preserves_backend_approved_client_action(self, monkeypatch):
+        body = successful_body(
+            response="Opening YouTube on your desktop.",
+            client_action={"type": "open_url", "url": "https://www.youtube.com/"},
+            action={"name": "open_url", "success": True, "pending": True},
+        )
+        monkeypatch.setattr(
+            client_backend.httpx2,
+            "post",
+            lambda *a, **k: FakeHttpResponse(200, body),
+        )
+        result = SarthiController("http://x").send("play youtube")
+        assert result.client_action == {
+            "type": "open_url",
+            "url": "https://www.youtube.com/",
+        }
+        assert result.action_status is None
+
+    def test_controller_preserves_ordered_backend_client_actions(self, monkeypatch):
+        actions = [
+            {"type": "set_pet_state", "state": "sad"},
+            {
+                "type": "open_url",
+                "url": "https://www.youtube.com/results?search_query=lost+in+love",
+            },
+        ]
+        body = successful_body(client_actions=actions)
+        monkeypatch.setattr(
+            client_backend.httpx2,
+            "post",
+            lambda *a, **k: FakeHttpResponse(200, body),
+        )
+        result = SarthiController("http://x").send(
+            "Turn sad and play lost in love on YouTube"
+        )
+        assert result.client_actions == actions
+        assert result.client_action is None
 
     def test_pet_state_passes_through_existing_command_response(self, monkeypatch):
         body = successful_body(pet_state="thinking")
@@ -267,6 +346,20 @@ class TestController:
         assert result.display_text == "No matching application."
         assert result.status_text == "Failed"
 
+    def test_failed_desktop_action_status_is_visible(self, monkeypatch):
+        body = successful_body(
+            success=False,
+            response="The URL could not be opened.",
+            action={"name": "open_url", "success": False, "message": "failed"},
+        )
+        monkeypatch.setattr(
+            client_backend.httpx2, "post", lambda *a, **k: FakeHttpResponse(200, body)
+        )
+        result = SarthiController("http://x").send("Open a URL")
+        assert result.display_text == "The URL could not be opened."
+        assert result.status_text == "Desktop action failed."
+        assert result.action_status == "failed"
+
     def test_query_is_stripped_before_sending(self, monkeypatch):
         seen = {}
 
@@ -276,7 +369,8 @@ class TestController:
 
         monkeypatch.setattr(client_backend.httpx2, "post", ok)
         SarthiController("http://x").send("   open chrome  ")
-        assert seen["json"] == {"query": "open chrome"}
+        assert seen["json"]["query"] == "open chrome"
+        assert seen["json"]["session_id"].startswith("desktop_")
 
 
 # ---------------------------------------------------------------------------
@@ -332,6 +426,57 @@ class TestGui:
         source = inspect.getsource(gui)
         for forbidden in ("brain", "knowledge", "skills", "hermes", "executor"):
             assert forbidden not in source, f"gui.py must not reference {forbidden}"
+
+    def test_client_pet_action_changes_state_locally(self):
+        from sarthi_client.gui import SarthiApp
+
+        class FakePet:
+            state = None
+            shown = False
+
+            def set_state(self, state):
+                self.state = state
+
+            def show(self):
+                self.shown = True
+
+        app = SarthiApp.__new__(SarthiApp)
+        app.pet = FakePet()
+        success, message = app._execute_client_action({"type": "set_pet_state", "state": "sad"})
+        assert success is True
+        assert app.pet.state == "sad"
+        assert app.pet.shown is True
+        assert "sad" in message
+
+    def test_open_youtube_action_uses_desktop_browser(self, monkeypatch):
+        import sarthi_client.gui as gui
+
+        app = gui.SarthiApp.__new__(gui.SarthiApp)
+        opened = []
+        monkeypatch.setattr(
+            gui.webbrowser, "open", lambda url, new: opened.append((url, new)) or True
+        )
+
+        success, message = app._execute_client_action(
+            {"type": "open_url", "url": "https://www.youtube.com/"}
+        )
+
+        assert success is True
+        assert opened == [("https://www.youtube.com/", 2)]
+        assert "desktop browser" in message
+
+    def test_client_rejects_non_http_action_url(self, monkeypatch):
+        import sarthi_client.gui as gui
+
+        app = gui.SarthiApp.__new__(gui.SarthiApp)
+        monkeypatch.setattr(
+            gui.webbrowser, "open", lambda *_a, **_k: (_ for _ in ()).throw(AssertionError())
+        )
+        success, message = app._execute_client_action(
+            {"type": "open_url", "url": "file:///C:/Windows/win.ini"}
+        )
+        assert success is False
+        assert "HTTP or HTTPS" in message
 
     def test_send_disabled_while_sending(self):
         """The Send button is disabled during the send and re-enabled after."""

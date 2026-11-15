@@ -27,14 +27,16 @@ How to set up, navigate and safely modify Sarthi.
 
 4. **Configure**: copy `.env.example` to `.env` and set provider settings.
 
-   Default is the local Ollama provider (`HERMES_PROVIDER=local`,
-   `LOCAL_HERMES_MODEL=hermes3:8b`) — no API keys needed. If you run Ollama,
-   `ollama pull hermes3:8b` (or point `LOCAL_HERMES_MODEL` at a model you
-   have). Desktop Agent IPC settings (`SARTHI_DESKTOP_AGENT_*`) also live in
-   `.env` — see [ARCHITECTURE.md](ARCHITECTURE.md#brain--desktop-agent-ipc-implemented-2026-09-16).
-5. **Verify**: `start.bat` (or `Backend\sarthi.bat`), then open
-   <http://127.0.0.1:8000> — the dashboard should load and `/health` should
-   report `{"assistant": "Sarthi", "status": "Running"}`.
+   Default is the local Ollama provider (`HERMES_PROVIDER=local`) — no API
+   keys needed. The backend launcher starts the local Ollama service when
+   needed. Install the selected profile's model separately: Low uses
+   `hermes3:3b`, Medium uses `hermes3:8b-llama3.1-q3_K_M`, and High uses
+   `LOCAL_HERMES_MODEL` (default `hermes3:8b`). Desktop Agent IPC settings
+   (`SARTHI_DESKTOP_AGENT_*`) also live in `.env` — see
+   [ARCHITECTURE.md](ARCHITECTURE.md#brain--desktop-agent-ipc-implemented-2026-09-16).
+5. **Run**: start the backend with `start.bat`, then run
+   `python Desktop/run.py` to open the Windows client. `GET /health` reports
+   backend readiness at <http://127.0.0.1:8000/health>.
 
 ## Repository structure (useful level)
 

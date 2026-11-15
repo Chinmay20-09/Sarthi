@@ -25,3 +25,24 @@ Rules:
   query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current
   (AST-only, no API cost).
+
+## Desktop task routing
+
+- For supported Windows desktop actions, Sarthi's backend is the deterministic
+  task router and executor. Resolve one action directly without starting
+  Hermes/model orchestration. For example, `play lost in love on YouTube`
+  should resolve the first video and have the desktop client open its watch
+  URL, while
+  `turn sad` should select the matching Hitori pet image through the desktop
+  client.
+- Start Hermes/model orchestration for desktop actions only when the user
+  gives a compound request that needs decomposition, such as `turn sad and
+  play lost in love on YouTube`. Hermes may convert that request into ordered
+  smaller tasks; the backend must validate every task against its explicit
+  supported-action allowlist before execution. Hermes must not execute desktop
+  actions, run arbitrary code, or bypass the Desktop Hand/client action
+  boundary.
+- Keep each resulting action deterministic and execute it through the
+  appropriate validated boundary: Desktop Hand for backend-controlled Windows
+  actions, or an explicitly validated client action for GUI-local behavior
+  such as changing the pet image or opening the user's browser.

@@ -1,13 +1,11 @@
 import time
 
 from .agent import HermesAgent
-from .conversation import DEFAULT_SESSION, get_conversation_store
 from .models import ModelRequest, Task
 from .providers.base import ProviderResponse
 from .providers.manager import ProviderManager
 from .sandbox import TaskSandbox
 from .tool_registry import ToolRegistry
-
 
 DEFAULT_CHAT_TIMEOUT_MS = 30_000
 MAX_CHAT_CHUNK_BYTES = 128_000
@@ -47,6 +45,10 @@ class HermesOrchestrator:
     def provider_manager(self) -> ProviderManager:
         """The provider manager backing this orchestrator (for diagnostics)."""
         return self._provider_manager
+
+    def generate(self, task: Task | ModelRequest) -> ProviderResponse:
+        """Generate one provider response using the configured fallback stack."""
+        return self._generate_with_fallback(task)
 
     def process(self, task: Task) -> ProviderResponse:
         """

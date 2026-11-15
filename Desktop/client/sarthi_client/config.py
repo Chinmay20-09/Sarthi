@@ -24,7 +24,7 @@ from pathlib import Path
 DEFAULT_BACKEND_URL = "http://127.0.0.1:8000"
 
 # Network settings
-REQUEST_TIMEOUT = 300.0  # seconds; Hermes-backed commands can be slow
+REQUEST_TIMEOUT = 420.0  # two configured model calls may be needed around a Hand action
 
 ENV_BACKEND_URL = "SARTHI_BACKEND_URL"
 CONFIG_FILE_NAME = "sarthi_client.json"
