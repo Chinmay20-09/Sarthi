@@ -13,6 +13,7 @@ tests lock the client-side contract:
 from __future__ import annotations
 
 import json
+import time
 from typing import Any
 
 import pytest
@@ -236,6 +237,11 @@ class TestBackendUnavailable:
 
 
 class TestController:
+    @pytest.fixture(autouse=True)
+    def defer_local_routes_to_backend(self, monkeypatch):
+        """Keep backend contract tests independent of installed PC apps."""
+        monkeypatch.setattr(client_controller, "route_local_query", lambda _query: None)
+
     def test_invalid_query_never_reaches_the_network(self, monkeypatch):
         def boom(*_a, **_k):  # pragma: no cover - must not be called
             raise AssertionError("network must not be used for an empty query")
@@ -495,13 +501,17 @@ class TestGui:
             backend_url = "http://stub"
 
             def send(self, _query):
-                # The button is disabled while the controller runs.
-                assert app.send_button["state"] == str(tk.DISABLED)
                 return SendResult("Done.", "Backend: http://stub", pet_state="thinking")
 
         app = SarthiApp(controller=StubController())
         app.query_entry.insert(0, "open chrome")
         app.on_send()
+        assert app.send_button["state"] == str(tk.DISABLED)
+        deadline = time.monotonic() + 3
+        while app.send_button["state"] != str(tk.NORMAL) and time.monotonic() < deadline:
+            app.root.update()
+            time.sleep(0.01)
+        app.root.update()
         assert app.send_button["state"] == str(tk.NORMAL)
         assert app.response_box.get("1.0", tk.END).strip() == "Done."
         assert app.status_var.get() == "Backend: http://stub"

@@ -62,4 +62,4 @@ User submits multiple actions in one request → application sends the request t
 
 ## Scope boundary
 
-This PRD describes the target product architecture. It does not claim that mobile or TV hands, cross-device pairing, or every routing path are already implemented. Current implementation status is documented in [docs/dev/ARCHITECTURE.md](docs/dev/ARCHITECTURE.md) and [docs/dev/PROJECT_STATE.md](docs/dev/PROJECT_STATE.md).
+This PRD describes the target product architecture. It does not claim that mobile or TV hands, cross-device pairing, or every routing path are already implemented. Current implementation status is documented in [Architecture](../dev/ARCHITECTURE.md) and [Project State](../dev/PROJECT_STATE.md).

@@ -31,13 +31,14 @@ SECURITY BOUNDARY (explicit):
     — unknown actions and invalid arguments are rejected as structured
     failures without touching Windows. One bad request can never crash
     the server: every handler is wrapped and returns an error result.
-    This is a LAN/local development feature, not a public service.
+    The server defaults to loopback. It has no authentication or transport
+    security; do not bind it to a network interface for production use.
 
 Usage:
     python desktop_agent.py --capabilities
     python desktop_agent.py --self-test
     python desktop_agent.py --exec get_active_window
-    python desktop_agent.py --server --host 0.0.0.0 --port 8765
+    python desktop_agent.py --server
 """
 
 from __future__ import annotations

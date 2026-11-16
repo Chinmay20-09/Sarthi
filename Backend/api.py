@@ -20,6 +20,13 @@ from pathlib import Path
 # UI regardless of the process's current working directory.
 BACKEND_DIR = Path(__file__).resolve().parent
 
+# Read service-level options before constructing the FastAPI app. Hermes
+# also loads this file lazily for model configuration, but UI/headless mode
+# must be known at import time to decide whether the UI is mounted.
+from dotenv import load_dotenv
+
+load_dotenv(BACKEND_DIR / ".env")
+
 # Under pythonw (start.bat's windowless background mode) there is no
 # console: sys.stdout/sys.stderr are None, which would crash uvicorn's
 # logging setup and every print() in the request handlers. Route them to
@@ -58,6 +65,14 @@ logger = get_logger(__name__)
 
 app = FastAPI(title="Sarthi API")
 
+# A headless deployment may expose only the service API. Keeping the
+# dashboard optional makes the UI a client of the backend rather than a
+# startup requirement. Existing local installs retain the dashboard by
+# default.
+SERVE_UI = os.environ.get("SARTHI_SERVE_UI", "1").strip().lower() not in {
+    "0", "false", "no", "off"
+}
+
 # CORS — restrict cross-origin access to the local UI origins only.
 # Sarthi runs on 127.0.0.1 and holds personal data (memories, chat
 # transcripts, settings). A wildcard allowlist would let ANY website the
@@ -86,8 +101,9 @@ app.include_router(browser_router)
 # Include router for Hermes local AI
 app.include_router(hermes_router)
 
-# Serve Frontend
-app.mount("/ui", StaticFiles(directory=BACKEND_DIR / "UI"), name="ui")
+# Serve Frontend only when requested (enabled by default for existing installs).
+if SERVE_UI:
+    app.mount("/ui", StaticFiles(directory=BACKEND_DIR / "UI"), name="ui")
 
 # Core
 engine = BrainEngine()
@@ -206,7 +222,9 @@ class ProjectUpdateRequest(BaseModel):
 
 @app.get("/", include_in_schema=False)
 def root():
-    return RedirectResponse(url="/ui/dashboard.html")
+    if SERVE_UI:
+        return RedirectResponse(url="/ui/dashboard.html")
+    return {"assistant": "Sarthi", "status": "Running", "interface": "disabled"}
 
 
 @app.get("/health")
@@ -2077,6 +2095,6 @@ if __name__ == "__main__":
     args, _unknown = parser.parse_known_args()
 
     bus.publish("system_startup", {}, source="api")
-    # Host/port come from config.py (API_HOST=0.0.0.0) so every device on the
-    # LAN can reach the dashboard at http://<LAN-IP>:8000, not just this PC.
+    # Host/port come from config.py; loopback is the default because the API
+    # has no authentication. Network exposure must be configured deliberately.
     uvicorn.run("api:app", host=API_HOST, port=API_PORT, reload=args.reload)

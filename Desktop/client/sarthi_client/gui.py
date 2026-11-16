@@ -12,8 +12,10 @@ auto-matically when the window opens.
 
 from __future__ import annotations
 
+import threading
 import tkinter as tk
 import webbrowser
+from queue import Empty, Queue
 from tkinter import font as tkfont
 from tkinter import ttk
 from urllib.parse import urlsplit
@@ -44,6 +46,8 @@ class SarthiApp:
         self.root.geometry(WINDOW_SIZE)
         self.root.minsize(*WINDOW_MIN_SIZE)
         self._build_widgets()
+        self._ui_queue: Queue[tuple[object, tuple]] = Queue()
+        self.root.after(50, self._drain_ui_queue)
 
         # Launch the optional desktop pet (borderless, always-on-top).
         # It does not depend on backend internals — it only uses the existing
@@ -128,12 +132,21 @@ class SarthiApp:
     # ------------------------------------------------------------------
 
     def load_model_profile(self) -> None:
-        """Load the saved model profile through the client controller."""
+        """Load the saved model profile without blocking window startup."""
         get_profile = getattr(self.controller, "get_model_profile", None)
         if not callable(get_profile):
             self.profile_status_var.set("Profile settings unavailable.")
             return
-        result = get_profile()
+        threading.Thread(target=self._load_profile_worker, args=(get_profile,), daemon=True).start()
+
+    def _load_profile_worker(self, get_profile) -> None:
+        try:
+            result = get_profile()
+        except Exception as exc:
+            result = {"success": False, "detail": str(exc)}
+        self._ui_queue.put((self._apply_loaded_profile, (result,)))
+
+    def _apply_loaded_profile(self, result: dict) -> None:
         profile = result.get("profile")
         if result.get("success") and profile in PROFILE_LABELS:
             self.profile_var.set(PROFILE_LABELS[profile])
@@ -142,7 +155,7 @@ class SarthiApp:
             self.profile_status_var.set("Could not load saved profile; Low remains selected.")
 
     def on_save_profile(self) -> None:
-        """Save the selected profile through the backend HTTP API."""
+        """Save the selected profile without blocking the Tk event loop."""
         profile = PROFILE_OPTIONS.get(self.profile_var.get())
         if profile is None:
             self.profile_status_var.set("Choose Low, Medium, or High.")
@@ -152,10 +165,19 @@ class SarthiApp:
             self.profile_status_var.set("Profile settings unavailable.")
             return
         self.profile_save_button.config(state=tk.DISABLED)
+        threading.Thread(
+            target=self._save_profile_worker, args=(save_profile, profile), daemon=True
+        ).start()
+
+    def _save_profile_worker(self, save_profile, profile: str) -> None:
         try:
             result = save_profile(profile)
-        finally:
-            self.profile_save_button.config(state=tk.NORMAL)
+        except Exception as exc:
+            result = {"success": False, "detail": str(exc)}
+        self._ui_queue.put((self._finish_profile_save, (result, profile)))
+
+    def _finish_profile_save(self, result: dict, profile: str) -> None:
+        self.profile_save_button.config(state=tk.NORMAL)
         if result.get("success"):
             self.profile_status_var.set(
                 f"Saved {PROFILE_LABELS[profile]}. Applies to the next query."
@@ -165,12 +187,41 @@ class SarthiApp:
             self.profile_status_var.set(f"Could not save profile: {detail}")
 
     def on_send(self) -> None:
-        """Send the textbox content through the controller and render it."""
+        """Run routing/network work off the Tk event loop."""
+        query = self.query_entry.get()
         self.send_button.config(state=tk.DISABLED)
+        threading.Thread(target=self._send_worker, args=(query,), daemon=True).start()
+
+    def _send_worker(self, query: str) -> None:
+        """Do potentially slow inventory/network/model work away from Tk."""
         try:
-            result = self.controller.send(self.query_entry.get())
-        finally:
-            self.send_button.config(state=tk.NORMAL)
+            result = self.controller.send(query)
+        except Exception as exc:
+            from .controller import SendResult
+
+            result = SendResult("", f"Sarthi could not complete the request: {exc}")
+        self._ui_queue.put((self._finish_send, (result,)))
+
+    def _drain_ui_queue(self) -> None:
+        """Apply worker results on Tk's main thread only."""
+        try:
+            while True:
+                callback, args = self._ui_queue.get_nowait()
+                try:
+                    callback(*args)
+                except Exception as exc:
+                    self.status_var.set(f"Could not update the window: {exc}")
+        except Empty:
+            pass
+        try:
+            self.root.after(50, self._drain_ui_queue)
+        except tk.TclError:
+            # The user closed the window; queued work can be discarded.
+            pass
+
+    def _finish_send(self, result) -> None:
+        """Apply the completed request result on Tk's main thread."""
+        self.send_button.config(state=tk.NORMAL)
 
         display_text = result.display_text
         status_text = result.status_text

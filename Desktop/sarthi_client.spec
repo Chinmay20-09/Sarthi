@@ -32,8 +32,8 @@ a = Analysis(
     hookspath=[],
     runtime_hooks=[],
     excludes=[
-        # The client is a thin HTTP shell — keep the bundle lean and
-        # prove it needs none of the backend stack.
+        # The client owns a narrow local app-launch route and HTTP boundary;
+        # keep the bundle lean and prove it needs none of the backend stack.
         "brain",
         "knowledge",
         "skills",

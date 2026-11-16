@@ -10,11 +10,13 @@ display and without a network.
 
 from __future__ import annotations
 
+import sqlite3
 from typing import Any
 from uuid import uuid4
 
 from . import backend
 from .config import get_backend_url
+from .local_router import route_local_query
 
 # Status lines shown in the GUI status bar
 STATUS_CONNECTING = "Sending to Sarthi backend..."
@@ -88,6 +90,24 @@ class SarthiController:
             return SendResult(
                 display_text="",
                 status_text="Please enter a command first.",
+            )
+
+        # A clear, single application launch belongs to this device. This
+        # narrow route keeps working when the backend is offline; all other
+        # requests retain the existing HTTP path.
+        try:
+            local_result = route_local_query((query or "").strip())
+        except (OSError, RuntimeError, ValueError, sqlite3.Error):
+            local_result = None
+        if local_result is not None:
+            return SendResult(
+                display_text=str(local_result.get("response") or ""),
+                status_text=(
+                    "Opened on this PC."
+                    if local_result.get("success")
+                    else "Local desktop action failed."
+                ),
+                action_status="completed" if local_result.get("success") else "failed",
             )
 
         result: dict[str, Any] = backend.send_query(

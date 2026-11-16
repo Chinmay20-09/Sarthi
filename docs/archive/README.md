@@ -1,59 +1,26 @@
-# Archive
+# Archive summary
 
-Historical documentation, preserved rather than deleted. Nothing in this tree
-describes the *current* system — read [`docs/dev/`](../dev/README.md) for
-that.
+This folder contains old project documents. They record past designs, audits, and development work. They do not describe the current system. Read [current developer documentation](../dev/README.md) for current behavior.
 
-## Contents
+## September 2026 documentation reset
 
-### documentation-reset-2026-09/
+The folder `documentation-reset-2026-09/` contains the documents that the project used before the reset on 2026-09-16. The reset merged many separate guides into the current architecture, project-state, development, and testing guides.
 
-The complete documentation system as it stood on 2026-09-16, before it was
-consolidated into the four-layer structure (`client/`, `dev/`, `agent/`,
-`archive/`). Also includes the 2026-09-13/14 forensic audit trail.
+The old architecture, runtime flow, module map, and data flow became [Architecture](../dev/ARCHITECTURE.md). The old skill, tool, agent, knowledge, memory, database, browser, automation, API, configuration, and dependency guides also became part of that document.
 
-**Consolidated into active documentation:**
+The old capability and project-state reports became [Project State](../dev/PROJECT_STATE.md). The old test guide became [Testing](../dev/TESTING.md). User setup and usage information moved to `docs/client/`.
 
-| Archived document | Content now lives in |
-| --- | --- |
-| ARCHITECTURE.md, RUNTIME_FLOW.md, MODULE_MAP.md, DATA_FLOW.md | [`dev/ARCHITECTURE.md`](../dev/ARCHITECTURE.md) |
-| SKILLS.md, TOOLS.md, AGENTS.md, API.md | [`dev/ARCHITECTURE.md`](../dev/ARCHITECTURE.md) |
-| KNOWLEDGE.md, MEMORY.md, DATABASE.md | [`dev/ARCHITECTURE.md`](../dev/ARCHITECTURE.md) |
-| BROWSER_AUTOMATION.md, CHAINING.md, AUTOMATION.md | [`dev/ARCHITECTURE.md`](../dev/ARCHITECTURE.md) |
-| CONFIGURATION.md, DEPENDENCIES.md, CLI.md | [`dev/ARCHITECTURE.md`](../dev/ARCHITECTURE.md) + [`client/INSTALLATION.md`](../client/INSTALLATION.md) (user-facing parts) |
-| PROJECT_STATE.md, CAPABILITIES.md, DIVERGENCE.md, DEAD_CODE&Duplicate.md, FORENSIC_SUMMARY.md | [`dev/PROJECT_STATE.md`](../dev/PROJECT_STATE.md) + [`dev/ARCHITECTURE.md`](../dev/ARCHITECTURE.md) |
-| TESTING.md | [`dev/TESTING.md`](../dev/TESTING.md) |
-| DOCUMENTATION_RULES.md | philosophy/rules now summarized in [`dev/README.md`](../dev/README.md) |
+## Audit and decision history
 
-**Historical-only (audit trail, kept for the reasoning):**
+The archive keeps these records for reference:
 
-- ARCHITECTURAL_DECISIONS.md — full decision log AD-01…AD-16 with
-  problem/evidence/rejected-alternatives (referenced by
-  `dev/ARCHITECTURE.md` and `dev/PROJECT_STATE.md` for the "why")
-- CONSOLIDATION_PLAN.md, CONSOLIDATION_REPORT.md — the 2026-09-14
-  architectural consolidation pass (before/after, findings, phases)
-- Divergance-matrix.md, DIVERGENCE.md, DEAD_CODE&Duplicate.md,
-  FORENSIC_SUMMARY.md — the forensic audit: what was found, resolved,
-  deferred
-- BRAIN_HAND_BOUNDARY_REPORT.md — the 2026-09-15 Brain/Hand boundary report
-  (AD-16); superseded by the 2026-09-16 IPC implementation, but records the
-  inspection trail
-- README.md — the old documentation index
+- `ARCHITECTURAL_DECISIONS.md` records decisions AD-01 through AD-16 and their reasons.
+- `CONSOLIDATION_PLAN.md` and `CONSOLIDATION_REPORT.md` record the 2026-09 documentation and architecture consolidation.
+- `DIVERGENCE.md`, `Divergance-matrix.md`, `DEAD_CODE&Duplicate.md`, and `FORENSIC_SUMMARY.md` record audit findings from 2026-09-13 and 2026-09-14.
+- `BRAIN_HAND_BOUNDARY_REPORT.md` records the review before Desktop Agent IPC was added.
 
-### Pre-reset documents (from the earlier archive)
+Older project snapshots and audits are in the archive root. They record earlier project states.
 
-- ABSOLUTE.md — a superseded behaviour contract (e.g. voice-announcement
-  rules the code outgrew)
-- ARCHITECTURE.md, ARCHITECTURE_NOTES.md, PROJECT_STATE.md, README.md,
-  README_ENV.md, CHANGELOG.md, CONTRIBUTING.md — older snapshots of the
-  project's self-description
-- old-project-README.md (in `documentation-reset-2026-09/`) — the former
-  top-level project README preserved from `docs/archive/README.md`
-- audit.md, AUDIT_CHECKLIST.md, AUDIT_REPORT.md — earlier audit passes
+## Archive rule
 
-## Rules
-
-- Archived documents are never edited in place or kept in sync with the code
-  — they are frozen history.
-- New archives are added as dated folders (e.g. `sprint-XX/` for historical
-  agent-sprint contexts, or a future `documentation-reset-YYYY-MM/`).
+Do not edit archived files to match current code. Add new historical records in a dated folder. Keep current behavior in `docs/dev/`.
